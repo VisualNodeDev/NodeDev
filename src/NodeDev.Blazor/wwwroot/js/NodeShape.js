@@ -51,7 +51,7 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
         var portType = isInput ? "input" : "output";
         var port = label.createPort(portType);
 
-        port.setName(portType + label.id);
+        port.setName(portType + '_' + txt);
 
         this.add(label);
     },
