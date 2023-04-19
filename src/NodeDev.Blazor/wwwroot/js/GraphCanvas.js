@@ -17,8 +17,18 @@ class GraphCanvas {
         this.Canvas.installEditPolicy(new draw2d.policy.canvas.SnapToGridEditPolicy())
     }
 
-    AddNode() {
-        this.Canvas.add(new draw2d.shape.basic.Rectangle({ width: 80, height: 40, x: 50, y: 300, resizeable: false }));
+    AddNodes(infos) {
+
+        for (let i = 0; i < infos.length; ++i) {
+            this.Canvas.add(new NodeShape({
+                id: infos[i].id,
+                LabelText: infos[i].name,
+                x: infos[i].x,
+                y: infos[i].y,
+                inputs: infos[i].inputs,
+                outputs: infos[i].outputs
+            }));
+        }
     }
 
     Destroy() {
