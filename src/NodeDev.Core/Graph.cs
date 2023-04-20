@@ -7,6 +7,11 @@ public class Graph
 {
 	public static Graph Instance { get; } = new();
 
+	static Graph()
+	{
+		NodeProvider.Initialize();
+	}
+
 	public IReadOnlyDictionary<string, Node> Nodes { get; } = new Dictionary<string, Node>();
 
 	public Task Invoke(Action action)

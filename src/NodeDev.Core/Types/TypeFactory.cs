@@ -13,5 +13,7 @@ namespace NodeDev.Core.Types
 		public static RealType Get(Type type) => RealTypes.TryGetValue(type, out var realType) ? realType : new(type);
 
 		public static readonly ExecType ExecType = new();
+
+		public static UndefinedGenericType CreateGenericType(string name) => new(name);
 	}
 }

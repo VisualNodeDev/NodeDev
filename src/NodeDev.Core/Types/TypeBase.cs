@@ -12,6 +12,10 @@ namespace NodeDev.Core.Types
 
 		public abstract string FullName { get; }
 
-		public abstract bool IsClass { get; }
+		public virtual bool IsClass => true;
+
+		public virtual bool IsGeneric => false;
+
+		public bool IsExec => this == TypeFactory.ExecType;
 	}
 }
