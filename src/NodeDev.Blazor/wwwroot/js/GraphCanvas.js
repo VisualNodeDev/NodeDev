@@ -87,6 +87,7 @@ class GraphCanvas {
         throw "unable to find node id:" + id;
     }
 
+    // ------------------------------------- events
     OnNodeSelected(emitter, event) {
         if (!(event.figure instanceof draw2d.Connection))
             this.Dotnet.invokeMethodAsync('OnNodeSelectedInClient', event.figure.id);
@@ -104,11 +105,13 @@ class GraphCanvas {
         if (event.figure instanceof draw2d.Connection)
             this.Dotnet.invokeMethodAsync('OnConnectionRemoved', event.figure.sourcePort.nodeId, event.figure.sourcePort.id, event.figure.targetPort.nodeId, event.figure.targetPort.id);
     }
-
     onNodeMove(emitter, event) {
         this.nodeMoveTimeoutId = this.limitFunctionCall(this.nodeMoveTimeoutId, () => {
             this.Dotnet.invokeMethodAsync('OnNodeMoved', emitter.id, event.x, event.y);
         }, 250);
+    }
+    OnPortDroppedOnCanvas(port, x, y) {
+        this.Dotnet.invokeMethodAsync('OnPortDroppedOnCanvas', port.nodeId, port.id, x, y);
     }
 
     limitFunctionCall(timeoutId, fn, limit) {

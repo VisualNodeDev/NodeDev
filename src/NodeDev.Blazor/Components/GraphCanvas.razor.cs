@@ -121,6 +121,22 @@ namespace NodeDev.Blazor.Components
 
 		#endregion
 
+		#region OnPortDroppedOnCanvas
+
+		[JSInvokable]
+		public void OnPortDroppedOnCanvas(string nodeId, string connectionId, int x, int y)
+		{
+			if (!Graph.Nodes.TryGetValue(nodeId, out var node))
+				return;
+			
+			var connection = node.Inputs.Concat(node.Outputs).FirstOrDefault( x=> x.Id == connectionId);
+			if (connection == null)
+				return;
+
+		}
+
+		#endregion
+
 		#endregion
 
 		#region Initialize

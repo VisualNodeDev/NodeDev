@@ -56,13 +56,15 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
 
         port.id = info.id;
         port.nodeId = this.id;
-
-
         port.setName(portType + '_' + info.name);
+
+        port.on('dragend', (emitter, event) => {
+            if (!event.target)
+                emitter.canvas.Graph.OnPortDroppedOnCanvas(port, event.x, event.y);
+        });
 
         this.add(label);
     },
-
     /**
      * @method
      * Remove the entity with the given index from the DB table shape.<br>
