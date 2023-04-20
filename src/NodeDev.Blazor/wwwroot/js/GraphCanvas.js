@@ -19,6 +19,20 @@ class GraphCanvas {
         this.Canvas.installEditPolicy(new draw2d.policy.connection.DragConnectionCreatePolicy({
             createConnection: this.createConnection.bind(this)
         }));
+        draw2d.Configuration.factory.createInputPort = function () {
+            let port = new draw2d.InputPort();
+            port.uninstallEditPolicy("draw2d.policy.port.IntrusivePortsFeedbackPolicy")
+            port.installEditPolicy(new draw2d.policy.port.ExclusiveIntrusivePortsFeedbackPolicy())
+            port.installEditPolicy(new draw2d.policy.port.IntrusivePortsFeedbackPolicy())
+            return port
+        }
+        draw2d.Configuration.factory.createOutputPort = function () {
+            let port = new draw2d.OutputPort();
+            port.uninstallEditPolicy("draw2d.policy.port.IntrusivePortsFeedbackPolicy")
+            port.installEditPolicy(new draw2d.policy.port.ExclusiveIntrusivePortsFeedbackPolicy())
+            port.installEditPolicy(new draw2d.policy.port.IntrusivePortsFeedbackPolicy())
+            return port
+        }
 
         // bind events :
         this.Canvas.on("select", this.OnNodeSelected.bind(this));

@@ -3,6 +3,7 @@ using Microsoft.JSInterop;
 using NodeDev.Blazor.NodeAttributes;
 using NodeDev.Core;
 using NodeDev.Core.Nodes;
+using NodeDev.Core.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,7 +45,6 @@ namespace NodeDev.Blazor.Components
 				await Graph.Invoke(InitializeCanvasWithGraphNodes);
 			}
 		}
-
 
 		#region Events from client
 
@@ -149,7 +149,20 @@ namespace NodeDev.Blazor.Components
 		}
 
 		private record class NodeCreationInfo(string Id, string Name, float X, float Y, List<NodeCreationInfo_Connection> Inputs, List<NodeCreationInfo_Connection> Outputs);
-		private record class NodeCreationInfo_Connection(string Id, string Name, List<string>? Connections);
+		private record class NodeCreationInfo_Connection(string Id, string Name, List<string>? Connections, string Color, string Type);
+
+		private string GetTypeShapeColor(TypeBase type)
+		{
+			if (type.IsClass)
+				return "green";
+			else if (type.IsGeneric)
+				return "orange";
+			else if (type.IsExec)
+				return "gray";
+			else
+				return "blue";
+		}
+
 		private NodeCreationInfo GetNodeCreationInfo(Node node)
 		{
 			var positionAttribute = node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero));
@@ -158,8 +171,8 @@ namespace NodeDev.Blazor.Components
 				node.Name,
 				positionAttribute.X,
 				positionAttribute.Y,
-				node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList())).ToList(),
-				node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, null)).ToList()); // no need to specify connections on outputs, they're all gonna be defined anyway from the inputs
+				node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name)).ToList(),
+				node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, null, GetTypeShapeColor(x.Type), x.Type.Name)).ToList()); // no need to specify connections on outputs, they're all gonna be defined anyway from the inputs
 		}
 
 		#endregion
