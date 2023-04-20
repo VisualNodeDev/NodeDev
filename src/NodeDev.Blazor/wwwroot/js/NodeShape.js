@@ -6,6 +6,8 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
     init: function (attr) {
         this._super($.extend({ bgColor: "#dbddde", color: "#d7d7d7", stroke: 1, radius: 3 }, attr));
 
+        this.on('added', this.onAdded.bind(this));
+
         this.classLabel = new draw2d.shape.basic.Label({
             text: attr.LabelText,
             stroke: 1,
@@ -20,14 +22,15 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
         this.add(this.classLabel);
 
         for (let i = 0; i < attr.inputs.length; ++i)
-            this.addEntity(attr.inputs[i].name, true);
+            this.addInputOrOutput(attr.inputs[i], true);
 
         for (let i = 0; i < attr.outputs.length; ++i)
-            this.addEntity(attr.outputs[i].name, false);
+            this.addInputOrOutput(attr.outputs[i], false);
 
     },
-
-
+    onAdded: function (emitter, event) {
+        this.on('move', this.canvas.Graph.onNodeMove.bind(this.canvas.Graph));
+    },
     /**
      * @method
      * Add an entity to the db shape
@@ -35,9 +38,9 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
      * @param {String} txt the label to show
      * @param {Number} [optionalIndex] index where to insert the entity
      */
-    addEntity: function (txt, isInput) {
+    addInputOrOutput: function (info, isInput) {
         var label = new draw2d.shape.basic.Label({
-            text: txt,
+            text: info.name,
             stroke: 0,
             radius: 0,
             bgColor: null,
@@ -51,7 +54,11 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
         var portType = isInput ? "input" : "output";
         var port = label.createPort(portType);
 
-        port.setName(portType + '_' + txt);
+        port.id = info.id;
+        port.nodeId = this.id;
+
+
+        port.setName(portType + '_' + info.name);
 
         this.add(label);
     },

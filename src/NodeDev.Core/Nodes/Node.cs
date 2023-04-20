@@ -13,10 +13,10 @@ namespace NodeDev.Core.Nodes
 		public Node(Graph graph, Guid? id = null)
 		{
 			Graph = graph;
-			Id = id ?? Guid.NewGuid();
+			Id = (id ?? Guid.NewGuid()).ToString();
 		}
 
-		public Guid Id { get; }
+		public string Id { get; }
 
 		public string Name { get; set; } = "";
 
@@ -32,7 +32,7 @@ namespace NodeDev.Core.Nodes
 
 		public void AddDecoration<T>(NodeDecoration attribute) where T : NodeDecoration => Decorations[typeof(T)] = attribute;
 
-		public T GetOrAddAttribute<T>(Func<T> creator) where T: NodeDecoration
+		public T GetOrAddDecoration<T>(Func<T> creator) where T: NodeDecoration
 		{
 			if (Decorations.TryGetValue(typeof(T), out var decoration))
 				return (T)decoration;

@@ -6,19 +6,30 @@ let Canvas = {};
 
 class GraphCanvas {
 
-    dotnet;
+    Dotnet;
     Canvas;
 
     constructor(dotnet, id) {
-        this.dotnet = dotnet;
+        this.Dotnet = dotnet;
 
         this.Canvas = new draw2d.Canvas(id);
+        this.Canvas.Graph = this;
 
         this.Canvas.installEditPolicy(new draw2d.policy.canvas.SnapToGridEditPolicy())
+        this.Canvas.installEditPolicy(new draw2d.policy.connection.DragConnectionCreatePolicy({
+            createConnection: this.createConnection.bind(this)
+        }));
+
+        // bind events :
+        this.Canvas.on("select", this.OnNodeSelected.bind(this));
+        this.Canvas.on("unselect", this.OnNodeUnselected.bind(this));
+        this.Canvas.on("figure:add", this.OnFigureAdded.bind(this));
+        this.Canvas.on("figure:remove", this.OnFigureRemoved.bind(this));
     }
 
     AddNodes(infos) {
 
+        // create nodes without the links
         for (let i = 0; i < infos.length; ++i) {
             this.Canvas.add(new NodeShape({
                 id: infos[i].id,
@@ -29,15 +40,88 @@ class GraphCanvas {
                 outputs: infos[i].outputs
             }));
         }
+
+        // links them all together
+        for (let i = 0; i < infos.length; ++i) {
+            for (let j = 0; j < infos[i].inputs.length; ++j) {
+                let inputInfo = infos[i].inputs[j];
+                for (let k = 0; k < inputInfo.connections.length; ++k) {
+
+                    let input = this.getPort(inputInfo.id);
+                    let output = this.getPort(inputInfo.connections[k]);
+
+                    let connection = this.createConnection(input, output);
+                    this.Canvas.add(connection);
+                }
+            }
+        }
     }
 
+    createConnection(sourcePort, targetPort) {
+
+        var conn = new draw2d.Connection({
+            router: new draw2d.layout.connection.ManhattanConnectionRouter(),
+            stroke: 2,
+            color: "#00a8f0",
+            radius: 20,
+            outlineColor: "#30ff30",
+            source: sourcePort,
+            target: targetPort
+        });
+
+        return conn;
+    }
+
+    getPort(id) {
+        for (let i = 0; i < this.Canvas.figures.data.length; ++i) {
+            let port = this.Canvas.figures.data[i].getPorts().data.find(x => x.id == id);
+            if (port)
+                return port;
+        }
+    }
+    getNode(id) {
+        for (let i = 0; i < this.Canvas.figures.data.length; ++i) {
+            if (this.Canvas.figures.data[i].id == id)
+                return this.Canvas.figures.data[i];
+        }
+        throw "unable to find node id:" + id;
+    }
+
+    OnNodeSelected(emitter, event) {
+        if (!(event.figure instanceof draw2d.Connection))
+            this.Dotnet.invokeMethodAsync('OnNodeSelectedInClient', event.figure.id);
+    }
+    OnNodeUnselected(emitter, event) {
+        if (!(event.figure instanceof draw2d.Connection))
+            this.Dotnet.invokeMethodAsync('OnNodeUnselectedInClient', event.figure.id);
+    }
+    OnFigureAdded(emitter, event) {
+        if (event.figure instanceof draw2d.Connection) {
+            this.Dotnet.invokeMethodAsync('OnConnectionAdded', event.figure.sourcePort.nodeId, event.figure.sourcePort.id, event.figure.targetPort.nodeId, event.figure.targetPort.id);
+        }
+    }
+    OnFigureRemoved(emitter, event) {
+        if (event.figure instanceof draw2d.Connection)
+            this.Dotnet.invokeMethodAsync('OnConnectionRemoved', event.figure.sourcePort.nodeId, event.figure.sourcePort.id, event.figure.targetPort.nodeId, event.figure.targetPort.id);
+    }
+
+    onNodeMove(emitter, event) {
+        this.nodeMoveTimeoutId = this.limitFunctionCall(this.nodeMoveTimeoutId, () => {
+            this.Dotnet.invokeMethodAsync('OnNodeMoved', emitter.id, event.x, event.y);
+        }, 250);
+    }
+
+    limitFunctionCall(timeoutId, fn, limit) {
+        clearTimeout(timeoutId);
+        return setTimeout(fn, limit);
+    }
     Destroy() {
         delete window['Canvas_' + this.id];
     }
 }
 
 
-window.InitializeCanvas = function(dotnet, id) {
+window.InitializeCanvas = function (dotnet, id) {
     Canvas[id] = new GraphCanvas(dotnet, id);
     window['Canvas_' + id] = Canvas[id];
 }

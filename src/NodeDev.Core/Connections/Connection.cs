@@ -10,6 +10,8 @@ namespace NodeDev.Core.Connections
 {
 	public class Connection
 	{
+		public string Id { get; }
+
 		public string Name { get; set; }
 
 		public Node Parent { get; }
@@ -18,8 +20,9 @@ namespace NodeDev.Core.Connections
 
 		public ICollection<Connection> Connections { get; } = new List<Connection>();
 
-		public Connection(string name, Node parent, TypeBase type)
+		public Connection(string name, Node parent, TypeBase type, string? id = null)
 		{
+			Id = id ?? Guid.NewGuid().ToString();
 			Name = name;
 			Parent = parent;
 			Type = type;
