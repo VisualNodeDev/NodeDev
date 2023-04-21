@@ -96,7 +96,8 @@ class GraphCanvas {
         var conn = new draw2d.Connection({
             router: new draw2d.layout.connection.ManhattanConnectionRouter(),
             stroke: 2,
-            color: "#00a8f0",
+            color: sourcePort ? sourcePort.bgColor : "#00a8f0",
+            lineColor: sourcePort ? sourcePort.bgColor : "#00a8f0",
             radius: 20,
             outlineColor: "#30ff30",
             source: sourcePort,
@@ -133,6 +134,8 @@ class GraphCanvas {
     OnFigureAdded(emitter, event) {
         if (event.figure instanceof draw2d.Connection && !event.figure.fromNet) {
             this.Dotnet.invokeMethodAsync('OnConnectionAdded', event.figure.sourcePort.nodeId, event.figure.sourcePort.id, event.figure.targetPort.nodeId, event.figure.targetPort.id);
+            event.figure.lineColor = event.figure.sourcePort.bgColor;
+            event.figure.repaint();
         }
     }
     OnFigureRemoved(emitter, event) {
