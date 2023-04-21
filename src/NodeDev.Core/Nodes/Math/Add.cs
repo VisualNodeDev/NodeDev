@@ -11,6 +11,7 @@ namespace NodeDev.Core.Nodes.Math
 	{
 		public Add(Graph graph, Guid? id = null) : base(graph, id)
 		{
+			Name = "Add";
 		}
 	}
 }
