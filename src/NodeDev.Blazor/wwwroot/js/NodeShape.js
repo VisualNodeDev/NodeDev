@@ -68,6 +68,41 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
         });
 
         this.add(label);
+
+        // if the port is generic, add a decoration to choose the type
+        if (info.isGeneric) {
+            var decoration = new draw2d.shape.icon.Link({ width: 10, height: 10 });
+            port.add(decoration, isInput ? new draw2d.layout.locator.LeftLocator({ margin: 10 }) : new draw2d.layout.locator.RightLocator({ margin: 2 }));
+
+            let that = this;
+            decoration.on('click', (emitter, event) => emitter.canvas.Graph.OnGenericTypeSelectionMenuAsked(that.id, port.id, event.x, event.y));
+        }
+    },
+    UpdateConnectionType: function (info, port) {
+
+        if (port.isGeneric && !info.isGeneric) {
+            for (let i = 0; i < port.children.data.length; ++i) {
+                let child = port.children.data[i];
+                if (child.figure instanceof draw2d.shape.icon.Link) {
+                    port.remove(child);
+                    port.canvas.remove(child.figure);
+                    break;
+                }
+            }
+        }
+
+        port.bgColor = new draw2d.util.Color(info.color);
+        port.isGeneric = info.isGeneric;
+        port.type = info.type;
+        for (let i = 0; i < port.connections.data.length; ++i) {
+            let connection = port.connections.data[i];
+            connection.lineColor = port.bgColor;
+
+            connection.repaint();
+        }
+
+
+        port.repaint();
     },
     /**
      * @method

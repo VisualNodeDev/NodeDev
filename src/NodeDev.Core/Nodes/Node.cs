@@ -26,6 +26,8 @@ namespace NodeDev.Core.Nodes
 
 		public List<Connection> Outputs { get; } = new();
 
+		public IEnumerable<Connection> InputsAndOutputs => Inputs.Concat(Outputs);
+
 		#region Decorations
 
 		public Dictionary<Type, NodeDecoration> Decorations { get; init; } = new();

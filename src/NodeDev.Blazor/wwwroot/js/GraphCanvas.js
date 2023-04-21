@@ -53,7 +53,8 @@ class GraphCanvas {
                 x: infos[i].x,
                 y: infos[i].y,
                 inputs: infos[i].inputs,
-                outputs: infos[i].outputs
+                outputs: infos[i].outputs,
+                canvas: this.Canvas
             }));
         }
 
@@ -122,6 +123,15 @@ class GraphCanvas {
         throw "unable to find node id:" + id;
     }
 
+    // --------------------------------------------- events from server
+    UpdateConnectionType(info) {
+        let port = this.getPort(info.id);
+
+        let node = this.getNode(port.nodeId);
+
+        node.UpdateConnectionType(info, port);
+    }
+
     // ------------------------------------- events
     OnNodeSelected(emitter, event) {
         if (!(event.figure instanceof draw2d.Connection))
@@ -151,6 +161,9 @@ class GraphCanvas {
     }
     OnPortDroppedOnCanvas(port, x, y) {
         this.Dotnet.invokeMethodAsync('OnPortDroppedOnCanvas', port.nodeId, port.id, x, y);
+    }
+    OnGenericTypeSelectionMenuAsked(nodeId, portId, x, y) {
+        this.Dotnet.invokeMethodAsync('OnGenericTypeSelectionMenuAsked', nodeId, portId, x, y);
     }
 
     limitFunctionCall(timeoutId, fn, limit) {

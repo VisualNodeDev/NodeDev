@@ -32,6 +32,11 @@ namespace NodeDev.Blazor.Components
 
 		private List<Node> SelectedNodes { get; } = new();
 
+		private int PopupX = 0;
+		private int PopupY = 0;
+		private Connection? PopupNodeConnection;
+		private Node? PopupNode;
+
 		private ValueTask InvokeJSVoid(string name, params object?[]? parameters) => JS.InvokeVoidAsync($"{CanvasJS}.{name}", parameters);
 		private ValueTask<T> InvokeJS<T>(string name, params object?[]? parameters) => JS.InvokeAsync<T>($"{CanvasJS}.{name}", parameters);
 
@@ -155,71 +160,60 @@ namespace NodeDev.Blazor.Components
 
 		#region OnPortDroppedOnCanvas
 
+		private bool IsShowingNodeSelection = false;
+
 		[JSInvokable]
 		public void OnPortDroppedOnCanvas(string nodeId, string connectionId, int x, int y)
 		{
 			if (!Graph.Nodes.TryGetValue(nodeId, out var node))
 				return;
 
-			var connection = node.Inputs.Concat(node.Outputs).FirstOrDefault(x => x.Id == connectionId);
+			var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
 			if (connection == null)
 				return;
 
-			NodeSelectionSource = node;
-			NodeSelectionSourceConnection = connection;
-			NodeSelectionX = x;
-			NodeSelectionY = y;
+			PopupNode = node;
+			PopupNodeConnection = connection;
+			PopupX = x;
+			PopupY = y;
 			IsShowingNodeSelection = true;
 
 			StateHasChanged();
 		}
-
-		#endregion
-
-		#endregion
-
-		#region Node Selection popup 
-
-
-		private bool IsShowingNodeSelection = false;
-		private int NodeSelectionX = 0;
-		private int NodeSelectionY = 0;
-		private Connection? NodeSelectionSourceConnection;
-		private Node? NodeSelectionSource;
 
 		private void OnNewNodeTypeSelected(Type typeSelected)
 		{
 			IsShowingNodeSelection = false; // remove the node type selection popup
 
 			var node = Graph.AddNode(typeSelected);
-			node.AddDecoration(new NodeDecorationPosition(new(NodeSelectionX, NodeSelectionY)));
+			node.AddDecoration(new NodeDecorationPosition(new(PopupX, PopupY)));
 
-			if (NodeSelectionSourceConnection != null && NodeSelectionSource != null)
+			if (PopupNodeConnection != null && PopupNode != null)
 			{
 				// check if the source was an input or output and choose the proper destination based on that
 				List<Connection> sources, destinations;
-				if (NodeSelectionSource.Inputs.Contains(NodeSelectionSourceConnection))
+				if (PopupNode.Inputs.Contains(PopupNodeConnection))
 				{
-					sources = NodeSelectionSource.Inputs;
+					sources = PopupNode.Inputs;
 					destinations = node.Outputs;
 				}
 				else
 				{
-					sources = NodeSelectionSource.Outputs;
+					sources = PopupNode.Outputs;
 					destinations = node.Inputs;
 				}
 
 				Connection? destination = null;
-				if (NodeSelectionSourceConnection.Type.IsGeneric) // can connect to anything except exec
+				if (PopupNodeConnection.Type.IsGeneric) // can connect to anything except exec
 					destination = destinations.FirstOrDefault(x => !x.Type.IsExec);
 				else // can connect to anything that is the same type or generic (except exec)
-					destination = destinations.FirstOrDefault(x => x.Type == NodeSelectionSourceConnection.Type || (x.Type.IsGeneric && !NodeSelectionSourceConnection.Type.IsExec));
+					destination = destinations.FirstOrDefault(x => x.Type == PopupNodeConnection.Type || (x.Type.IsGeneric && !PopupNodeConnection.Type.IsExec));
 
 				// if we found a connection, connect them together
 				if (destination != null)
 				{
-					NodeSelectionSourceConnection.Connections.Add(destination);
-					destination.Connections.Add(NodeSelectionSourceConnection);
+					PopupNodeConnection.Connections.Add(destination);
+					destination.Connections.Add(PopupNodeConnection);
 				}
 			}
 
@@ -227,6 +221,61 @@ namespace NodeDev.Blazor.Components
 		}
 
 		#endregion
+
+		#region OnGenericTypeSelectionMenuAsked
+
+		private bool IsShowingGenericTypeSelection = false;
+
+		[JSInvokable]
+		public void OnGenericTypeSelectionMenuAsked(string nodeId, string connectionId, int x, int y)
+		{
+			if (!Graph.Nodes.TryGetValue(nodeId, out var node))
+				return;
+			var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
+			if (connection == null)
+				return;
+
+			PopupNode = node;
+			PopupNodeConnection = connection;
+			PopupX = x;
+			PopupY = y;
+			IsShowingGenericTypeSelection = true;
+
+			StateHasChanged();
+		}
+
+		private void OnGenericTypeSelected(Type type)
+		{
+			IsShowingGenericTypeSelection = false;
+
+			if(PopupNode == null || PopupNodeConnection?.Type is not UndefinedGenericType generic)
+				return;
+
+			PropagateNewGeneric(PopupNode, generic, TypeFactory.Get(type));
+		}
+
+		private record class UpdateConnectionTypeParameters(string Id, string Type, bool IsGeneric, string Color);
+		private void PropagateNewGeneric(Node node, UndefinedGenericType generic, TypeBase newType)
+		{
+			foreach (var connection in node.InputsAndOutputs)
+			{
+				if (connection.Type == generic)
+				{
+					connection.Type = newType;
+					InvokeJSVoid("UpdateConnectionType", new UpdateConnectionTypeParameters(connection.Id, newType.Name, false, GetTypeShapeColor(newType))).AndForget();
+				}
+				foreach (var other in connection.Connections)
+				{
+					if(other.Type is UndefinedGenericType generic2)
+						PropagateNewGeneric(other.Parent, generic2, newType);
+				}
+			}
+		}
+
+		#endregion
+
+		#endregion
+
 
 		#region Initialize
 

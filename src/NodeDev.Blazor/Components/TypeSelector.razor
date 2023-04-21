@@ -1,0 +1,47 @@
+﻿@using NodeDev.Core.Types;
+
+<div style="@($"position: absolute; left: calc(50vw - 300px); top: calc(50vh - 200px); width: 600px; height: 400px")" @onclick:stopPropagation="true">
+
+	<MudPaper Style="height: 100%; width: 100%">
+
+		<MudStack Style="height: 100%; width: 100%" Class="pa-3">
+
+			<MudTextField T="string" AutoFocus="true" @bind-Value="TypeText" @bind-Value:after="TypeToCreateChanged" Immediate="true" DebounceInterval="100" Label="Type" Class="flex-none"></MudTextField>
+
+			@if (Error != null)
+			{
+				<MudText Color="Color.Error">@Error</MudText>
+			}
+
+			<MudButton Disabled="Type == null" OnClick="@(() => OnTypeSelected.InvokeAsync(Type))" Color="Color.Success">Accept</MudButton>
+
+		</MudStack>
+
+
+	</MudPaper>
+</div>
+
+@code {
+
+	[Parameter]
+	public int PositionX { get; set; }
+
+	[Parameter]
+	public int PositionY { get; set; }
+
+	[Parameter]
+	public GraphCanvas GraphCanvas { get; set; } = null!;
+
+	[Parameter]
+	public EventCallback<Type> OnTypeSelected { get; set; }
+
+	private string? Error;
+	private Type? Type;
+
+	private string TypeText { get; set; } = "";
+
+	private void TypeToCreateChanged()
+	{
+		Error = NodeDev.Core.Types.TypeFactory.CreateBaseFromUserInput(TypeText, out Type);
+	}
+}
