@@ -238,7 +238,7 @@ namespace NodeDev.Blazor.Components
 		}
 
 		private record class NodeCreationInfo(string Id, string Name, float X, float Y, List<NodeCreationInfo_Connection> Inputs, List<NodeCreationInfo_Connection> Outputs);
-		private record class NodeCreationInfo_Connection(string Id, string Name, List<string>? Connections, string Color, string Type);
+		private record class NodeCreationInfo_Connection(string Id, string Name, List<string>? Connections, string Color, string Type, bool IsGeneric);
 
 		private string GetTypeShapeColor(TypeBase type)
 		{
@@ -260,8 +260,8 @@ namespace NodeDev.Blazor.Components
 				node.Name,
 				positionAttribute.X,
 				positionAttribute.Y,
-				node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name)).ToList(),
-				node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name)).ToList());
+				node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric)).ToList(),
+				node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric)).ToList());
 		}
 
 		#endregion

@@ -59,6 +59,7 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
         port.bgColor = new draw2d.util.Color(info.color);
         port.setName(portType + '_' + info.name);
         port.portType = portType;
+        port.isGeneric = info.isGeneric;
         port.type = info.type;
 
         port.on('dragend', (emitter, event) => {
