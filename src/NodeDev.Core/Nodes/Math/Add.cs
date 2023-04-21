@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Nodes.Math
 {
-	public class Add<T1, T2, T3> : TwoOperationMath<T1, T2, T3>
+	public class Add: TwoOperationMath
 	{
 		public Add(Graph graph, Guid? id = null) : base(graph, id)
 		{

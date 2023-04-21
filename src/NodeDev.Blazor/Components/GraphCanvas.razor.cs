@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using MudBlazor;
 using NodeDev.Blazor.NodeAttributes;
 using NodeDev.Core;
+using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
 using System;
@@ -62,6 +64,36 @@ namespace NodeDev.Blazor.Components
 		{
 			if (Graph.Nodes.TryGetValue(nodeId, out var node))
 				SelectedNodes.Remove(node);
+		}
+
+		#endregion
+
+		#region Node Removed
+
+		[JSInvokable]
+		public void OnNodeRemoved(string nodeId)
+		{
+			Graph.Invoke(() =>
+			{
+				if (!Graph.Nodes.TryGetValue(nodeId, out var node))
+					return;
+				foreach (var input in node.Inputs)
+				{
+					foreach (var connection in input.Connections)
+					{
+						connection.Connections.Remove(input);
+					}
+				}
+				foreach (var output in node.Outputs)
+				{
+					foreach (var connection in output.Connections)
+					{
+						connection.Connections.Remove(output);
+					}
+				}
+
+				Graph.RemoveNode(node);
+			});
 		}
 
 		#endregion
@@ -128,14 +160,71 @@ namespace NodeDev.Blazor.Components
 		{
 			if (!Graph.Nodes.TryGetValue(nodeId, out var node))
 				return;
-			
-			var connection = node.Inputs.Concat(node.Outputs).FirstOrDefault( x=> x.Id == connectionId);
+
+			var connection = node.Inputs.Concat(node.Outputs).FirstOrDefault(x => x.Id == connectionId);
 			if (connection == null)
 				return;
 
+			NodeSelectionSource = node;
+			NodeSelectionSourceConnection = connection;
+			NodeSelectionX = x;
+			NodeSelectionY = y;
+			IsShowingNodeSelection = true;
+
+			StateHasChanged();
 		}
 
 		#endregion
+
+		#endregion
+
+		#region Node Selection popup 
+
+
+		private bool IsShowingNodeSelection = false;
+		private int NodeSelectionX = 0;
+		private int NodeSelectionY = 0;
+		private Connection? NodeSelectionSourceConnection;
+		private Node? NodeSelectionSource;
+
+		private void OnNewNodeTypeSelected(Type typeSelected)
+		{
+			IsShowingNodeSelection = false; // remove the node type selection popup
+
+			var node = Graph.AddNode(typeSelected);
+			node.AddDecoration(new NodeDecorationPosition(new(NodeSelectionX, NodeSelectionY)));
+
+			if (NodeSelectionSourceConnection != null && NodeSelectionSource != null)
+			{
+				// check if the source was an input or output and choose the proper destination based on that
+				List<Connection> sources, destinations;
+				if (NodeSelectionSource.Inputs.Contains(NodeSelectionSourceConnection))
+				{
+					sources = NodeSelectionSource.Inputs;
+					destinations = node.Outputs;
+				}
+				else
+				{
+					sources = NodeSelectionSource.Outputs;
+					destinations = node.Inputs;
+				}
+
+				Connection? destination = null;
+				if (NodeSelectionSourceConnection.Type.IsGeneric) // can connect to anything except exec
+					destination = destinations.FirstOrDefault(x => !x.Type.IsExec);
+				else // can connect to anything that is the same type or generic (except exec)
+					destination = destinations.FirstOrDefault(x => x.Type == NodeSelectionSourceConnection.Type || (x.Type.IsGeneric && !NodeSelectionSourceConnection.Type.IsExec));
+
+				// if we found a connection, connect them together
+				if (destination != null)
+				{
+					NodeSelectionSourceConnection.Connections.Add(destination);
+					destination.Connections.Add(NodeSelectionSourceConnection);
+				}
+			}
+
+			InvokeJSVoid("AddNodes", GetNodeCreationInfo(node)).AndForget();
+		}
 
 		#endregion
 
@@ -172,7 +261,7 @@ namespace NodeDev.Blazor.Components
 				positionAttribute.X,
 				positionAttribute.Y,
 				node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name)).ToList(),
-				node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, null, GetTypeShapeColor(x.Type), x.Type.Name)).ToList()); // no need to specify connections on outputs, they're all gonna be defined anyway from the inputs
+				node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name)).ToList());
 		}
 
 		#endregion

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Nodes
 {
-	public class Node
+	public abstract class Node
 	{
 		public Node(Graph graph, Guid? id = null)
 		{
@@ -30,7 +30,7 @@ namespace NodeDev.Core.Nodes
 
 		public Dictionary<Type, NodeDecoration> Decorations { get; init; } = new();
 
-		public void AddDecoration<T>(NodeDecoration attribute) where T : NodeDecoration => Decorations[typeof(T)] = attribute;
+		public void AddDecoration<T>(T attribute) where T : NodeDecoration => Decorations[typeof(T)] = attribute;
 
 		public T GetOrAddDecoration<T>(Func<T> creator) where T: NodeDecoration
 		{

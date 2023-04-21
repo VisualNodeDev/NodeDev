@@ -20,11 +20,14 @@ namespace NodeDev.Core
 		// function load a list of all class that inherit from Node
 		public static void AddNodesFromAssembly(Assembly assembly)
 		{
-			var types = AppDomain.CurrentDomain.GetAssemblies()
-				.SelectMany(s => s.GetTypes())
-				.Where(p => typeof(Node).IsAssignableFrom(p) && !p.IsAbstract);
+			var types = assembly.GetTypes().Where(p => typeof(Node).IsAssignableFrom(p) && !p.IsAbstract);
 
 			NodeTypes.AddRange(types);
+		}
+
+		public static IEnumerable<Type> Search(string text)
+		{
+			return NodeTypes.Where(p => p.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 		}
 	}
 }

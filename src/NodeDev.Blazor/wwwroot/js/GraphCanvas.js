@@ -13,6 +13,7 @@ class GraphCanvas {
         this.Dotnet = dotnet;
 
         this.Canvas = new draw2d.Canvas(id);
+        this.Canvas.setScrollArea("html")
         this.Canvas.Graph = this;
 
         this.Canvas.installEditPolicy(new draw2d.policy.canvas.SnapToGridEditPolicy())
@@ -42,7 +43,8 @@ class GraphCanvas {
     }
 
     AddNodes(infos) {
-
+        if (infos.length === undefined)
+            infos = [infos];
         // create nodes without the links
         for (let i = 0; i < infos.length; ++i) {
             this.Canvas.add(new NodeShape({
@@ -65,7 +67,25 @@ class GraphCanvas {
                     let output = this.getPort(inputInfo.connections[k]);
 
                     let connection = this.createConnection(input, output);
+                    connection.fromNet = true; // prevent the event to be fired
                     this.Canvas.add(connection);
+                }
+            }
+        }
+        for (let i = 0; i < infos.length; ++i) {
+            for (let j = 0; j < infos[i].outputs.length; ++j) {
+                let outputInfo = infos[i].outputs[j];
+                for (let k = 0; k < outputInfo.connections.length; ++k) {
+
+                    let output = this.getPort(outputInfo.id);
+                    let input = this.getPort(outputInfo.connections[k]);
+
+                    let found = input.connections.data.find(x => x.targetPort.id == outputInfo.id);
+                    if (!found) {
+                        let connection = this.createConnection(input, output);
+                        connection.fromNet = true; // prevent the event to be fired
+                        this.Canvas.add(connection);
+                    }
                 }
             }
         }
@@ -111,13 +131,15 @@ class GraphCanvas {
             this.Dotnet.invokeMethodAsync('OnNodeUnselectedInClient', event.figure.id);
     }
     OnFigureAdded(emitter, event) {
-        if (event.figure instanceof draw2d.Connection) {
+        if (event.figure instanceof draw2d.Connection && !event.figure.fromNet) {
             this.Dotnet.invokeMethodAsync('OnConnectionAdded', event.figure.sourcePort.nodeId, event.figure.sourcePort.id, event.figure.targetPort.nodeId, event.figure.targetPort.id);
         }
     }
     OnFigureRemoved(emitter, event) {
         if (event.figure instanceof draw2d.Connection)
             this.Dotnet.invokeMethodAsync('OnConnectionRemoved', event.figure.sourcePort.nodeId, event.figure.sourcePort.id, event.figure.targetPort.nodeId, event.figure.targetPort.id);
+        else
+            this.Dotnet.invokeMethodAsync('OnNodeRemoved', event.figure.id);
     }
     onNodeMove(emitter, event) {
         this.nodeMoveTimeoutId = this.limitFunctionCall(this.nodeMoveTimeoutId, () => {

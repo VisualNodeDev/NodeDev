@@ -1,8 +1,38 @@
 ﻿
+<div style="@($"position: absolute; left: {PositionX - 100}px; top: {PositionY - 30}px; width: 200px; height: 400px")" @onclick:stopPropagation="true">
 
+	<MudPaper Style="height: 100%; width: 100%">
+
+		<MudStack Style="height: 100%; width: 100%" Class="pa-3">
+
+			<MudTextField T="string" AutoFocus="true" @bind-Value="SearchText" Immediate="true" DebounceInterval="100" Label="Search" Class="flex-none"></MudTextField>
+
+			<MudList Clickable="true" SelectedItemChanged="@( x=> OnNodeTypeSelected.InvokeAsync((Type)x.Value))" Class="flex-1 overflow-y-hidden">
+				@foreach (var type in NodeDev.Core.NodeProvider.Search(SearchText).Take(1000))
+				{
+					<MudListItem Text="@type.Name" Value="type" />
+				}
+			</MudList>
+
+		</MudStack>
+
+
+	</MudPaper>
+</div>
 
 @code {
 
+	[Parameter]
+	public int PositionX { get; set; }
 
+	[Parameter]
+	public int PositionY { get; set; }
 
+	[Parameter]
+	public GraphCanvas GraphCanvas { get; set; } = null!;
+
+	[Parameter]
+	public EventCallback<Type> OnNodeTypeSelected { get; set; }
+
+	private string SearchText { get; set; } = "";
 }
