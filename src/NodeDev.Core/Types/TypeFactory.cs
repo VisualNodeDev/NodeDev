@@ -10,7 +10,7 @@ namespace NodeDev.Core.Types
 	{
 		private static readonly Dictionary<Type, RealType> RealTypes = new();
 
-		public static RealType Get(Type type) => RealTypes.TryGetValue(type, out var realType) ? realType : new(type);
+		public static RealType Get(Type type) => RealTypes.TryGetValue(type, out var realType) ? realType : RealTypes[type] = new(type);
 
 		public static readonly ExecType ExecType = new();
 
