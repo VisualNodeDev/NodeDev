@@ -69,7 +69,8 @@ namespace NodeDev.Core.Types
 			var correspondance2 = TypeCorrespondances.FirstOrDefault(x => x.Value.Contains(name));
 			if (correspondance2.Key != null)
 				name = correspondance2.Key;
-			var baseType = Type.GetType(name) ?? IncludedNamespaces.Select(ns => Type.GetType($"{ns}.{name}")).FirstOrDefault(t => t != null);
+
+			var baseType = Type.GetType(name + "`" + genericArgs.Length) ?? IncludedNamespaces.Select(ns => Type.GetType($"{ns}.{name}`{genericArgs.Length}")).FirstOrDefault(t => t != null);
 			if(baseType == null)
 			{
 				type = null;
@@ -92,7 +93,7 @@ namespace NodeDev.Core.Types
 			// create the generic type
 			type = baseType.MakeGenericType(genericArgsTypes);
 
-			if(type.IsGenericType)
+			if(type.ContainsGenericParameters)
 			{
 				type = null;
 				return "Not all generics are provided for type:" + name;
