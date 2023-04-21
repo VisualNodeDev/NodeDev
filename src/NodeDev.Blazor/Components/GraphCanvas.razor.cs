@@ -291,10 +291,10 @@ namespace NodeDev.Blazor.Components
 
 		private string GetTypeShapeColor(TypeBase type)
 		{
+			if (type.IsGeneric)
+				return "yellow";
 			if (type.IsClass)
 				return "green";
-			else if (type.IsGeneric)
-				return "orange";
 			else if (type.IsExec)
 				return "gray";
 			else
