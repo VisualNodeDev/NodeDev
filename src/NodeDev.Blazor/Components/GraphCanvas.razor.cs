@@ -214,6 +214,13 @@ namespace NodeDev.Blazor.Components
 				{
 					PopupNodeConnection.Connections.Add(destination);
 					destination.Connections.Add(PopupNodeConnection);
+
+					// if one of the connection ( destination or PopupNodeConnection ) is generic and the other isn't
+					// We have to propagate the non-generic type to the generic one
+					if (destination.Type.IsGeneric && !PopupNodeConnection.Type.IsGeneric)
+						PropagateNewGeneric(destination.Parent, (UndefinedGenericType)destination.Type, PopupNodeConnection.Type);
+					else if (!destination.Type.IsGeneric && PopupNodeConnection.Type.IsGeneric)
+						PropagateNewGeneric(PopupNodeConnection.Parent, (UndefinedGenericType)PopupNodeConnection.Type, destination.Type);
 				}
 			}
 
@@ -275,7 +282,6 @@ namespace NodeDev.Blazor.Components
 		#endregion
 
 		#endregion
-
 
 		#region Initialize
 
