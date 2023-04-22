@@ -6,7 +6,7 @@
 
 		<MudStack Style="height: 100%; width: 100%" Class="pa-3">
 
-			<MudTextField T="string" AutoFocus="true" @bind-Value="TypeText" @bind-Value:after="TypeToCreateChanged" Immediate="true" DebounceInterval="100" Label="Type" Class="flex-none"></MudTextField>
+			<MudTextField T="string" AutoFocus="true" @bind-Value="TypeText" @bind-Value:after="TypeToCreateChanged" Immediate="true" DebounceInterval="100" Label="Type" Class="flex-none" OnKeyDown="OnKeyDown"></MudTextField>
 
 			@if (Error != null)
 			{
@@ -43,5 +43,11 @@
 	private void TypeToCreateChanged()
 	{
 		Error = NodeDev.Core.Types.TypeFactory.CreateBaseFromUserInput(TypeText, out Type);
+	}
+
+	private async Task OnKeyDown(KeyboardEventArgs args)
+	{
+		if (args.Key == "Enter" && Type != null)
+			await OnTypeSelected.InvokeAsync(Type);
 	}
 }
