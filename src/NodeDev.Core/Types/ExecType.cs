@@ -14,7 +14,9 @@ namespace NodeDev.Core.Types
 
 		public override bool IsClass => false;
 
-		internal override string Serialize()
+        public override bool IsExec => true;
+
+        internal override string Serialize()
 		{
 			return "";
 		}

@@ -34,7 +34,7 @@ namespace NodeDev.Core.Types
 
 		public static RealType Get<T>() => Get(typeof(T));
 
-		public static readonly ExecType ExecType = new();
+		public static ExecType ExecType => new();
 
 		public static UndefinedGenericType CreateGenericType(string name) => new(name);
 

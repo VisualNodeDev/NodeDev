@@ -16,7 +16,7 @@ namespace NodeDev.Core.Types
 
 		public virtual bool IsGeneric => false;
 
-		public bool IsExec => this == TypeFactory.ExecType;
+		public virtual bool IsExec => false;
 
 		internal static TypeBase Deserialize(string typeFullName, string serializedType)
 		{
