@@ -18,5 +18,9 @@ namespace NodeDev.Core.Types
 		{
 			FullName = Name = name;
 		}
+
+		internal override string Serialize() => Name;
+
+		public static UndefinedGenericType Deserialize(string name) => new(name);
 	}
 }

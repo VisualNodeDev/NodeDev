@@ -1,5 +1,6 @@
 ﻿using NodeDev.Core.Nodes;
 using System.Reflection;
+using System.Text.Json;
 
 namespace NodeDev.Core;
 
@@ -7,12 +8,13 @@ public class Graph
 {
 	public static Graph Instance { get; } = new();
 
+	public IReadOnlyDictionary<string, Node> Nodes { get; } = new Dictionary<string, Node>();
+
+
 	static Graph()
 	{
 		NodeProvider.Initialize();
 	}
-
-	public IReadOnlyDictionary<string, Node> Nodes { get; } = new Dictionary<string, Node>();
 
 	public Task Invoke(Action action)
 	{
@@ -52,4 +54,33 @@ public class Graph
 		AddNode(new Nodes.Flow.ReturnNode(this));
 	}
 
+
+	#region Serialization
+
+	private record class SerializedGraph(List<string> Nodes);
+	public string Serialize()
+	{
+		var nodes = new List<string>();
+
+		foreach (var node in Nodes.Values)
+			nodes.Add(node.Serialize());
+
+		var serializedGraph = new SerializedGraph(nodes);
+
+		return JsonSerializer.Serialize(serializedGraph);
+	}
+
+	public static Graph Deserialize(string serializedGraph)
+	{
+		var graph = new Graph();
+		var serializedGraphObj = JsonSerializer.Deserialize<SerializedGraph>(serializedGraph) ?? throw new Exception("Unable to deserialize graph");
+		foreach (var serializedNode in serializedGraphObj.Nodes)
+		{
+			var node = Node.Deserialize(graph, serializedNode);
+			graph.AddNode(node);
+		}
+		return graph;
+	}
+
+	#endregion
 }

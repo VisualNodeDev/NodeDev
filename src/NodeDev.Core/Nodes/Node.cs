@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace NodeDev.Core.Nodes
@@ -43,6 +44,59 @@ namespace NodeDev.Core.Nodes
 			Decorations[typeof(T)] = v;
 
 			return v;
+		}
+
+		#endregion
+
+		#region Serialization
+
+        public record SerializedNode(string Type, string Id, string Name, List<string> Inputs, List<string> Outputs);
+		internal string Serialize()
+		{
+			var serializedNode = new SerializedNode(GetType().FullName!, Id, Name, Inputs.Select(x => x.Serialize()).ToList(), Outputs.Select(x => x.Serialize()).ToList());
+
+			return JsonSerializer.Serialize(serializedNode);
+		}
+
+		public static Node Deserialize(Graph graph, string serializedNode)
+		{
+			var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
+
+			var type = Type.GetType(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
+			var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
+
+			node.Deserialize(serializedNodeObj);
+
+			return node;
+		}
+
+		protected virtual Dictionary<Connection, List<Connection.SerializedConnection>> Deserialize(SerializedNode serializedNodeObj)
+		{
+			var connections = new Dictionary<Connection, List<Connection.SerializedConnection>>();
+
+			Name = serializedNodeObj.Name;
+			foreach (var input in serializedNodeObj.Inputs)
+			{
+				var connection = Connection.Deserialize(this, input, out var serializedConnectionObj);
+				Inputs.Add(connection);
+
+				if(!connections.TryGetValue(connection, out var list))
+					connections[connection] = list = new List<Connection.SerializedConnection>();
+				
+				list.Add(serializedConnectionObj);
+			}
+			foreach (var output in serializedNodeObj.Outputs)
+			{
+				var connection = Connection.Deserialize(this, output, out var serializedConnectionObj);
+				Outputs.Add(connection);
+
+				if (!connections.TryGetValue(connection, out var list))
+					connections[connection] = list = new List<Connection.SerializedConnection>();
+
+				list.Add(serializedConnectionObj);
+			}
+
+			return connections;
 		}
 
 		#endregion

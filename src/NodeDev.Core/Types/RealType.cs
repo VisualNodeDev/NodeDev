@@ -20,4 +20,16 @@ public class RealType : TypeBase
 	{
 		BackendType = backendType;
 	}
+
+	internal override string Serialize()
+	{
+		return FullName;
+	}
+
+	public static RealType Deserialize(string fullName)
+	{
+		var type = Type.GetType(fullName) ?? throw new Exception($"Type not found {fullName}"); ;
+
+		return TypeFactory.Get(type);
+	}
 }

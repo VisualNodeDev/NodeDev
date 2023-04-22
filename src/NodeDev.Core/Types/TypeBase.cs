@@ -17,5 +17,21 @@ namespace NodeDev.Core.Types
 		public virtual bool IsGeneric => false;
 
 		public bool IsExec => this == TypeFactory.ExecType;
+
+		internal static TypeBase Deserialize(string typeFullName, string serializedType)
+		{
+			var type = Type.GetType(typeFullName) ?? throw new Exception($"Type not found: {typeFullName}");
+
+			var deserializeMethod = type.GetMethod("Deserialize", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) ?? throw new Exception($"Deserialize method not found in type: {typeFullName}");
+
+			var deserializedType = deserializeMethod.Invoke(null, new[] { serializedType });
+
+			if(deserializedType is TypeBase typeBase)
+				return typeBase;
+
+			throw new Exception($"Deserialize method in type {typeFullName} returned invalid type");
+		}
+
+		internal abstract string Serialize();
 	}
 }

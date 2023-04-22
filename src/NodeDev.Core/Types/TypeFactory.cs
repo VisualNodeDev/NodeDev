@@ -32,9 +32,13 @@ namespace NodeDev.Core.Types
 
 		public static RealType Get(Type type) => RealTypes.TryGetValue(type, out var realType) ? realType : RealTypes[type] = new(type);
 
+		public static RealType Get<T>() => Get(typeof(T));
+
 		public static readonly ExecType ExecType = new();
 
 		public static UndefinedGenericType CreateGenericType(string name) => new(name);
+
+		#region CreateBaseFromUserInput
 
 		public static string? CreateBaseFromUserInput(string typeName, out Type? type)
 		{
@@ -100,5 +104,7 @@ namespace NodeDev.Core.Types
 			}
 			return null;
 		}
+
+		#endregion
 	}
 }
