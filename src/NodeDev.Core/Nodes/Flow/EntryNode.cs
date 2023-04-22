@@ -9,7 +9,7 @@ namespace NodeDev.Core.Nodes.Flow
 {
 	public class EntryNode : Node
 	{
-		public EntryNode(Graph graph) : base(graph)
+		public EntryNode(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Entry";
 

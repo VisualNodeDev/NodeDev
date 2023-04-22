@@ -6,8 +6,6 @@ namespace NodeDev.Core;
 
 public class Graph
 {
-	public static Graph Instance { get; } = new();
-
 	public IReadOnlyDictionary<string, Node> Nodes { get; } = new Dictionary<string, Node>();
 
 
@@ -45,13 +43,6 @@ public class Graph
 	public void RemoveNode(Node node)
 	{
 		((IDictionary<string, Node>)Nodes).Remove(node.Id);
-	}
-
-	public Graph()
-	{
-		// for test purpose:
-		AddNode(new Nodes.Flow.EntryNode(this));
-		AddNode(new Nodes.Flow.ReturnNode(this));
 	}
 
 

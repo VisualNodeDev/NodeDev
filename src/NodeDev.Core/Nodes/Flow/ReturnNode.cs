@@ -9,7 +9,7 @@ namespace NodeDev.Core.Nodes.Flow
 {
 	public class ReturnNode : Node
 	{
-		public ReturnNode(Graph graph) : base(graph)
+		public ReturnNode(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Return";
 

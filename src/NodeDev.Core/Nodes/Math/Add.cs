@@ -9,7 +9,7 @@ namespace NodeDev.Core.Nodes.Math
 {
 	public class Add: TwoOperationMath
 	{
-		public Add(Graph graph, Guid? id = null) : base(graph, id)
+		public Add(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Add";
 		}

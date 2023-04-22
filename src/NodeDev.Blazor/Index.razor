@@ -1,5 +1,32 @@
-﻿<MudThemeProvider/>
-<MudDialogProvider/>
-<MudSnackbarProvider/>
+﻿<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
-<GraphCanvas Graph="Core.Graph.Instance"></GraphCanvas>
+<MudLayout>
+	<MudAppBar Elevation="1">
+		<MudButton OnClick="Save" Class="ml-3">Save</MudButton>
+		<MudSpacer />
+		<MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+	</MudAppBar>
+	<MudMainContent>
+		<GraphCanvas Graph="Graph"></GraphCanvas>
+	</MudMainContent>
+</MudLayout>
+
+@code {
+
+	private Core.Graph Graph { get; set; } = null!;
+
+	protected override void OnInitialized()
+	{
+		if (File.Exists("graph.json"))
+			Graph = Core.Graph.Deserialize(File.ReadAllText("graph.json"));
+		else
+			Graph = new Core.Graph();
+	}
+
+	private void Save()
+	{
+		File.WriteAllText("graph.json", Graph.Serialize());
+	}
+}

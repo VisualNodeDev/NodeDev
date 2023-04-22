@@ -1,5 +1,6 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
+using NodeDev.Core.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,10 +12,10 @@ namespace NodeDev.Core.Nodes
 {
 	public abstract class Node
 	{
-		public Node(Graph graph, Guid? id = null)
+		public Node(Graph graph, string? id = null)
 		{
 			Graph = graph;
-			Id = (id ?? Guid.NewGuid()).ToString();
+			Id = id ?? (Guid.NewGuid().ToString());
 		}
 
 		public string Id { get; }
@@ -35,7 +36,7 @@ namespace NodeDev.Core.Nodes
 
 		public void AddDecoration<T>(T attribute) where T : NodeDecoration => Decorations[typeof(T)] = attribute;
 
-		public T GetOrAddDecoration<T>(Func<T> creator) where T: NodeDecoration
+		public T GetOrAddDecoration<T>(Func<T> creator) where T : NodeDecoration
 		{
 			if (Decorations.TryGetValue(typeof(T), out var decoration))
 				return (T)decoration;
@@ -50,10 +51,10 @@ namespace NodeDev.Core.Nodes
 
 		#region Serialization
 
-        public record SerializedNode(string Type, string Id, string Name, List<string> Inputs, List<string> Outputs);
+		public record SerializedNode(string Type, string Id, string Name, List<string> Inputs, List<string> Outputs, Dictionary<string, string> Decorations);
 		internal string Serialize()
 		{
-			var serializedNode = new SerializedNode(GetType().FullName!, Id, Name, Inputs.Select(x => x.Serialize()).ToList(), Outputs.Select(x => x.Serialize()).ToList());
+			var serializedNode = new SerializedNode(GetType().FullName!, Id, Name, Inputs.Select(x => x.Serialize()).ToList(), Outputs.Select(x => x.Serialize()).ToList(), Decorations.ToDictionary(x => x.Key.FullName!, x => x.Value.Serialize()));
 
 			return JsonSerializer.Serialize(serializedNode);
 		}
@@ -62,8 +63,25 @@ namespace NodeDev.Core.Nodes
 		{
 			var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
 
-			var type = Type.GetType(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
+			var type = TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
 			var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
+
+			foreach(var decoration in serializedNodeObj.Decorations)
+			{
+				var decorationType = TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
+
+				var method = decorationType.GetMethod("Deserialize", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+
+				if(method == null)
+					throw new Exception($"Unable to find Deserialize method on type: {decoration.Key}");
+
+				var decorationObj = method.Invoke(null, new object[] { decoration.Value }) as NodeDecoration;
+
+				if(decorationObj == null)
+					throw new Exception($"Unable to deserialize decoration: {decoration.Key}");
+
+				node.Decorations[decorationType] = decorationObj;
+			}
 
 			node.Deserialize(serializedNodeObj);
 
@@ -74,15 +92,18 @@ namespace NodeDev.Core.Nodes
 		{
 			var connections = new Dictionary<Connection, List<Connection.SerializedConnection>>();
 
+			Inputs.Clear();
+			Outputs.Clear();
+
 			Name = serializedNodeObj.Name;
 			foreach (var input in serializedNodeObj.Inputs)
 			{
 				var connection = Connection.Deserialize(this, input, out var serializedConnectionObj);
 				Inputs.Add(connection);
 
-				if(!connections.TryGetValue(connection, out var list))
+				if (!connections.TryGetValue(connection, out var list))
 					connections[connection] = list = new List<Connection.SerializedConnection>();
-				
+
 				list.Add(serializedConnectionObj);
 			}
 			foreach (var output in serializedNodeObj.Outputs)

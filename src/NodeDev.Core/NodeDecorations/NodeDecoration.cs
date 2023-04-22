@@ -6,17 +6,8 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.NodeDecorations;
 
-public class NodeDecoration
+public abstract class NodeDecoration
 {
-	public NodeDecoration(string name)
-	{
-		Name = name;
-	}
+	public abstract string Serialize();
 
-	public NodeDecoration()
-	{
-		Name = GetType().Name;
-	}
-
-	public string Name { get; }
 }

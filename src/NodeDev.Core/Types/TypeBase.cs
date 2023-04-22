@@ -20,7 +20,7 @@ namespace NodeDev.Core.Types
 
 		internal static TypeBase Deserialize(string typeFullName, string serializedType)
 		{
-			var type = Type.GetType(typeFullName) ?? throw new Exception($"Type not found: {typeFullName}");
+			var type = TypeFactory.GetTypeByFullName(typeFullName) ?? throw new Exception($"Type not found: {typeFullName}");
 
 			var deserializeMethod = type.GetMethod("Deserialize", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) ?? throw new Exception($"Deserialize method not found in type: {typeFullName}");
 

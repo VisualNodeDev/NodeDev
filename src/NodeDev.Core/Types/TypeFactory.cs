@@ -38,6 +38,11 @@ namespace NodeDev.Core.Types
 
 		public static UndefinedGenericType CreateGenericType(string name) => new(name);
 
+		public static Type? GetTypeByFullName(string name)
+		{
+			return AppDomain.CurrentDomain.GetAssemblies().Select(x => x.GetType(name)).FirstOrDefault(x => x != null);
+		}
+
 		#region CreateBaseFromUserInput
 
 		public static string? CreateBaseFromUserInput(string typeName, out Type? type)
