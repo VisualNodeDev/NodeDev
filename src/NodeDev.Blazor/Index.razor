@@ -5,17 +5,20 @@
 <MudLayout>
 	<MudAppBar Elevation="1">
 		<MudButton OnClick="Save" Class="ml-3">Save</MudButton>
+		<MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
 		<MudSpacer />
 		<MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
 	</MudAppBar>
 	<MudMainContent>
-		<GraphCanvas Graph="Graph"></GraphCanvas>
+		<GraphCanvas @ref="GraphCanvas" Graph="Graph"></GraphCanvas>
 	</MudMainContent>
 </MudLayout>
 
 @code {
 
 	private Core.Graph Graph { get; set; } = null!;
+
+	private GraphCanvas? GraphCanvas { get; set; }
 
 	protected override void OnInitialized()
 	{
@@ -28,5 +31,10 @@
 	private void Save()
 	{
 		File.WriteAllText("graph.json", Graph.Serialize());
+	}
+
+	private void Add()
+	{
+		GraphCanvas.ShowAddNode();
 	}
 }

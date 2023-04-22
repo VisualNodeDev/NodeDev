@@ -281,6 +281,17 @@ namespace NodeDev.Blazor.Components
 
 		#endregion
 
+        #endregion
+
+        #region ShowAddNode
+
+        public void ShowAddNode()
+        {
+            IsShowingNodeSelection = true;
+            PopupX = 300;
+            PopupY = 300;
+        }
+
 		#endregion
 
 		#region Initialize
