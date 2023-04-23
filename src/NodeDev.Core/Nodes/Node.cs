@@ -88,36 +88,22 @@ namespace NodeDev.Core.Nodes
 			return node;
 		}
 
-		protected virtual Dictionary<Connection, List<Connection.SerializedConnection>> Deserialize(SerializedNode serializedNodeObj)
+		protected virtual void Deserialize(SerializedNode serializedNodeObj)
 		{
-			var connections = new Dictionary<Connection, List<Connection.SerializedConnection>>();
-
 			Inputs.Clear();
 			Outputs.Clear();
 
 			Name = serializedNodeObj.Name;
 			foreach (var input in serializedNodeObj.Inputs)
 			{
-				var connection = Connection.Deserialize(this, input, out var serializedConnectionObj);
+				var connection = Connection.Deserialize(this, input);
 				Inputs.Add(connection);
-
-				if (!connections.TryGetValue(connection, out var list))
-					connections[connection] = list = new List<Connection.SerializedConnection>();
-
-				list.Add(serializedConnectionObj);
 			}
 			foreach (var output in serializedNodeObj.Outputs)
 			{
-				var connection = Connection.Deserialize(this, output, out var serializedConnectionObj);
+				var connection = Connection.Deserialize(this, output);
 				Outputs.Add(connection);
-
-				if (!connections.TryGetValue(connection, out var list))
-					connections[connection] = list = new List<Connection.SerializedConnection>();
-
-				list.Add(serializedConnectionObj);
 			}
-
-			return connections;
 		}
 
 		#endregion
