@@ -40,6 +40,8 @@ class GraphCanvas {
         this.Canvas.on("unselect", this.OnNodeUnselected.bind(this));
         this.Canvas.on("figure:add", this.OnFigureAdded.bind(this));
         this.Canvas.on("figure:remove", this.OnFigureRemoved.bind(this));
+
+        this.nodeMoveTimeoutId = {};
     }
 
     AddNodes(infos) {
@@ -155,8 +157,9 @@ class GraphCanvas {
             this.Dotnet.invokeMethodAsync('OnNodeRemoved', event.figure.id);
     }
     onNodeMove(emitter, event) {
-        this.nodeMoveTimeoutId = this.limitFunctionCall(this.nodeMoveTimeoutId, () => {
-            this.Dotnet.invokeMethodAsync('OnNodeMoved', emitter.id, event.x, event.y);
+        let that = this;
+        this.nodeMoveTimeoutId[emitter.id] = this.limitFunctionCall(this.nodeMoveTimeoutId[emitter.id], () => {
+            that.Dotnet.invokeMethodAsync('OnNodeMoved', emitter.id, event.x, event.y);
         }, 250);
     }
     OnPortDroppedOnCanvas(port, x, y) {
