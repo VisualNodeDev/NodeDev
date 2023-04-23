@@ -135,8 +135,8 @@ namespace NodeDev.Blazor.Components
             {
                 if (Graph.Nodes.TryGetValue(nodeSourceId, out var nodeSource) && Graph.Nodes.TryGetValue(nodeDestinationID, out var nodeDestination))
                 {
-                    var source = nodeSource.Outputs.FirstOrDefault(x => x.Id == outputId);
-                    var destination = nodeDestination.Inputs.FirstOrDefault(x => x.Id == inputId);
+                    var source = nodeSource.InputsAndOutputs.FirstOrDefault(x => x.Id == outputId || x.Id == inputId);
+                    var destination = nodeDestination.InputsAndOutputs.FirstOrDefault(x => x.Id == inputId || x.Id == outputId);
 
                     if (source != null && destination != null)
                     {
