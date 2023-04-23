@@ -1,4 +1,5 @@
 
+/** prevents plugging a port into something it shouldn't be plugged! */
 draw2d.policy.port.ExclusiveIntrusivePortsFeedbackPolicy = draw2d.policy.port.PortFeedbackPolicy.extend(
     /** @lends draw2d.policy.port.PortFeedbackPolicy.prototype */
     {

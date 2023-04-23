@@ -168,7 +168,9 @@ class GraphCanvas {
     OnGenericTypeSelectionMenuAsked(nodeId, portId, x, y) {
         this.Dotnet.invokeMethodAsync('OnGenericTypeSelectionMenuAsked', nodeId, portId, x, y);
     }
-
+    TextboxValueChanged(nodeId, portId, value){
+        this.Dotnet.invokeMethodAsync('OnTextboxValueChanged', nodeId, portId, value);
+    }
     limitFunctionCall(timeoutId, fn, limit) {
         clearTimeout(timeoutId);
         return setTimeout(fn, limit);
@@ -177,7 +179,6 @@ class GraphCanvas {
         delete window['Canvas_' + this.id];
     }
 }
-
 
 window.InitializeCanvas = function (dotnet, id) {
     Canvas[id] = new GraphCanvas(dotnet, id);

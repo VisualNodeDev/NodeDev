@@ -39,15 +39,18 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
      * @param {Number} [optionalIndex] index where to insert the entity
      */
     addInputOrOutput: function (info, isInput) {
+
+        let row = new draw2d.shape.layout.HorizontalLayout({ bgColor: "#dbddde" });
+        this.add(row);
+
         var label = new draw2d.shape.basic.Label({
             text: info.name,
             stroke: 0,
             radius: 0,
             bgColor: null,
-            padding: { left: 10, top: 3, right: 10, bottom: 5 },
+            padding: { left: 10, top: 5, right: 10, bottom: 5 },
             fontColor: "#4a4a4a",
-            resizeable: true,
-            editor: new draw2d.ui.LabelEditor()
+            resizeable: true
         });
 
         //        label.installEditor(new draw2d.ui.LabelEditor());
@@ -67,7 +70,7 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
                 emitter.canvas.Graph.OnPortDroppedOnCanvas(port, event.x, event.y);
         });
 
-        this.add(label);
+        row.add(label);
 
         // if the port is generic, add a decoration to choose the type
         if (info.isGeneric) {
@@ -77,9 +80,30 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
             let that = this;
             decoration.on('click', (emitter, event) => emitter.canvas.Graph.OnGenericTypeSelectionMenuAsked(that.id, port.id, event.x, event.y));
         }
+
+        if (isInput && info.allowTextboxEdit) {
+            this.createTextboxEditLabel(port, info.textboxValue);
+        }
+    },
+    createTextboxEditLabel: function (port, textboxValue) {
+        let that = this;
+        var input = new draw2d.shape.basic.Label({
+            width: 50,
+            height: 10,
+            padding: { left: 10, top: 3, right: 10, bottom: 5 },
+            editor: new draw2d.ui.LabelInplaceEditor({
+                onCommit: newText => that.canvas.Graph.TextboxValueChanged(port.nodeId, port.id, newText)
+            }),
+            text: textboxValue
+        });
+
+        port.parent.parent.add(input);
+
+        port.textboxEditorLabel = input;
     },
     UpdateConnectionType: function (info, port) {
 
+        // remove the link icon if the port is not generic anymore
         if (port.isGeneric && !info.isGeneric) {
             for (let i = 0; i < port.children.data.length; ++i) {
                 let child = port.children.data[i];
@@ -91,6 +115,7 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
             }
         }
 
+        // update the color of the port and of the connections coming out of it
         port.bgColor = new draw2d.util.Color(info.color);
         port.isGeneric = info.isGeneric;
         port.type = info.type;
@@ -101,6 +126,16 @@ NodeShape = draw2d.shape.layout.VerticalLayout.extend({
             connection.repaint();
         }
 
+        // if there was no textbox and now there is one, add it
+        if (!port.textboxEditorLabel && info.allowTextboxEdit && port.portType == 'input')
+            this.createTextboxEditLabel(port, info.textboxValue);
+        else if (port.textboxEditorLabel && !info.allowTextboxEdit) {
+            port.parent.parent.remove(port.textboxEditorLabel);
+            port.canvas.remove(port.textboxEditorLabel.figure);
+            port.textboxEditorLabel = null;
+        }
+        else if (port.textboxEditorLabel)
+            port.textboxEditorLabel.setText(info.textboxValue);
 
         port.repaint();
     },

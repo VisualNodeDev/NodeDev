@@ -265,15 +265,15 @@ namespace NodeDev.Blazor.Components
             PropagateNewGeneric(PopupNode, generic, TypeFactory.Get(type));
         }
 
-        private record class UpdateConnectionTypeParameters(string Id, string Type, bool IsGeneric, string Color);
+        private record class UpdateConnectionTypeParameters(string Id, string Type, bool IsGeneric, string Color, bool AllowTextboxEdit, string? TextboxValue);
         private void PropagateNewGeneric(Node node, UndefinedGenericType generic, TypeBase newType)
         {
             foreach (var connection in node.InputsAndOutputs)
             {
                 if (connection.Type == generic)
                 {
-                    connection.Type = newType;
-                    InvokeJSVoid("UpdateConnectionType", new UpdateConnectionTypeParameters(connection.Id, newType.Name, false, GetTypeShapeColor(newType))).AndForget();
+                    connection.UpdateType(newType);
+                    InvokeJSVoid("UpdateConnectionType", new UpdateConnectionTypeParameters(connection.Id, newType.Name, false, GetTypeShapeColor(newType), newType.AllowTextboxEdit, connection.TextboxValue)).AndForget();
 
                     foreach (var other in connection.Connections)
                     {
@@ -282,6 +282,24 @@ namespace NodeDev.Blazor.Components
                     }
                 }
             }
+        }
+
+        #endregion
+
+        #region OnTextboxValueChanged
+
+        [JSInvokable]
+        public void OnTextboxValueChanged(string nodeId, string connectionId, string? text)
+        {
+            if (!Graph.Nodes.TryGetValue(nodeId, out var node))
+                return;
+
+            var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
+            if (connection == null)
+                return;
+
+            if(connection.Type.AllowTextboxEdit)
+                connection.UpdateTextboxText(text);
         }
 
         #endregion
@@ -309,7 +327,7 @@ namespace NodeDev.Blazor.Components
         }
 
         private record class NodeCreationInfo(string Id, string Name, float X, float Y, List<NodeCreationInfo_Connection> Inputs, List<NodeCreationInfo_Connection> Outputs);
-        private record class NodeCreationInfo_Connection(string Id, string Name, List<string>? Connections, string Color, string Type, bool IsGeneric);
+        private record class NodeCreationInfo_Connection(string Id, string Name, List<string>? Connections, string Color, string Type, bool IsGeneric, bool AllowTextboxEdit, string? TextboxValue);
 
         private string GetTypeShapeColor(TypeBase type)
         {
@@ -331,8 +349,8 @@ namespace NodeDev.Blazor.Components
                 node.Name,
                 positionAttribute.X,
                 positionAttribute.Y,
-                node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric)).ToList(),
-                node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric)).ToList());
+                node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric, x.Type.AllowTextboxEdit, x.TextboxValue)).ToList(),
+                node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric, false, null)).ToList());
         }
 
         #endregion

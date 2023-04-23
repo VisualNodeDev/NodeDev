@@ -18,6 +18,14 @@ namespace NodeDev.Core.Types
 
 		public virtual bool IsExec => false;
 
+		public virtual bool AllowTextboxEdit => false;
+
+		public virtual string? DefaultTextboxValue => null;
+
+        internal abstract string Serialize();
+
+		public virtual object? ParseTextboxEdit(string text) => throw new NotImplementedException();
+
 		internal static TypeBase Deserialize(string typeFullName, string serializedType)
 		{
 			var type = TypeFactory.GetTypeByFullName(typeFullName) ?? throw new Exception($"Type not found: {typeFullName}");
@@ -32,6 +40,5 @@ namespace NodeDev.Core.Types
 			throw new Exception($"Deserialize method in type {typeFullName} returned invalid type");
 		}
 
-		internal abstract string Serialize();
 	}
 }

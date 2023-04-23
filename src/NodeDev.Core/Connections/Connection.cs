@@ -21,6 +21,9 @@ namespace NodeDev.Core.Connections
 
 		public ICollection<Connection> Connections { get; } = new List<Connection>();
 
+		public string? TextboxValue { get; private set; }
+		public object? ParsedTextboxValue { get; set; }
+
 		public Connection(string name, Node parent, TypeBase type, string? id = null)
 		{
 			Id = id ?? Guid.NewGuid().ToString();
@@ -31,12 +34,12 @@ namespace NodeDev.Core.Connections
 
 		#region Serialization
 
-		public record SerializedConnection(string Id, string Name, string TypeInfo, string SerializedType, List<string> Connections);
+		public record SerializedConnection(string Id, string Name, string TypeInfo, string SerializedType, List<string> Connections, string? TextboxValue);
 		internal string Serialize()
 		{
 			var connections = Connections.ToList();
 
-			var serializedConnection = new SerializedConnection(Id, Name, Type.GetType().FullName!, Type.Serialize(), Connections.Select(x => x.Id).ToList());
+			var serializedConnection = new SerializedConnection(Id, Name, Type.GetType().FullName!, Type.Serialize(), Connections.Select(x => x.Id).ToList(), TextboxValue);
 
 			return JsonSerializer.Serialize(serializedConnection);
 		}
@@ -46,6 +49,10 @@ namespace NodeDev.Core.Connections
 			serializedConnectionObj = JsonSerializer.Deserialize<SerializedConnection>(serializedConnection) ?? throw new Exception($"Unable to deserialize connection");
 			var type = TypeBase.Deserialize(serializedConnectionObj.TypeInfo, serializedConnectionObj.SerializedType);
 			var connection = new Connection(serializedConnectionObj.Name, parent, type, serializedConnectionObj.Id);
+
+			connection.TextboxValue = serializedConnectionObj.TextboxValue;
+			if (connection.TextboxValue != null)
+				connection.ParsedTextboxValue = connection.Type.ParseTextboxEdit(connection.TextboxValue);
 
 			return connection;
 		}
@@ -62,7 +69,29 @@ namespace NodeDev.Core.Connections
 			}
 		}
 
+        public void UpdateType(TypeBase newType)
+        {
+			Type = newType;
 
-		#endregion
-	}
+			if (Type.AllowTextboxEdit)
+				TextboxValue = Type.DefaultTextboxValue;
+			else
+				TextboxValue = null;
+        }
+
+        public void UpdateTextboxText(string? text)
+        {
+			if (Type.AllowTextboxEdit)
+			{
+				TextboxValue = text;
+				if(text == null)
+					ParsedTextboxValue = null;
+                else
+					ParsedTextboxValue = Type.ParseTextboxEdit(text);
+			}
+        }
+
+
+        #endregion
+    }
 }
