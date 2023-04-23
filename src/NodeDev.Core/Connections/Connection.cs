@@ -44,9 +44,9 @@ namespace NodeDev.Core.Connections
 			return JsonSerializer.Serialize(serializedConnection);
 		}
 
-		internal static Connection Deserialize(Node parent, string serializedConnection, out SerializedConnection serializedConnectionObj)
+		internal static Connection Deserialize(Node parent, string serializedConnection)
 		{
-			serializedConnectionObj = JsonSerializer.Deserialize<SerializedConnection>(serializedConnection) ?? throw new Exception($"Unable to deserialize connection");
+			var serializedConnectionObj = JsonSerializer.Deserialize<SerializedConnection>(serializedConnection) ?? throw new Exception($"Unable to deserialize connection");
 			var type = TypeBase.Deserialize(serializedConnectionObj.TypeInfo, serializedConnectionObj.SerializedType);
 			var connection = new Connection(serializedConnectionObj.Name, parent, type, serializedConnectionObj.Id);
 
@@ -54,19 +54,19 @@ namespace NodeDev.Core.Connections
 			if (connection.TextboxValue != null)
 				connection.ParsedTextboxValue = connection.Type.ParseTextboxEdit(connection.TextboxValue);
 
-			return connection;
-		}
-
-		internal void DeserializeConnectionLinks(Graph graph, SerializedConnection serializedConnection)
-		{
-			foreach (var connectionId in serializedConnection.Connections)
+			foreach (var connectionId in serializedConnectionObj.Connections)
 			{
-				var otherConnection = graph.Nodes.SelectMany(x => x.Value.InputsAndOutputs).FirstOrDefault(x => x.Id == connectionId);
+				var otherConnection = parent.Graph.Nodes.SelectMany(x => x.Value.InputsAndOutputs).FirstOrDefault(x => x.Id == connectionId);
 				if (otherConnection == null)
-					throw new Exception("Connection not found:" + connectionId);
+					continue;
 
-				Connections.Add(otherConnection);
+				if(!connection.Connections.Contains(otherConnection))
+                    connection.Connections.Add(otherConnection);
+				if(!otherConnection.Connections.Contains(connection))
+                    otherConnection.Connections.Add(connection);
 			}
+
+			return connection;
 		}
 
         public void UpdateType(TypeBase newType)
