@@ -129,6 +129,9 @@ class GraphCanvas {
     UpdateConnectionType(info) {
         let port = this.getPort(info.id);
 
+        if (!port)
+            return;
+
         let node = this.getNode(port.nodeId);
 
         node.UpdateConnectionType(info, port);
