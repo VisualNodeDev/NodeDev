@@ -41,8 +41,6 @@ namespace NodeDev.Core.Nodes
 		/// </summary>
 		public abstract Connection? Execute(Connection? connectionBeingExecuted, object?[] inputs, object?[] nodeOutputs);
 
-		protected abstract void ExecuteInternal(object?[] inputs, object?[] outputs);
-
         #endregion
 
         #region Decorations

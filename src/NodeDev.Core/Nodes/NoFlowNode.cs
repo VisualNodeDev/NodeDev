@@ -23,5 +23,7 @@ namespace NodeDev.Core.Nodes
 
             return null;
         }
+
+        protected abstract void ExecuteInternal(object?[] inputs, object?[] outputs);
     }
 }

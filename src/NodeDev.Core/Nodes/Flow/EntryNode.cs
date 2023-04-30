@@ -23,13 +23,7 @@ namespace NodeDev.Core.Nodes.Flow
 
         public override Connection? Execute(Connection? inputExec, object?[] inputs, object?[] outputs)
         {
-            ExecuteInternal(inputs, outputs);
-
             return Outputs[0];
-        }
-
-        protected override void ExecuteInternal(object?[] inputs, object?[] outputs)
-        {
         }
     }
 }
