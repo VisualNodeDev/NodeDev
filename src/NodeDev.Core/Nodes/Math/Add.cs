@@ -13,5 +13,13 @@ namespace NodeDev.Core.Nodes.Math
 		{
 			Name = "Add";
 		}
-	}
+
+        protected override void ExecuteInternal(object?[] inputs, object?[] outputs)
+        {
+			dynamic? a = inputs[0];
+			dynamic? b = inputs[1];
+
+			outputs[0] = a + b;
+        }
+    }
 }

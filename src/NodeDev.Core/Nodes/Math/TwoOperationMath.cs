@@ -7,8 +7,9 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Nodes.Math
 {
-	public abstract class TwoOperationMath: Node
+	public abstract class TwoOperationMath: NoFlowNode
 	{
+
 		public TwoOperationMath(Graph graph, string? id = null) : base(graph, id)
 		{
 			var t1 = TypeFactory.CreateGenericType("T1");

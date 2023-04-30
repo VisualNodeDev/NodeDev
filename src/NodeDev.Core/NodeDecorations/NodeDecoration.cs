@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.NodeDecorations;
 
-public abstract class NodeDecoration
+public interface INodeDecoration
 {
-	public abstract string Serialize();
+    public static INodeDecoration Deserialize(string serialized) => throw new NotImplementedException();
 
+    public abstract string Serialize();
 }

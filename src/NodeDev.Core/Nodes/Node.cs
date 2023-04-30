@@ -30,13 +30,28 @@ namespace NodeDev.Core.Nodes
 
 		public IEnumerable<Connection> InputsAndOutputs => Inputs.Concat(Outputs);
 
-		#region Decorations
+		public abstract bool AlterExecutionStackOnPop { get; }
 
-		public Dictionary<Type, NodeDecoration> Decorations { get; init; } = new();
+		public abstract bool IsFlowNode { get; }
 
-		public void AddDecoration<T>(T attribute) where T : NodeDecoration => Decorations[typeof(T)] = attribute;
+		#region Execution
 
-		public T GetOrAddDecoration<T>(Func<T> creator) where T : NodeDecoration
+		/// <summary>
+		/// Returns the next node to execute. The connection is on the current node, must look at what it's connected to
+		/// </summary>
+		public abstract Connection? Execute(Connection? connectionBeingExecuted, object?[] inputs, object?[] nodeOutputs);
+
+		protected abstract void ExecuteInternal(object?[] inputs, object?[] outputs);
+
+        #endregion
+
+        #region Decorations
+
+        public Dictionary<Type, INodeDecoration> Decorations { get; init; } = new();
+
+		public void AddDecoration<T>(T attribute) where T : INodeDecoration => Decorations[typeof(T)] = attribute;
+
+		public T GetOrAddDecoration<T>(Func<T> creator) where T : INodeDecoration
 		{
 			if (Decorations.TryGetValue(typeof(T), out var decoration))
 				return (T)decoration;
@@ -59,7 +74,8 @@ namespace NodeDev.Core.Nodes
 			return JsonSerializer.Serialize(serializedNode);
 		}
 
-		public static Node Deserialize(Graph graph, string serializedNode)
+
+        public static Node Deserialize(Graph graph, string serializedNode)
 		{
 			var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
 
@@ -69,13 +85,13 @@ namespace NodeDev.Core.Nodes
 			foreach(var decoration in serializedNodeObj.Decorations)
 			{
 				var decorationType = TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
-
-				var method = decorationType.GetMethod("Deserialize", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+				
+				var method = decorationType.GetMethod(nameof(INodeDecoration.Deserialize), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
 				if(method == null)
 					throw new Exception($"Unable to find Deserialize method on type: {decoration.Key}");
 
-				var decorationObj = method.Invoke(null, new object[] { decoration.Value }) as NodeDecoration;
+				var decorationObj = method.Invoke(null, new object[] { decoration.Value }) as INodeDecoration;
 
 				if(decorationObj == null)
 					throw new Exception($"Unable to deserialize decoration: {decoration.Key}");

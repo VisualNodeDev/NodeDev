@@ -6,11 +6,10 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using static MudBlazor.Colors;
 
 namespace NodeDev.Blazor.NodeAttributes
 {
-	public class NodeDecorationPosition : NodeDecoration
+	public class NodeDecorationPosition : INodeDecoration
 	{
 		public NodeDecorationPosition(Vector2 position)
 		{
@@ -24,16 +23,17 @@ namespace NodeDev.Blazor.NodeAttributes
 
 
 		private record class SerializedNodeDecoration(float X, float Y);
-		public override string Serialize()
+		
+		public string Serialize()
 		{
 			return JsonSerializer.Serialize(new SerializedNodeDecoration(X, Y));
 		}
 
-		public static NodeDecorationPosition Deserialize(string Json)
+		public static INodeDecoration Deserialize(string Json)
 		{
 			var serializedNodeDecoration = JsonSerializer.Deserialize<SerializedNodeDecoration>(Json) ?? throw new Exception("Unable to deserialize node decoration");
 
 			return new NodeDecorationPosition(new(serializedNodeDecoration.X, serializedNodeDecoration.Y));
 		}
-	}
+    }
 }
