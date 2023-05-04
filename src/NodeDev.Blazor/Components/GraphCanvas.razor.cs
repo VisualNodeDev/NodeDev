@@ -273,6 +273,7 @@ namespace NodeDev.Blazor.Components
                 if (connection.Type == generic)
                 {
                     connection.UpdateType(newType);
+                    
                     InvokeJSVoid("UpdateConnectionType", new UpdateConnectionTypeParameters(connection.Id, newType.Name, false, GetTypeShapeColor(newType), newType.AllowTextboxEdit, connection.TextboxValue)).AndForget();
 
                     foreach (var other in connection.Connections)

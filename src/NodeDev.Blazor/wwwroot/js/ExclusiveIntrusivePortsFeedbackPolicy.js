@@ -37,7 +37,8 @@ draw2d.policy.port.ExclusiveIntrusivePortsFeedbackPolicy = draw2d.policy.port.Po
 
                 let canConnect = port.type == figure.type || ((port.isGeneric || figure.isGeneric) && (port.type !== 'Exec' && figure.type !== 'Exec'));
 
-                if (port.portType === figure.portType || port.nodeId === figure.nodeId)
+                let alreadyConnectedToIt = port.connections.data.find(x => x.targetPort.id == figure.id || x.sourcePort.id == figure.id);
+                if (port.portType === figure.portType || port.nodeId === figure.nodeId || alreadyConnectedToIt)
                     canConnect = false;
 
                 port.setSemanticGroup(canConnect || figure == port ? 'yes' : 'no');

@@ -97,7 +97,7 @@ class GraphCanvas {
     createConnection(sourcePort, targetPort) {
 
         var conn = new draw2d.Connection({
-            router: new draw2d.layout.connection.ManhattanBridgedConnectionRouter(),
+            //router: new draw2d.layout.connection.InteractiveManhattanConnectionRouter(),
             stroke: 2,
             color: sourcePort ? sourcePort.bgColor : "#00a8f0",
             lineColor: sourcePort ? sourcePort.bgColor : "#00a8f0",
