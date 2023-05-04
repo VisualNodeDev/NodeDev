@@ -7,3 +7,4 @@
 /src/NodeDev.Core/obj
 /src/NodeDev.Core/bin
 /src/NodeDev.Blazor.Server/graph.json
+/src/NodeDev.Blazor/node_modules

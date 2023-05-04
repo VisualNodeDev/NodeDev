@@ -14,10 +14,23 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="7.0.5" />
     <PackageReference Include="MudBlazor" Version="6.2.2" />
+    <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.9.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NodeDev.Core\NodeDev.Core.csproj" />
   </ItemGroup>
+
+
+  <Target Name="webpack" AfterTargets="Build">
+    <Exec Command="npm run build" />
+  </Target>
+
+  <Target Name="webpack clean" AfterTargets="Clean" Condition="Exists('node_modules')">
+    <Exec Command="npm run clean" />
+  </Target>
 
 </Project>

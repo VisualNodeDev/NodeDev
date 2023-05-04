@@ -8,25 +8,27 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="~/" />
-    <link href="NodeDev.Blazor.Server.styles.css" rel="stylesheet" />
 
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link href="_content/NodeDev.Blazor/dist/style.css" rel="stylesheet" />
 
     <component type="typeof(HeadOutlet)" render-mode="Server" />
 </head>
 <body>
     @RenderBody()
 
+    <style>
+        .react-flow__node-custom {
+            padding: 10px;
+            background-color: #556677;
+            color: white;
+        }
 
+    </style>
     <script src="_framework/blazor.server.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 
-    <script src="_content/NodeDev.Blazor/js/lib/jquery.js"></script>
-    <script src="_content/NodeDev.Blazor/js/lib/jquery-ui.js"></script>
-    <script src="_content/NodeDev.Blazor/js/lib/draw2d.js"></script>
-    <script src="_content/NodeDev.Blazor/js/ExclusiveIntrusivePortsFeedbackPolicy.js"></script>
-    <script src="_content/NodeDev.Blazor/js/GraphCanvas.js"></script>
-	<script src="_content/NodeDev.Blazor/js/NodeShape.js"></script>
+    <script src="_content/NodeDev.Blazor/dist/NodeDev.min.js"></script>
 </body>
 </html>
