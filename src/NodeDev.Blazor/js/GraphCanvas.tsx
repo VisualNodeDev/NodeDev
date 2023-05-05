@@ -9,12 +9,15 @@ import ReactFlow, {
     useEdgesState,
     NodeChange,
     applyNodeChanges,
-    NodePositionChange
+    NodePositionChange,
+    Position
 } from "reactflow";
 
-//import CustomNode from "./CustomNode";
+import NodeWithMultipleHandles from "./NodeWithMultipleHandles";
 
 import "reactflow/dist/style.css";
+import '../css/styles.css';
+
 import * as Types from './Types'
 import * as Utility from './Utility'
 
@@ -23,7 +26,7 @@ const initialEdges: Edge[] = [];
 
 
 const nodeTypes = {
-    //custom: CustomNode
+    NodeWithMultipleHandles: NodeWithMultipleHandles
 };
 
 export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
@@ -39,8 +42,13 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         if (newNodes.length === undefined)
             newNodes = [newNodes] as any;
 
-        for (let i = 0; i < newNodes.length; i++)
-            nodes.push({ id: newNodes[i].id, data: { label: newNodes[i].name }, position: { x: newNodes[i].x, y: newNodes[i].y } });
+        for (let i = 0; i < newNodes.length; i++) {
+            nodes.push({
+                id: newNodes[i].id,
+                data: { label: newNodes[i].name, inputs: newNodes[i].inputs, outputs: newNodes[i].outputs }, position: { x: newNodes[i].x, y: newNodes[i].y },
+                type: 'NodeWithMultipleHandles'
+            });
+        }
 
         setNodes(nodes.map(x => x)); // the 'map' is a patch, the nodes are not updated otherwise
     }

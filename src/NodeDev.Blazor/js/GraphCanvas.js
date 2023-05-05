@@ -33,17 +33,21 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 exports.__esModule = true;
 var jsx_runtime_1 = require("react/jsx-runtime");
 var react_1 = require("react");
 var reactflow_1 = __importStar(require("reactflow"));
-//import CustomNode from "./CustomNode";
+var NodeWithMultipleHandles_1 = __importDefault(require("./NodeWithMultipleHandles"));
 require("reactflow/dist/style.css");
+require("../css/styles.css");
 var Utility = __importStar(require("./Utility"));
 var initialNodes = [];
 var initialEdges = [];
 var nodeTypes = {
-//custom: CustomNode
+    NodeWithMultipleHandles: NodeWithMultipleHandles_1["default"]
 };
 function BasicFlow(props) {
     var _a = (0, reactflow_1.useNodesState)(initialNodes), nodes = _a[0], setNodes = _a[1], onNodesChange = _a[2];
@@ -52,8 +56,13 @@ function BasicFlow(props) {
     props.CanvasInfos.AddNodes = function (newNodes) {
         if (newNodes.length === undefined)
             newNodes = [newNodes];
-        for (var i = 0; i < newNodes.length; i++)
-            nodes.push({ id: newNodes[i].id, data: { label: newNodes[i].name }, position: { x: newNodes[i].x, y: newNodes[i].y } });
+        for (var i = 0; i < newNodes.length; i++) {
+            nodes.push({
+                id: newNodes[i].id,
+                data: { label: newNodes[i].name, inputs: newNodes[i].inputs, outputs: newNodes[i].outputs }, position: { x: newNodes[i].x, y: newNodes[i].y },
+                type: 'NodeWithMultipleHandles'
+            });
+        }
         setNodes(nodes.map(function (x) { return x; })); // the 'map' is a patch, the nodes are not updated otherwise
     };
     var nodeMoveTimeoutId = {};
