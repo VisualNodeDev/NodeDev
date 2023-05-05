@@ -12,40 +12,34 @@ import ReactFlow, {
 //import CustomNode from "./CustomNode";
 
 import "reactflow/dist/style.css";
+import * as Types from './Types'
 
-const initialNodes: Node[] = [
-    {
-        id: "1",
-        type: "input",
-        data: { label: "Node 1" },
-        position: { x: 250, y: 5 }
-    },
-    { id: "2", data: { label: "Node 2" }, position: { x: 100, y: 100 } },
-    { id: "3", data: { label: "Node 3" }, position: { x: 400, y: 100 } },
-    {
-        id: "4",
-        //type: "custom",
-        data: { label: "Node 4" },
-        position: { x: 400, y: 200 }
-    }
-];
+const initialNodes: Node[] = [];
 
-const initialEdges: Edge[] = [
-    { id: "e1-2", source: "1", target: "2", animated: true },
-    { id: "e1-3", source: "1", target: "3" }
-];
+const initialEdges: Edge[] = [];
 
 const nodeTypes = {
     //custom: CustomNode
 };
 
-const BasicFlow = () => {
-    const [nodes, , onNodesChange] = useNodesState(initialNodes);
+export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
+    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
     const onConnect = useCallback(
         (params: Edge | Connection) => setEdges((els) => addEdge(params, els)),
         [setEdges]
     );
+
+    props.CanvasInfos.AddNodes = function (newNodes: Types.NodeCreationInfo[]) {
+
+        if (newNodes.length === undefined)
+            newNodes = [newNodes] as any;
+
+        for (let i = 0; i < newNodes.length; i++)
+            nodes.push({ id: newNodes[i].id, data: { label: newNodes[i].name }, position: { x: newNodes[i].x, y: newNodes[i].y } });
+
+        setNodes(nodes);
+    }
 
     return (
         <ReactFlow
@@ -61,4 +55,3 @@ const BasicFlow = () => {
     );
 };
 
-export default BasicFlow;

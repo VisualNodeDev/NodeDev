@@ -39,33 +39,23 @@ var react_1 = require("react");
 var reactflow_1 = __importStar(require("reactflow"));
 //import CustomNode from "./CustomNode";
 require("reactflow/dist/style.css");
-var initialNodes = [
-    {
-        id: "1",
-        type: "input",
-        data: { label: "Node 1" },
-        position: { x: 250, y: 5 }
-    },
-    { id: "2", data: { label: "Node 2" }, position: { x: 100, y: 100 } },
-    { id: "3", data: { label: "Node 3" }, position: { x: 400, y: 100 } },
-    {
-        id: "4",
-        //type: "custom",
-        data: { label: "Node 4" },
-        position: { x: 400, y: 200 }
-    }
-];
-var initialEdges = [
-    { id: "e1-2", source: "1", target: "2", animated: true },
-    { id: "e1-3", source: "1", target: "3" }
-];
+var initialNodes = [];
+var initialEdges = [];
 var nodeTypes = {
 //custom: CustomNode
 };
-var BasicFlow = function () {
-    var _a = (0, reactflow_1.useNodesState)(initialNodes), nodes = _a[0], onNodesChange = _a[2];
+function BasicFlow(props) {
+    var _a = (0, reactflow_1.useNodesState)(initialNodes), nodes = _a[0], setNodes = _a[1], onNodesChange = _a[2];
     var _b = (0, reactflow_1.useEdgesState)(initialEdges), edges = _b[0], setEdges = _b[1], onEdgesChange = _b[2];
     var onConnect = (0, react_1.useCallback)(function (params) { return setEdges(function (els) { return (0, reactflow_1.addEdge)(params, els); }); }, [setEdges]);
+    props.CanvasInfos.AddNodes = function (newNodes) {
+        if (newNodes.length === undefined)
+            newNodes = [newNodes];
+        for (var i = 0; i < newNodes.length; i++)
+            nodes.push({ id: newNodes[i].id, data: { label: newNodes[i].name }, position: { x: newNodes[i].x, y: newNodes[i].y } });
+        setNodes(nodes);
+    };
     return ((0, jsx_runtime_1.jsx)(reactflow_1["default"], __assign({ nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes }, { children: (0, jsx_runtime_1.jsx)(reactflow_1.Background, {}) })));
-};
+}
 exports["default"] = BasicFlow;
+;

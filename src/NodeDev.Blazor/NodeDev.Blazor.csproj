@@ -6,6 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="js\index.jsx" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <SupportedPlatform Include="browser" />
@@ -24,13 +28,13 @@
     <ProjectReference Include="..\NodeDev.Core\NodeDev.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <TypeScriptCompile Include="js\index.jsx" />
+  </ItemGroup>
+
 
   <Target Name="webpack" AfterTargets="Build">
     <Exec Command="npm run build" />
-  </Target>
-
-  <Target Name="webpack clean" AfterTargets="Clean" Condition="Exists('node_modules')">
-    <Exec Command="npm run clean" />
   </Target>
 
 </Project>

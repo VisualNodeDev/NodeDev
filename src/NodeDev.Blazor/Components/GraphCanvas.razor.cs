@@ -50,8 +50,9 @@ namespace NodeDev.Blazor.Components
             {
                 Ref = DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync("InitializeCanvas", Ref, Id);
-                
-                //await Graph.Invoke(InitializeCanvasWithGraphNodes);
+
+                await Task.Delay(100);
+                await Graph.Invoke(InitializeCanvasWithGraphNodes);
             }
         }
 
