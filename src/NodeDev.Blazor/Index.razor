@@ -2,7 +2,7 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<MudLayout>
+<MudLayout Style="height: 100%; width: 100%">
 	<MudAppBar Elevation="1">
 		<MudButton OnClick="Save" Class="ml-3">Save</MudButton>
 		<MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
@@ -10,7 +10,7 @@
 		<MudSpacer />
 		<MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
 	</MudAppBar>
-	<MudMainContent>
+	<MudMainContent Style="width: 100%; height: 100%">
 		<GraphCanvas @ref="GraphCanvas" Graph="Graph"></GraphCanvas>
 	</MudMainContent>
 </MudLayout>

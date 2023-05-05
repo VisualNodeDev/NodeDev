@@ -39,6 +39,7 @@ var react_1 = require("react");
 var reactflow_1 = __importStar(require("reactflow"));
 //import CustomNode from "./CustomNode";
 require("reactflow/dist/style.css");
+var Utility = __importStar(require("./Utility"));
 var initialNodes = [];
 var initialEdges = [];
 var nodeTypes = {
@@ -53,9 +54,29 @@ function BasicFlow(props) {
             newNodes = [newNodes];
         for (var i = 0; i < newNodes.length; i++)
             nodes.push({ id: newNodes[i].id, data: { label: newNodes[i].name }, position: { x: newNodes[i].x, y: newNodes[i].y } });
-        setNodes(nodes);
+        setNodes(nodes.map(function (x) { return x; })); // the 'map' is a patch, the nodes are not updated otherwise
     };
-    return ((0, jsx_runtime_1.jsx)(reactflow_1["default"], __assign({ nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes }, { children: (0, jsx_runtime_1.jsx)(reactflow_1.Background, {}) })));
+    var nodeMoveTimeoutId = {};
+    function nodesChanged(changes) {
+        onNodesChange(changes);
+        var _loop_1 = function (i) {
+            var change = changes[i];
+            if (change.type === 'select') {
+                props.CanvasInfos.dotnet.invokeMethodAsync(change.selected ? 'OnNodeSelectedInClient' : 'OnNodeUnselectedInClient', change.id);
+            }
+            else if (change.type === 'position' && change.position) {
+                nodeMoveTimeoutId[change.id] = Utility.limitFunctionCall(nodeMoveTimeoutId[change.id], function () {
+                    change = change;
+                    props.CanvasInfos.dotnet.invokeMethodAsync('OnNodeMoved', change.id, change.position.x, change.position.y);
+                }, 250);
+            }
+        };
+        for (var i = 0; i < changes.length; i++) {
+            _loop_1(i);
+        }
+    }
+    return ((0, jsx_runtime_1.jsx)(reactflow_1["default"], __assign({ nodes: nodes, edges: edges, onNodesChange: nodesChanged, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes }, { children: (0, jsx_runtime_1.jsx)(reactflow_1.Background, {}) })));
 }
 exports["default"] = BasicFlow;
 ;
+//# sourceMappingURL=GraphCanvas.js.map

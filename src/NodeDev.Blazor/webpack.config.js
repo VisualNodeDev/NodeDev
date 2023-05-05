@@ -1,6 +1,6 @@
 module.exports = {
     entry: [
-        './js/index.jsx'
+        './js/index.js'
     ],
     mode: 'development',
     output: {
@@ -16,12 +16,16 @@ module.exports = {
                 use: ["style-loader", "css-loader"],
             }, {
                 test: /\.map/i,
-                use: ["map-loader"]
-            },
+                use: ["source-map-loader"]
+            }, {
+                test: /\.js$/,
+                use: ["source-map-loader"],
+                enforce: "pre"
+            }
         ]
     },
     resolve: {
-        extensions: ['', '.js', '.jsx', '.css', '.map']
+        extensions: ['', '.js', '.jsx', '.css', '.map', '.tsx']
     },
     devtool: 'source-map',
     devServer: {

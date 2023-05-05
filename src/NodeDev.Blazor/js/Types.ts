@@ -22,4 +22,5 @@ export interface NodeCreationInfo_Connection {
 export interface CanvasInfos {
     dotnet: any;
     AddNodes: (props: NodeCreationInfo[]) => void;
+    Destroy: () => void;
 }

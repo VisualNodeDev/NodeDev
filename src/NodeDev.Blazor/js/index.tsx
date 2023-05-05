@@ -3,19 +3,21 @@ import { createRoot } from "react-dom/client";
 
 import GraphCanvas from "./GraphCanvas"
 import "reactflow/dist/style.css";
+
 import * as Types from './Types'
 
-let Canvas = {};
+let Canvas = {} as any;
 
-(window)["InitializeCanvas"] = function (dotnet, id) {
+(window as any)["InitializeCanvas"] = function (dotnet: any, id: any) {
 
     let info = Canvas[id] = {
         dotnet: dotnet,
-        AddNodes: function (props) { }
+        AddNodes: function (props: Types.NodeCreationInfo[]) { },
+        Destroy: function () { delete (window as any)['Canvas_' + id]; }
     } ;
-    (window)['Canvas_' + id] = Canvas[id];
+    (window as any)['Canvas_' + id] = Canvas[id];
 
-    createRoot(document.getElementById(id)).render(
+    createRoot(document.getElementById(id) as HTMLElement).render(
         <StrictMode>
             <GraphCanvas CanvasInfos={info}></GraphCanvas>
         </StrictMode>
