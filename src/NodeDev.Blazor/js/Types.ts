@@ -1,3 +1,4 @@
+import { Connection } from 'reactflow'
 
 export interface NodeCreationInfo {
     id: string;
@@ -13,7 +14,7 @@ export interface NodeCreationInfo_Connection {
     name: string;
     connections?: { connectionId: string, nodeId: string }[];
     color: string;
-    type: string;
+    type: string | 'exec' | 'generic';
     isGeneric: boolean;
     allowTextboxEdit: boolean;
     textboxValue?: string;
@@ -23,6 +24,7 @@ export interface NodeData {
     name: string;
     inputs: NodeCreationInfo_Connection[];
     outputs: NodeCreationInfo_Connection[];
+    isValidConnection: (connection: Connection) => boolean;
 }
 
 export interface CanvasInfos {

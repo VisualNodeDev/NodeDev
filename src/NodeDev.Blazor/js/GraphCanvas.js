@@ -63,7 +63,8 @@ function BasicFlow(props) {
                 data: {
                     name: newNodes[i].name,
                     inputs: newNodes[i].inputs,
-                    outputs: newNodes[i].outputs
+                    outputs: newNodes[i].outputs,
+                    isValidConnection: isValidConnection
                 },
                 position: { x: newNodes[i].x, y: newNodes[i].y },
                 type: 'NodeWithMultipleHandles'
@@ -86,13 +87,29 @@ function BasicFlow(props) {
         setNodes(nodes.map(function (x) { return x; })); // the 'map' is a patch, the nodes are not updated otherwise
         setEdges(edges.map(function (x) { return x; })); // the 'map' is a patch, the nodes are not updated otherwise
     };
+    function isValidConnection(connection) {
+        if (!connection.source || !connection.target)
+            return false;
+        var source = Utility.findNode(nodes, connection.source);
+        var target = Utility.findNode(nodes, connection.target);
+        if (!source || !target)
+            return false;
+        var sourceOutput = source.data.outputs.find(function (x) { return x.id === connection.sourceHandle; });
+        var targetInput = target.data.inputs.find(function (x) { return x.id === connection.targetHandle; });
+        if (!sourceOutput || !targetInput)
+            return false;
+        if ((targetInput.type === 'generic' && sourceOutput.type !== 'exec') || (sourceOutput.type === 'generic' && targetInput.type !== 'exec'))
+            return true;
+        if (sourceOutput.type !== targetInput.type)
+            return false;
+        return true;
+    }
     function nodesChanged(changes) {
         onNodesChange(changes);
         var _loop_1 = function (i) {
             var change = changes[i];
-            if (change.type === 'select') {
+            if (change.type === 'select')
                 props.CanvasInfos.dotnet.invokeMethodAsync(change.selected ? 'OnNodeSelectedInClient' : 'OnNodeUnselectedInClient', change.id);
-            }
             else if (change.type === 'position' && change.position) {
                 nodeMoveTimeoutId[change.id] = Utility.limitFunctionCall(nodeMoveTimeoutId[change.id], function () {
                     change = change;
