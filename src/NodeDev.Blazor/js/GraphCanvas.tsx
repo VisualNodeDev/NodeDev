@@ -93,7 +93,7 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         if (!sourceOutput || !targetInput)
             return false;
 
-        if ((targetInput.type === 'generic' && sourceOutput.type !== 'exec') || (sourceOutput.type === 'generic' && targetInput.type !== 'exec'))
+        if ((targetInput.isGeneric && sourceOutput.type !== 'exec') || (sourceOutput.isGeneric && targetInput.type !== 'exec'))
             return true;
 
         if (sourceOutput.type !== targetInput.type)

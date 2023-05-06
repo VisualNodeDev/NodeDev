@@ -14,7 +14,7 @@ export interface NodeCreationInfo_Connection {
     name: string;
     connections?: { connectionId: string, nodeId: string }[];
     color: string;
-    type: string | 'exec' | 'generic';
+    type: string | 'exec';
     isGeneric: boolean;
     allowTextboxEdit: boolean;
     textboxValue?: string;
