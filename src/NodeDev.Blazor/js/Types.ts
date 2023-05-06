@@ -19,6 +19,12 @@ export interface NodeCreationInfo_Connection {
     textboxValue?: string;
 }
 
+export interface NodeData {
+    name: string;
+    inputs: NodeCreationInfo_Connection[];
+    outputs: NodeCreationInfo_Connection[];
+}
+
 export interface CanvasInfos {
     dotnet: any;
     AddNodes: (props: NodeCreationInfo[]) => void;

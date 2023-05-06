@@ -45,7 +45,12 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         for (let i = 0; i < newNodes.length; i++) {
             nodes.push({
                 id: newNodes[i].id,
-                data: { label: newNodes[i].name, inputs: newNodes[i].inputs, outputs: newNodes[i].outputs }, position: { x: newNodes[i].x, y: newNodes[i].y },
+                data: {
+                    name: newNodes[i].name,
+                    inputs: newNodes[i].inputs,
+                    outputs: newNodes[i].outputs
+                } as Types.NodeData,
+                position: { x: newNodes[i].x, y: newNodes[i].y },
                 type: 'NodeWithMultipleHandles'
             });
         }

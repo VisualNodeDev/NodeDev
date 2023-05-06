@@ -1,40 +1,38 @@
 import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 
-export default memo(({ data, isConnectable }: any) => {
+import * as Types from './Types'
+
+interface NodeWithMultipleHandlesProps {
+	data: Types.NodeData;
+}
+export default memo(({ data }: NodeWithMultipleHandlesProps) => {
+
+	function getConnection(inputOrOutput: Types.NodeCreationInfo_Connection, type: 'source' | 'target') {
+
+
+		return <div className={'nodeConnection_' + type} >
+			<div style={{ paddingRight: 10, paddingLeft: 10 }}>
+				{inputOrOutput.name}
+			</div>
+			<Handle
+				type={type as any}
+				position={type == 'source' ? Position.Right : Position.Left}
+				id={inputOrOutput.id}
+			/>
+		</div>
+	}
+
+
 	return (
 		<>
-			<Handle
-				type="target"
-				position={Position.Left}
-				onConnect={(params) => console.log('handle onConnect', params)}
-				isConnectable={isConnectable}
-			/>
 			<div>
-				{data?.label}
+				{data.name}
 			</div>
-			<div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'right', position: 'relative' }} >
-				<div style={{ paddingRight: 10, paddingLeft: 10 }}>
-					Output A
-				</div>
-				<Handle
-					type="source"
-					position={Position.Right}
-					id="a"
-					isConnectable={isConnectable}
-				/>
-			</div>
-			<div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'right', position: 'relative' }} >
-				<div style={{ paddingRight: 10, paddingLeft: 10 }}>
-					Output B
-				</div>
-				<Handle
-					type="source"
-					position={Position.Right}
-					id="b"
-					isConnectable={isConnectable}
-				/>
-			</div>
+
+			{data.inputs.map(x => getConnection(x, 'target'))}
+
+			{data.outputs.map(x => getConnection(x, 'source'))}
 		</>
 	);
 });

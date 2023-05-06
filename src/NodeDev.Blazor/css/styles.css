@@ -11,3 +11,17 @@
     border-color: #1a192b;
     background-color: white;
 }
+
+.nodeConnection_source {
+    display: flex;
+    flex-direction: row;
+    justify-content: right;
+    position: relative;
+}
+
+.nodeConnection_target {
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    position: relative;
+}

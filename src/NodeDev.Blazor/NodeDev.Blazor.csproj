@@ -7,15 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <TypeScriptCompile Remove="js\NodeWithMultipleHandles.tsx" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="js\NodeWithMultipleHandles.tsx" />
-  </ItemGroup>
-
-
-  <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
