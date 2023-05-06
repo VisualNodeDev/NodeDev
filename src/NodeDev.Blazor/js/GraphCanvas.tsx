@@ -158,11 +158,16 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         for (let i = 0; i < edge.length; i++)
             props.CanvasInfos.dotnet.invokeMethodAsync('OnConnectionRemoved', edge[i].source, edge[i].sourceHandle, edge[i].target, edge[i].targetHandle);
     }
+    function nodesDeleted(nodes: Node[]) {
+        for (let i = 0; i < nodes.length; i++)
+            props.CanvasInfos.dotnet.invokeMethodAsync('OnNodeRemoved', nodes[i].id);
+    }
 
     return (
         <ReactFlow
             nodes={nodes}
             edges={edges}
+            onNodesDelete={nodesDeleted}
             onNodesChange={nodesChanged}
             onEdgesChange={onEdgesChange}
             onConnect={nodeConnected}
