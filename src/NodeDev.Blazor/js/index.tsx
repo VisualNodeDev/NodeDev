@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-
+import { ReactFlowProvider } from "reactflow";
 import GraphCanvas from "./GraphCanvas"
 import "reactflow/dist/style.css";
 
@@ -14,14 +14,16 @@ let Canvas = {} as any;
         dotnet: dotnet,
         AddNodes: function (props: Types.NodeCreationInfo[]) { },
         Destroy: function () { delete (window as any)['Canvas_' + id]; },
-        UpdateConnectionType: function (type: {nodeId: string, id: string, type: string, isGeneric: boolean, color: string, allowTextboxEdit: boolean, textboxValue: string | undefined }) { },
+        UpdateConnectionType: function (type: { nodeId: string, id: string, type: string, isGeneric: boolean, color: string, allowTextboxEdit: boolean, textboxValue: string | undefined }) { },
 
     } as Types.CanvasInfos;
     (window as any)['Canvas_' + id] = Canvas[id];
 
     createRoot(document.getElementById(id) as HTMLElement).render(
         <StrictMode>
-            <GraphCanvas CanvasInfos={info}></GraphCanvas>
+            <ReactFlowProvider>
+                <GraphCanvas CanvasInfos={info}></GraphCanvas>
+            </ReactFlowProvider>
         </StrictMode>
     );
 

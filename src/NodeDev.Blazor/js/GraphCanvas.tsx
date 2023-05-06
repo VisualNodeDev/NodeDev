@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import ReactFlow, {
     Node,
     addEdge,
@@ -8,10 +8,10 @@ import ReactFlow, {
     useNodesState,
     useEdgesState,
     NodeChange,
-    applyNodeChanges,
     NodePositionChange,
-    Position,
-    EdgeChange
+    useReactFlow,
+    OnConnectStartParams,
+    ReactFlowProvider
 } from "reactflow";
 
 import NodeWithMultipleHandles from "./NodeWithMultipleHandles";
@@ -38,6 +38,9 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         (params: Edge | Connection) => setEdges((els) => addEdge(params, els)),
         [setEdges]
     );
+    const reactFlowWrapper = useRef(null);
+    const { project } = useReactFlow();
+    const connectingNodeId = useRef<OnConnectStartParams>(null);
 
     props.CanvasInfos.AddNodes = function (newNodes: Types.NodeCreationInfo[]) {
 
@@ -151,8 +154,10 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
     function nodeConnected(changes: Edge | Connection) {
         onConnect(changes);
 
-        if (changes.sourceHandle)
+        if (changes.sourceHandle) {
+            (connectingNodeId as any).current = null;
             props.CanvasInfos.dotnet.invokeMethodAsync('OnConnectionAdded', changes.source, changes.sourceHandle, changes.target, changes.targetHandle);
+        }
     }
     function edgeDeleted(edge: Edge[]) {
         for (let i = 0; i < edge.length; i++)
@@ -163,19 +168,39 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
             props.CanvasInfos.dotnet.invokeMethodAsync('OnNodeRemoved', nodes[i].id);
     }
 
+
+    function connectStart(event: any, params: OnConnectStartParams) {
+        (connectingNodeId as any).current = params;
+    }
+    function connectEnd(event: MouseEvent) {
+        const targetIsPane = (event as any).target.classList.contains('react-flow__pane');
+
+        if (targetIsPane && connectingNodeId.current) {
+            // we need to remove the wrapper bounds, in order to get the correct position
+            const { top, left } = (reactFlowWrapper.current as any).getBoundingClientRect();
+            props.CanvasInfos.dotnet.invokeMethodAsync('OnPortDroppedOnCanvas', connectingNodeId.current.nodeId, connectingNodeId.current.handleId, event.clientX - left, event.clientY - top);
+        }
+    }
+
+
+
     return (
-        <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesDelete={nodesDeleted}
-            onNodesChange={nodesChanged}
-            onEdgesChange={onEdgesChange}
-            onConnect={nodeConnected}
-            onEdgesDelete={edgeDeleted}
-            nodeTypes={nodeTypes}
-        >
-            <Background />
-        </ReactFlow>
+        <div style={{height: '100%', width: '100%'}} ref={reactFlowWrapper}>
+            <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesDelete={nodesDeleted}
+                onNodesChange={nodesChanged}
+                onEdgesChange={onEdgesChange}
+                onConnect={nodeConnected}
+                onEdgesDelete={edgeDeleted}
+                nodeTypes={nodeTypes}
+                onConnectEnd={connectEnd as any}
+                onConnectStart={connectStart as any}
+            >
+                <Background />
+            </ReactFlow>
+        </div>
     );
 };
 
