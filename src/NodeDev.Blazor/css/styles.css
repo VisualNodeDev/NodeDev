@@ -18,10 +18,17 @@
     justify-content: right;
     position: relative;
 }
-
+.react-flow__handle {
+    min-height: 12px;
+    min-width: 12px;
+}
 .nodeConnection_target {
     display: flex;
     flex-direction: row;
     justify-content: left;
     position: relative;
+}
+
+.react-flow__handle-valid {
+    background: #55dd99 !important;
 }
