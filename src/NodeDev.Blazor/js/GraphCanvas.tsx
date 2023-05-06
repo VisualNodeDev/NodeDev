@@ -30,6 +30,7 @@ const nodeTypes = {
     NodeWithMultipleHandles: NodeWithMultipleHandles
 };
 
+let nodeMoveTimeoutId: any = {};
 export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -75,7 +76,6 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         setEdges(edges.map(x => x)); // the 'map' is a patch, the nodes are not updated otherwise
     }
 
-    let nodeMoveTimeoutId: any = {};
     function nodesChanged(changes: NodeChange[]) {
         onNodesChange(changes);
 
@@ -92,11 +92,10 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
             }
         }
     }
-
     function nodeConnected(changes: Edge | Connection) {
         onConnect(changes);
 
-        if (changes.sourceHandle) 
+        if (changes.sourceHandle)
             props.CanvasInfos.dotnet.invokeMethodAsync('OnConnectionAdded', changes.source, changes.sourceHandle, changes.target, changes.targetHandle);
     }
 

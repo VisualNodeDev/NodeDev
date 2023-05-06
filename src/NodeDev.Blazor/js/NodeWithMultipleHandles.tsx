@@ -19,6 +19,7 @@ export default memo(({ data }: NodeWithMultipleHandlesProps) => {
 				type={type as any}
 				position={type == 'source' ? Position.Right : Position.Left}
 				id={inputOrOutput.id}
+				style={{ background: inputOrOutput.color }}
 				isConnectable={true}
 			/>
 		</div>

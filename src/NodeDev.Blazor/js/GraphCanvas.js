@@ -49,6 +49,7 @@ var initialEdges = [];
 var nodeTypes = {
     NodeWithMultipleHandles: NodeWithMultipleHandles_1["default"]
 };
+var nodeMoveTimeoutId = {};
 function BasicFlow(props) {
     var _a = (0, reactflow_1.useNodesState)(initialNodes), nodes = _a[0], setNodes = _a[1], onNodesChange = _a[2];
     var _b = (0, reactflow_1.useEdgesState)(initialEdges), edges = _b[0], setEdges = _b[1], onEdgesChange = _b[2];
@@ -85,7 +86,6 @@ function BasicFlow(props) {
         setNodes(nodes.map(function (x) { return x; })); // the 'map' is a patch, the nodes are not updated otherwise
         setEdges(edges.map(function (x) { return x; })); // the 'map' is a patch, the nodes are not updated otherwise
     };
-    var nodeMoveTimeoutId = {};
     function nodesChanged(changes) {
         onNodesChange(changes);
         var _loop_1 = function (i) {

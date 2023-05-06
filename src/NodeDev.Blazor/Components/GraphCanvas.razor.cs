@@ -153,7 +153,7 @@ namespace NodeDev.Blazor.Components
         #region Node Moved
 
         [JSInvokable]
-        public void OnNodeMoved(string nodeId, int x, int y)
+        public void OnNodeMoved(string nodeId, float x, float y)
         {
             if (!Graph.Nodes.TryGetValue(nodeId, out var node))
                 return;
