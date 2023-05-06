@@ -71,8 +71,6 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
             }
         }
 
-        let str = JSON.stringify(nodes);
-        let str2 = JSON.stringify(edges);
         setNodes(nodes.map(x => x)); // the 'map' is a patch, the nodes are not updated otherwise
         setEdges(edges.map(x => x)); // the 'map' is a patch, the nodes are not updated otherwise
     }
@@ -94,10 +92,12 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
             }
         }
     }
-    function edgesChanged(changes: EdgeChange[]) {
-        onEdgesChange(changes);
 
-        console.log('edgesChanged', changes);
+    function nodeConnected(changes: Edge | Connection) {
+        onConnect(changes);
+
+        if (changes.sourceHandle) 
+            props.CanvasInfos.dotnet.invokeMethodAsync('OnConnectionAdded', changes.source, changes.sourceHandle, changes.target, changes.targetHandle);
     }
 
     return (
@@ -105,8 +105,8 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
             nodes={nodes}
             edges={edges}
             onNodesChange={nodesChanged}
-            onEdgesChange={edgesChanged}
-            onConnect={onConnect}
+            onEdgesChange={onEdgesChange}
+            onConnect={nodeConnected}
             nodeTypes={nodeTypes}
         >
             <Background />

@@ -82,8 +82,6 @@ function BasicFlow(props) {
                 }
             }
         }
-        var str = JSON.stringify(nodes);
-        var str2 = JSON.stringify(edges);
         setNodes(nodes.map(function (x) { return x; })); // the 'map' is a patch, the nodes are not updated otherwise
         setEdges(edges.map(function (x) { return x; })); // the 'map' is a patch, the nodes are not updated otherwise
     };
@@ -106,11 +104,12 @@ function BasicFlow(props) {
             _loop_1(i);
         }
     }
-    function edgesChanged(changes) {
-        onEdgesChange(changes);
-        console.log('edgesChanged', changes);
+    function nodeConnected(changes) {
+        onConnect(changes);
+        if (changes.sourceHandle)
+            props.CanvasInfos.dotnet.invokeMethodAsync('OnConnectionAdded', changes.source, changes.sourceHandle, changes.target, changes.targetHandle);
     }
-    return ((0, jsx_runtime_1.jsx)(reactflow_1["default"], __assign({ nodes: nodes, edges: edges, onNodesChange: nodesChanged, onEdgesChange: edgesChanged, onConnect: onConnect, nodeTypes: nodeTypes }, { children: (0, jsx_runtime_1.jsx)(reactflow_1.Background, {}) })));
+    return ((0, jsx_runtime_1.jsx)(reactflow_1["default"], __assign({ nodes: nodes, edges: edges, onNodesChange: nodesChanged, onEdgesChange: onEdgesChange, onConnect: nodeConnected, nodeTypes: nodeTypes }, { children: (0, jsx_runtime_1.jsx)(reactflow_1.Background, {}) })));
 }
 exports["default"] = BasicFlow;
 ;
