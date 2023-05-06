@@ -8,3 +8,9 @@
 /src/NodeDev.Core/bin
 /src/NodeDev.Blazor.Server/graph.json
 /src/NodeDev.Blazor/node_modules
+/src/NodeDev.Blazor/js/GraphCanvas.js.map
+/src/NodeDev.Blazor/js/GraphCanvas.js
+/src/NodeDev.Blazor/wwwroot/dist/NodeDev.min.js
+/src/NodeDev.Blazor/wwwroot/dist/NodeDev.min.js.map
+/src/NodeDev.Blazor/js/index.js
+/src/NodeDev.Blazor/js/index.js.map
