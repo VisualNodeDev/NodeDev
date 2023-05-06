@@ -11,7 +11,7 @@ export interface NodeCreationInfo {
 export interface NodeCreationInfo_Connection {
     id: string;
     name: string;
-    connections?: string[];
+    connections?: { connectionId: string, nodeId: string }[];
     color: string;
     type: string;
     isGeneric: boolean;

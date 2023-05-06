@@ -11,7 +11,7 @@ export default memo(({ data }: NodeWithMultipleHandlesProps) => {
 	function getConnection(inputOrOutput: Types.NodeCreationInfo_Connection, type: 'source' | 'target') {
 
 
-		return <div className={'nodeConnection_' + type} >
+		return <div key={ inputOrOutput.id } className={'nodeConnection_' + type} >
 			<div style={{ paddingRight: 10, paddingLeft: 10 }}>
 				{inputOrOutput.name}
 			</div>
@@ -19,6 +19,7 @@ export default memo(({ data }: NodeWithMultipleHandlesProps) => {
 				type={type as any}
 				position={type == 'source' ? Position.Right : Position.Left}
 				id={inputOrOutput.id}
+				isConnectable={true}
 			/>
 		</div>
 	}

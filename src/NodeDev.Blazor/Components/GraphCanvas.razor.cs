@@ -329,7 +329,8 @@ namespace NodeDev.Blazor.Components
         }
 
         private record class NodeCreationInfo(string Id, string Name, float X, float Y, List<NodeCreationInfo_Connection> Inputs, List<NodeCreationInfo_Connection> Outputs);
-        private record class NodeCreationInfo_Connection(string Id, string Name, List<string>? Connections, string Color, string Type, bool IsGeneric, bool AllowTextboxEdit, string? TextboxValue);
+        private record class NodeCreationInfo_Connection(string Id, string Name, List<NodeCreationInfo_Connection_Connection>? Connections, string Color, string Type, bool IsGeneric, bool AllowTextboxEdit, string? TextboxValue);
+        private record class NodeCreationInfo_Connection_Connection(string ConnectionId, string NodeId);
 
         private string GetTypeShapeColor(TypeBase type)
         {
@@ -351,8 +352,8 @@ namespace NodeDev.Blazor.Components
                 node.Name,
                 positionAttribute.X,
                 positionAttribute.Y,
-                node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric, x.Type.AllowTextboxEdit, x.TextboxValue)).ToList(),
-                node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => y.Id).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric, false, null)).ToList());
+                node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric, x.Type.AllowTextboxEdit, x.TextboxValue)).ToList(),
+                node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric, false, null)).ToList());
         }
 
         #endregion

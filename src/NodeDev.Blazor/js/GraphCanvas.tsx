@@ -10,7 +10,8 @@ import ReactFlow, {
     NodeChange,
     applyNodeChanges,
     NodePositionChange,
-    Position
+    Position,
+    EdgeChange
 } from "reactflow";
 
 import NodeWithMultipleHandles from "./NodeWithMultipleHandles";
@@ -53,9 +54,27 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                 position: { x: newNodes[i].x, y: newNodes[i].y },
                 type: 'NodeWithMultipleHandles'
             });
+
+            for (let j = 0; j < newNodes[i].inputs.length; j++) {
+                let input = newNodes[i].inputs[j];
+                if (!input.connections)
+                    continue;
+                for (let j = 0; j < input.connections.length; j++) {
+                    edges.push({
+                        id: input.id + '_' + input.connections[j].connectionId,
+                        target: newNodes[i].id,
+                        targetHandle: input.id,
+                        source: input.connections[j].nodeId,
+                        sourceHandle: input.connections[j].connectionId
+                    });
+                }
+            }
         }
 
+        let str = JSON.stringify(nodes);
+        let str2 = JSON.stringify(edges);
         setNodes(nodes.map(x => x)); // the 'map' is a patch, the nodes are not updated otherwise
+        setEdges(edges.map(x => x)); // the 'map' is a patch, the nodes are not updated otherwise
     }
 
     let nodeMoveTimeoutId: any = {};
@@ -75,13 +94,18 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
             }
         }
     }
+    function edgesChanged(changes: EdgeChange[]) {
+        onEdgesChange(changes);
+
+        console.log('edgesChanged', changes);
+    }
 
     return (
         <ReactFlow
             nodes={nodes}
             edges={edges}
             onNodesChange={nodesChanged}
-            onEdgesChange={onEdgesChange}
+            onEdgesChange={edgesChanged}
             onConnect={onConnect}
             nodeTypes={nodeTypes}
         >

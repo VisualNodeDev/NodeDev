@@ -67,8 +67,25 @@ function BasicFlow(props) {
                 position: { x: newNodes[i].x, y: newNodes[i].y },
                 type: 'NodeWithMultipleHandles'
             });
+            for (var j = 0; j < newNodes[i].inputs.length; j++) {
+                var input = newNodes[i].inputs[j];
+                if (!input.connections)
+                    continue;
+                for (var j_1 = 0; j_1 < input.connections.length; j_1++) {
+                    edges.push({
+                        id: input.id + '_' + input.connections[j_1].connectionId,
+                        target: newNodes[i].id,
+                        targetHandle: input.id,
+                        source: input.connections[j_1].nodeId,
+                        sourceHandle: input.connections[j_1].connectionId
+                    });
+                }
+            }
         }
+        var str = JSON.stringify(nodes);
+        var str2 = JSON.stringify(edges);
         setNodes(nodes.map(function (x) { return x; })); // the 'map' is a patch, the nodes are not updated otherwise
+        setEdges(edges.map(function (x) { return x; })); // the 'map' is a patch, the nodes are not updated otherwise
     };
     var nodeMoveTimeoutId = {};
     function nodesChanged(changes) {
@@ -89,7 +106,11 @@ function BasicFlow(props) {
             _loop_1(i);
         }
     }
-    return ((0, jsx_runtime_1.jsx)(reactflow_1["default"], __assign({ nodes: nodes, edges: edges, onNodesChange: nodesChanged, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes }, { children: (0, jsx_runtime_1.jsx)(reactflow_1.Background, {}) })));
+    function edgesChanged(changes) {
+        onEdgesChange(changes);
+        console.log('edgesChanged', changes);
+    }
+    return ((0, jsx_runtime_1.jsx)(reactflow_1["default"], __assign({ nodes: nodes, edges: edges, onNodesChange: nodesChanged, onEdgesChange: edgesChanged, onConnect: onConnect, nodeTypes: nodeTypes }, { children: (0, jsx_runtime_1.jsx)(reactflow_1.Background, {}) })));
 }
 exports["default"] = BasicFlow;
 ;
