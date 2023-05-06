@@ -1,5 +1,5 @@
 import * as Types from './Types'
-import { Node } from 'reactflow';
+import { Node, Edge } from 'reactflow';
 export function limitFunctionCall(timeoutId: number, fn: () => void, limit: number) {
     clearTimeout(timeoutId);
     return setTimeout(fn, limit);

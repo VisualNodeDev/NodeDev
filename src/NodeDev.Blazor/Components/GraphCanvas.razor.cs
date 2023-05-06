@@ -124,6 +124,11 @@ namespace NodeDev.Blazor.Components
                     {
                         source.Connections.Add(destination);
                         destination.Connections.Add(source);
+
+                        if (source.Type.IsGeneric && !destination.Type.IsGeneric)
+                            PropagateNewGeneric(nodeSource, (UndefinedGenericType)source.Type, destination.Type);
+                        else if(destination.Type.IsGeneric && !source.Type.IsGeneric)
+                            PropagateNewGeneric(nodeDestination, (UndefinedGenericType)destination.Type, source.Type);
                     }
                 }
             });
@@ -266,7 +271,7 @@ namespace NodeDev.Blazor.Components
             PropagateNewGeneric(PopupNode, generic, TypeFactory.Get(type));
         }
 
-        private record class UpdateConnectionTypeParameters(string Id, string Type, bool IsGeneric, string Color, bool AllowTextboxEdit, string? TextboxValue);
+        private record class UpdateConnectionTypeParameters(string NodeId, string Id, string Type, bool IsGeneric, string Color, bool AllowTextboxEdit, string? TextboxValue);
         private void PropagateNewGeneric(Node node, UndefinedGenericType generic, TypeBase newType)
         {
             foreach (var connection in node.InputsAndOutputs)
@@ -275,7 +280,7 @@ namespace NodeDev.Blazor.Components
                 {
                     connection.UpdateType(newType);
                     
-                    InvokeJSVoid("UpdateConnectionType", new UpdateConnectionTypeParameters(connection.Id, newType.Name, false, GetTypeShapeColor(newType), newType.AllowTextboxEdit, connection.TextboxValue)).AndForget();
+                    InvokeJSVoid("UpdateConnectionType", new UpdateConnectionTypeParameters(node.Id, connection.Id, newType.Name, false, GetTypeShapeColor(newType), newType.AllowTextboxEdit, connection.TextboxValue)).AndForget();
 
                     foreach (var other in connection.Connections)
                     {

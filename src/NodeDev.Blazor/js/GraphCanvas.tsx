@@ -76,6 +76,37 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         setNodes(nodes.map(x => x)); // the 'map' is a patch, the nodes are not updated otherwise
         setEdges(edges.map(x => x)); // the 'map' is a patch, the nodes are not updated otherwise
     }
+    props.CanvasInfos.UpdateConnectionType = function (type: { nodeId: string, id: string, type: string, isGeneric: boolean, color: string, allowTextboxEdit: boolean, textboxValue: string | undefined }) {
+        setNodes((nds) =>
+            nds.map((node) => {
+                if (node.id === type.nodeId) {
+                    // find the connection
+                    let connection = node.data.inputs.find(x => x.id === type.id);
+                    if (!connection)
+                        connection = node.data.outputs.find(x => x.id === type.id);
+                    if (!connection)
+                        return node;
+
+                    connection.type = type.type;
+                    connection.isGeneric = type.isGeneric;
+                    connection.color = type.color;
+                    connection.allowTextboxEdit = type.allowTextboxEdit;
+                    connection.textboxValue = type.textboxValue;
+
+                    // it's important that you create a new object here
+                    // in order to notify react flow about the change
+                    node.data = {
+                        ...node.data
+                    };
+                }
+
+                return node;
+            })
+        );
+
+
+
+    }
 
     function isValidConnection(connection: Connection) {
         if (!connection.source || !connection.target)
@@ -101,6 +132,7 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
 
         return true;
     }
+
     function nodesChanged(changes: NodeChange[]) {
         onNodesChange(changes);
 
