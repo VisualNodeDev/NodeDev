@@ -207,11 +207,11 @@ namespace NodeDev.Blazor.Components
 			StateHasChanged();
 		}
 
-		private void OnNewNodeTypeSelected(Type typeSelected)
+		private void OnNewNodeTypeSelected(NodeProvider.NodeSearchResult searchResult)
 		{
 			IsShowingNodeSelection = false; // remove the node type selection popup
 
-			var node = Graph.AddNode(typeSelected);
+			var node = Graph.AddNode(searchResult);
 			node.AddDecoration(new NodeDecorationPosition(new(PopupX, PopupY)));
 
 			if (PopupNodeConnection != null && PopupNode != null)
@@ -249,6 +249,8 @@ namespace NodeDev.Blazor.Components
 						PropagateNewGeneric(PopupNodeConnection.Parent, (UndefinedGenericType)PopupNodeConnection.Type, destination.Type);
 				}
 			}
+			PopupNode = null;
+			PopupNodeConnection = null;
 
 			InvokeJSVoid("AddNodes", GetNodeCreationInfo(node)).AndForget();
 		}
@@ -285,6 +287,9 @@ namespace NodeDev.Blazor.Components
 				return;
 
 			PropagateNewGeneric(PopupNode, generic, TypeFactory.Get(type));
+
+			PopupNode = null;
+			PopupNodeConnection = null;
 		}
 
 		private bool GetAllowTextboxEdit(Connection connection) => connection.Type.AllowTextboxEdit && connection.Connections.Count == 0;

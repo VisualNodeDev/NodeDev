@@ -8,7 +8,7 @@ namespace NodeDev.Core.Types;
 
 public class RealType : TypeBase
 {
-    private readonly Type BackendType;
+    internal readonly Type BackendType;
 
     public override string Name => BackendType.Name;
 

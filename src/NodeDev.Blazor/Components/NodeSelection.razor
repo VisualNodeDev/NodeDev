@@ -7,10 +7,17 @@
 
 			<MudTextField T="string" AutoFocus="true" @bind-Value="SearchText" Immediate="true" DebounceInterval="100" Label="Search" Class="flex-none" OnKeyDown="OnKeyDown"></MudTextField>
 
-			<MudList Clickable="true" SelectedItemChanged="@( x=> OnNodeTypeSelected.InvokeAsync((Type)x.Value))" Class="flex-1 overflow-y-hidden">
-				@foreach (var type in NodeDev.Core.NodeProvider.Search(SearchText).Take(1000))
+			<MudList Clickable="true" SelectedItemChanged="@( x=> OnNodeTypeSelected.InvokeAsync((NodeDev.Core.NodeProvider.NodeSearchResult)x.Value))" Class="flex-1 overflow-y-hidden">
+				@foreach (var type in NodeDev.Core.NodeProvider.Search(SearchText, Connection).Take(1000))
 				{
-					<MudListItem Text="@type.Name" Value="type" />
+					@if (type is NodeDev.Core.NodeProvider.MethodCallNode methodCallNode)
+					{
+						<MudListItem Text="@($"{type.Type.Name}.{methodCallNode.MethodInfo.Name}")" Value="type"/>
+					}
+					else
+					{
+						<MudListItem Text="@type.Type.Name" Value="type" />
+					}
 				}
 			</MudList>
 
@@ -27,12 +34,15 @@
 
 	[Parameter]
 	public int PositionY { get; set; }
+	
+	[Parameter]
+	public NodeDev.Core.Connections.Connection? Connection { get; set; } = null!;
 
 	[Parameter]
 	public GraphCanvas GraphCanvas { get; set; } = null!;
 
 	[Parameter]
-	public EventCallback<Type> OnNodeTypeSelected { get; set; }
+	public EventCallback<NodeDev.Core.NodeProvider.NodeSearchResult> OnNodeTypeSelected { get; set; }
 
 	private string SearchText { get; set; } = "";
 
@@ -40,7 +50,7 @@
 	{
 		if (args.Key == "Enter")
 		{
-			var first = NodeDev.Core.NodeProvider.Search(SearchText).FirstOrDefault();
+			var first = NodeDev.Core.NodeProvider.Search(SearchText, Connection).FirstOrDefault();
 			if(first != null)
 				await OnNodeTypeSelected.InvokeAsync(first);
 		}

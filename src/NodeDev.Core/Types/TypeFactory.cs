@@ -11,7 +11,7 @@ namespace NodeDev.Core.Types
 	{
 		private static readonly Dictionary<Type, RealType> RealTypes = new();
 
-		private static List<string> IncludedNamespaces = new()
+		public static List<string> IncludedNamespaces = new()
 		{
 			"System",
 			"System.Collections.Generic",
@@ -43,6 +43,15 @@ namespace NodeDev.Core.Types
 			return AppDomain.CurrentDomain.GetAssemblies().Select(x => x.GetType(name)).FirstOrDefault(x => x != null);
 		}
 
+		private static Type? GetTypeFromAllAssemblies(string name)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+				return null;
+
+			var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+			return assemblies.Select(ass => ass.GetType(name)).FirstOrDefault( x=> x != null);
+		}
+
 		#region CreateBaseFromUserInput
 
 		public static string? CreateBaseFromUserInput(string typeName, out Type? type)
@@ -60,7 +69,7 @@ namespace NodeDev.Core.Types
 				var correspondance = TypeCorrespondances.FirstOrDefault(x => x.Value.Contains(typeName));
 				if(correspondance.Key != null)
 					typeName = correspondance.Key;
-				type = Type.GetType(typeName) ?? IncludedNamespaces.Select(ns => Type.GetType($"{ns}.{typeName}")).FirstOrDefault(t => t != null);
+				type = GetTypeFromAllAssemblies(typeName) ?? IncludedNamespaces.Select(ns => GetTypeFromAllAssemblies($"{ns}.{typeName}")).FirstOrDefault(t => t != null);
 
 				if (type?.IsGenericType == true)
 				{
@@ -79,7 +88,7 @@ namespace NodeDev.Core.Types
 			if (correspondance2.Key != null)
 				name = correspondance2.Key;
 
-			var baseType = Type.GetType(name + "`" + genericArgs.Length) ?? IncludedNamespaces.Select(ns => Type.GetType($"{ns}.{name}`{genericArgs.Length}")).FirstOrDefault(t => t != null);
+			var baseType = GetTypeFromAllAssemblies(name + "`" + genericArgs.Length) ?? IncludedNamespaces.Select(ns => GetTypeFromAllAssemblies($"{ns}.{name}`{genericArgs.Length}")).FirstOrDefault(t => t != null);
 			if(baseType == null)
 			{
 				type = null;

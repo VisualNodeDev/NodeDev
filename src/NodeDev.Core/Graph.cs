@@ -33,10 +33,14 @@ public class Graph
 		((IDictionary<string, Node>)Nodes)[node.Id] = node;
 	}
 
-	public Node AddNode(Type type)
+	public Node AddNode(NodeProvider.NodeSearchResult searchResult)
 	{
-		var node = (Node)Activator.CreateInstance(type, this, null)!;
+		var node = (Node)Activator.CreateInstance(searchResult.Type, this, null)!;
 		AddNode(node);
+		if (searchResult is NodeProvider.MethodCallNode methodCall && node is Nodes.MethodCall methodCallNode)
+		{
+			methodCallNode.SetMethodTarget(methodCall.MethodInfo);
+		}
 		return node;
 	}
 

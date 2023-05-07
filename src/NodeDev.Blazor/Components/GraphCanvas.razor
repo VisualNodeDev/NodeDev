@@ -4,7 +4,7 @@
 	@if (IsShowingNodeSelection)
 	{
 		<div @onclick="@(() => IsShowingNodeSelection = false)" style="background-color: var(--mud-palette-overlay-dark); width: 100%; height: 100%; position: absolute; z-index: 1">
-			<NodeDev.Blazor.Components.NodeSelection PositionX="PopupX" PositionY="PopupY" GraphCanvas="this" OnNodeTypeSelected="OnNewNodeTypeSelected" />
+			<NodeDev.Blazor.Components.NodeSelection PositionX="PopupX" PositionY="PopupY" GraphCanvas="this" OnNodeTypeSelected="OnNewNodeTypeSelected" Connection="PopupNodeConnection" />
 		</div>
 	}
 	@if (IsShowingGenericTypeSelection)
