@@ -26,6 +26,11 @@ export default memo(({ id, data }: NodeWithMultipleHandlesProps) => {
                 isConnectable={true}
                 isValidConnection={data.isValidConnection}
             />
+
+            {inputOrOutput.allowTextboxEdit?
+                <input type="text" value={inputOrOutput.textboxValue ? inputOrOutput.textboxValue : ''} onChange={(event) => data.onTextboxValueChanged(id, inputOrOutput.id, event.target.value)} /> : <></>
+            }
+
             {inputOrOutput.isGeneric ? <svg onClick={onGenericTypeSelectionMenuAsked} viewBox="0 0 24 24" className={type == 'source' ? 'generic_source_link' : 'generic_target_link'} dangerouslySetInnerHTML={{ __html: linkIcon }}/> : <></>}
         </div>
     }

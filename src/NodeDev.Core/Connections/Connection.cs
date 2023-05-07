@@ -84,10 +84,17 @@ namespace NodeDev.Core.Connections
 			if (Type.AllowTextboxEdit)
 			{
 				TextboxValue = text;
-				if(text == null)
+				if (text == null)
 					ParsedTextboxValue = null;
-                else
-					ParsedTextboxValue = Type.ParseTextboxEdit(text);
+				else
+				{
+					try
+					{
+						ParsedTextboxValue = Type.ParseTextboxEdit(text);
+					}
+					catch (Exception)
+					{ }
+				}
 			}
         }
 

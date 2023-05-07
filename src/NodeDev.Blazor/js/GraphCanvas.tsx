@@ -55,7 +55,8 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                     inputs: newNodes[i].inputs,
                     outputs: newNodes[i].outputs,
                     isValidConnection: isValidConnection,
-                    onGenericTypeSelectionMenuAsked: onGenericTypeSelectionMenuAsked
+                    onGenericTypeSelectionMenuAsked: onGenericTypeSelectionMenuAsked,
+                    onTextboxValueChanged: onTextboxValueChanged
                 },
                 position: { x: newNodes[i].x, y: newNodes[i].y },
                 type: 'NodeWithMultipleHandles'
@@ -107,9 +108,28 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                 return node;
             })
         );
+    }
+    function onTextboxValueChanged(nodeId: string, connectionId: string, value: string) {
+        setNodes((nds) =>
+            nds.map((node) => {
+                if (node.id === nodeId) {
+                    // find the connection
+                    let connection = node.data.inputs.find(x => x.id === connectionId);
+                    if (!connection)
+                        connection = node.data.outputs.find(x => x.id === connectionId);
+                    if (!connection)
+                        return node;
 
+                    connection.textboxValue = value;
 
-
+                    node.data = {
+                        ...node.data
+                    };
+                }
+                return node;
+            })
+        );
+        props.CanvasInfos.dotnet.invokeMethodAsync('OnTextboxValueChanged', nodeId, connectionId, value);
     }
     function onGenericTypeSelectionMenuAsked(nodeId: string, connectionId: string, x: number, y: number) {
         props.CanvasInfos.dotnet.invokeMethodAsync('OnGenericTypeSelectionMenuAsked', nodeId, connectionId, x, y);

@@ -65,3 +65,9 @@
     pointer-events: all;
     cursor: default;
 }
+
+.nodeConnection_target input {
+    border: 1px black solid;
+    width: 100%;
+    margin-right: 20px;
+}
