@@ -23,7 +23,7 @@ namespace NodeDev.Core.Types
 
 		public static ExecType Deserialize(string serialized)
 		{
-			return new ExecType();
+			return TypeFactory.ExecType;
 		}
 	}
 }

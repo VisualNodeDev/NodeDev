@@ -22,8 +22,8 @@ namespace NodeDev.Core.Nodes
 
         protected NormalFlowNode(Graph graph, string? id = null) : base(graph, id)
         {
-            Inputs.Add(new("exec", this, TypeFactory.ExecType));
-            Outputs.Add(new("exec", this, TypeFactory.ExecType));
+            Inputs.Add(new("Exec", this, TypeFactory.ExecType));
+            Outputs.Add(new("Exec", this, TypeFactory.ExecType));
         }
 
         public override Connection Execute(Connection? inputExec, object?[] inputs, object?[] outputs)
