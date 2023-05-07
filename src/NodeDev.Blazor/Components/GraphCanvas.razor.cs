@@ -35,6 +35,7 @@ namespace NodeDev.Blazor.Components
 
 		private int PopupX = 0;
 		private int PopupY = 0;
+		private Vector2 PopupNodePosition;
 		private Connection? PopupNodeConnection;
 		private Node? PopupNode;
 
@@ -189,7 +190,7 @@ namespace NodeDev.Blazor.Components
 		private bool IsShowingNodeSelection = false;
 
 		[JSInvokable]
-		public void OnPortDroppedOnCanvas(string nodeId, string connectionId, int x, int y)
+		public void OnPortDroppedOnCanvas(string nodeId, string connectionId, int x, int y, float nodeX, float nodeY)
 		{
 			if (!Graph.Nodes.TryGetValue(nodeId, out var node))
 				return;
@@ -202,6 +203,7 @@ namespace NodeDev.Blazor.Components
 			PopupNodeConnection = connection;
 			PopupX = x;
 			PopupY = y;
+			PopupNodePosition = new(nodeX, nodeY);
 			IsShowingNodeSelection = true;
 
 			StateHasChanged();
@@ -212,7 +214,7 @@ namespace NodeDev.Blazor.Components
 			IsShowingNodeSelection = false; // remove the node type selection popup
 
 			var node = Graph.AddNode(searchResult);
-			node.AddDecoration(new NodeDecorationPosition(new(PopupX, PopupY)));
+			node.AddDecoration(new NodeDecorationPosition(new(PopupNodePosition.X, PopupNodePosition.Y)));
 
 			if (PopupNodeConnection != null && PopupNode != null)
 			{

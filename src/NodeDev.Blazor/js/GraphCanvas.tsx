@@ -145,7 +145,8 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         if (targetIsPane && connectingNodeId.current) {
             // we need to remove the wrapper bounds, in order to get the correct position
             const { top, left } = (reactFlowWrapper.current as any).getBoundingClientRect();
-            props.CanvasInfos.dotnet.invokeMethodAsync('OnPortDroppedOnCanvas', connectingNodeId.current.nodeId, connectingNodeId.current.handleId, event.clientX - left, event.clientY - top);
+            let positionInFlow = project({ x: event.clientX - left, y: event.clientY - top });
+            props.CanvasInfos.dotnet.invokeMethodAsync('OnPortDroppedOnCanvas', connectingNodeId.current.nodeId, connectingNodeId.current.handleId, event.clientX - left, event.clientY - top, positionInFlow.x, positionInFlow.y);
         }
     }
 
@@ -243,7 +244,7 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
     (window as any)['Canvas_' + props.CanvasInfos.id] = { ...props.CanvasInfos };
 
     return (
-        <div style={{ height: '100%', width: '100%' }} ref={reactFlowWrapper}>
+        <div style={{ height: '100%', flexGrow: '1' }} ref={reactFlowWrapper}>
             <ReactFlow
                 nodes={_Nodes}
                 edges={edges}
