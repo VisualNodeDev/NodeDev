@@ -24,6 +24,8 @@ namespace NodeDev.Core.Nodes
 
 		public Graph Graph { get; }
 
+		public abstract string TitleColor { get; }
+
 		public List<Connection> Inputs { get; } = new();
 
 		public List<Connection> Outputs { get; } = new();
@@ -41,11 +43,11 @@ namespace NodeDev.Core.Nodes
 		/// </summary>
 		public abstract Connection? Execute(Connection? connectionBeingExecuted, object?[] inputs, object?[] nodeOutputs);
 
-        #endregion
+		#endregion
 
-        #region Decorations
+		#region Decorations
 
-        public Dictionary<Type, INodeDecoration> Decorations { get; init; } = new();
+		public Dictionary<Type, INodeDecoration> Decorations { get; init; } = new();
 
 		public void AddDecoration<T>(T attribute) where T : INodeDecoration => Decorations[typeof(T)] = attribute;
 
@@ -73,25 +75,25 @@ namespace NodeDev.Core.Nodes
 		}
 
 
-        public static Node Deserialize(Graph graph, string serializedNode)
+		public static Node Deserialize(Graph graph, string serializedNode)
 		{
 			var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
 
 			var type = TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
 			var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
 
-			foreach(var decoration in serializedNodeObj.Decorations)
+			foreach (var decoration in serializedNodeObj.Decorations)
 			{
 				var decorationType = TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
-				
+
 				var method = decorationType.GetMethod(nameof(INodeDecoration.Deserialize), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
-				if(method == null)
+				if (method == null)
 					throw new Exception($"Unable to find Deserialize method on type: {decoration.Key}");
 
 				var decorationObj = method.Invoke(null, new object[] { decoration.Value }) as INodeDecoration;
 
-				if(decorationObj == null)
+				if (decorationObj == null)
 					throw new Exception($"Unable to deserialize decoration: {decoration.Key}");
 
 				node.Decorations[decorationType] = decorationObj;

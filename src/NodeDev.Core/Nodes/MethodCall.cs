@@ -38,6 +38,9 @@ namespace NodeDev.Core.Nodes
 			}
 		}
 
+		public override string TitleColor => "lightblue";
+
+
 		internal MethodInfo? TargetMethod;
 
 		public MethodCall(Graph graph, string? id = null) : base(graph, id)

@@ -189,12 +189,13 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                 id: newNodes[i].id,
                 data: {
                     name: newNodes[i].name,
+                    titleColor: newNodes[i].titleColor,
                     inputs: newNodes[i].inputs,
                     outputs: newNodes[i].outputs,
                     isValidConnection: isValidConnection,
                     onGenericTypeSelectionMenuAsked: onGenericTypeSelectionMenuAsked,
                     onTextboxValueChanged: onTextboxValueChanged
-                },
+                } as Types.NodeData,
                 position: { x: newNodes[i].x, y: newNodes[i].y },
                 type: 'NodeWithMultipleHandles'
             });

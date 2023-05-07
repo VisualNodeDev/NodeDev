@@ -14,7 +14,9 @@ namespace NodeDev.Core.Nodes
     /// </summary>
     public abstract class NormalFlowNode : Node
     {
-        public override bool AlterExecutionStackOnPop => false;
+		public override string TitleColor => "lightblue";
+
+		public override bool AlterExecutionStackOnPop => false;
 
         public override bool IsFlowNode => true;
 

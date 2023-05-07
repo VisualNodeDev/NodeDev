@@ -3,6 +3,7 @@ import { Connection, Node } from 'reactflow'
 export interface NodeCreationInfo {
     id: string;
     name: string;
+    titleColor: string;
     x: number;
     y: number;
     inputs: NodeCreationInfo_Connection[];
@@ -22,6 +23,7 @@ export interface NodeCreationInfo_Connection {
 
 export interface NodeData {
     name: string;
+    titleColor: string;
     inputs: NodeCreationInfo_Connection[];
     outputs: NodeCreationInfo_Connection[];
     isValidConnection: (connection: Connection) => boolean;

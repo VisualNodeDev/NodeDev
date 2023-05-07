@@ -11,17 +11,27 @@
     border-color: #1a192b;
     background-color: white;
 }
+
     .react-flow__node-NodeWithMultipleHandles.selected {
         border-radius: 5px;
         border-width: 3px;
     }
 
-    .react-flow .react-flow__handle {
-        height: 25px;
-        width: 14px;
-        border-radius: 3px;
-        background-color: #784be8;
+    .react-flow__node-NodeWithMultipleHandles .title {
+        margin-top: -10px;
+        padding-left: 7px;
+        text-align: left;
+        padding-top: 5px;
+        font-size: 15px;
     }
+
+.react-flow .react-flow__handle {
+    height: 25px;
+    width: 14px;
+    border-radius: 3px;
+    background-color: #784be8;
+}
+
 .react-flow .react-flow__handle-left {
     left: -10px;
 }
@@ -61,6 +71,7 @@
     pointer-events: all;
     cursor: default;
 }
+
 .generic_target_link {
     height: 20px;
     width: 20px;

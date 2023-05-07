@@ -39,7 +39,7 @@ export default memo(({ id, data }: NodeWithMultipleHandlesProps) => {
 
     return (
         <>
-            <div>
+            <div style={{ background: `linear-gradient(to right, ${data.titleColor}, transparent)` }} className='title'>
                 {data.name}
             </div>
 

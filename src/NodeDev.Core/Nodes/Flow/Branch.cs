@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Nodes.Flow
 {
-	public class Branch : Node
+	public class Branch : FlowNode
 	{
 
 		public override bool AlterExecutionStackOnPop => false;

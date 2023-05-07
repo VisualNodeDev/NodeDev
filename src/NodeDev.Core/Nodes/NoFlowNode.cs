@@ -9,7 +9,9 @@ namespace NodeDev.Core.Nodes
 {
     public abstract class NoFlowNode : Node
     {
-        public NoFlowNode(Graph graph, string? id = null) : base(graph, id)
+		public override string TitleColor => "lightgreen";
+
+		public NoFlowNode(Graph graph, string? id = null) : base(graph, id)
         {
         }
 

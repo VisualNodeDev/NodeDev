@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Nodes.Flow
 {
-	public class EntryNode : Node
+	public class EntryNode : FlowNode
 	{
+		public override string TitleColor => "red";
+
 		public EntryNode(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Entry";

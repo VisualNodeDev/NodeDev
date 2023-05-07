@@ -355,7 +355,7 @@ namespace NodeDev.Blazor.Components
 			await InvokeJSVoid("AddNodes", infos);
 		}
 
-		private record class NodeCreationInfo(string Id, string Name, float X, float Y, List<NodeCreationInfo_Connection> Inputs, List<NodeCreationInfo_Connection> Outputs);
+		private record class NodeCreationInfo(string Id, string Name, string TitleColor, float X, float Y, List<NodeCreationInfo_Connection> Inputs, List<NodeCreationInfo_Connection> Outputs);
 		private record class NodeCreationInfo_Connection(string Id, string Name, List<NodeCreationInfo_Connection_Connection>? Connections, string Color, string Type, bool IsGeneric, bool AllowTextboxEdit, string? TextboxValue);
 		private record class NodeCreationInfo_Connection_Connection(string ConnectionId, string NodeId);
 
@@ -377,6 +377,7 @@ namespace NodeDev.Blazor.Components
 
 			return new(node.Id.ToString(),
 				node.Name,
+				node.TitleColor,
 				positionAttribute.X,
 				positionAttribute.Y,
 				node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric, GetAllowTextboxEdit(x), x.TextboxValue)).ToList(),
