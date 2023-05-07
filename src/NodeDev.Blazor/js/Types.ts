@@ -25,6 +25,7 @@ export interface NodeData {
     inputs: NodeCreationInfo_Connection[];
     outputs: NodeCreationInfo_Connection[];
     isValidConnection: (connection: Connection) => boolean;
+    onGenericTypeSelectionMenuAsked: (nodeId: string, connectionId: string, x: number, y: number) => void;
 }
 
 export interface CanvasInfos {

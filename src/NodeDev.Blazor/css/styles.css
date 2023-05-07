@@ -47,3 +47,21 @@
 .react-flow__handle-valid {
     background: #55dd99 !important;
 }
+
+
+.generic_source_link {
+    height: 20px;
+    width: 20px;
+    right: -27px;
+    position: absolute;
+    pointer-events: all;
+    cursor: default;
+}
+.generic_target_link {
+    height: 20px;
+    width: 20px;
+    left: -27px;
+    position: absolute;
+    pointer-events: all;
+    cursor: default;
+}

@@ -54,7 +54,8 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                     name: newNodes[i].name,
                     inputs: newNodes[i].inputs,
                     outputs: newNodes[i].outputs,
-                    isValidConnection: isValidConnection
+                    isValidConnection: isValidConnection,
+                    onGenericTypeSelectionMenuAsked: onGenericTypeSelectionMenuAsked
                 },
                 position: { x: newNodes[i].x, y: newNodes[i].y },
                 type: 'NodeWithMultipleHandles'
@@ -110,7 +111,9 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
 
 
     }
-
+    function onGenericTypeSelectionMenuAsked(nodeId: string, connectionId: string, x: number, y: number) {
+        props.CanvasInfos.dotnet.invokeMethodAsync('OnGenericTypeSelectionMenuAsked', nodeId, connectionId, x, y);
+    }
     function isValidConnection(connection: Connection) {
         if (!connection.source || !connection.target)
             return false;
@@ -189,12 +192,12 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
+                nodeTypes={nodeTypes}
                 onNodesDelete={nodesDeleted}
                 onNodesChange={nodesChanged}
                 onEdgesChange={onEdgesChange}
                 onConnect={nodeConnected}
                 onEdgesDelete={edgeDeleted}
-                nodeTypes={nodeTypes}
                 onConnectEnd={connectEnd as any}
                 onConnectStart={connectStart as any}
             >
