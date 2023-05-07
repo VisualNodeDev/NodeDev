@@ -12,7 +12,7 @@
 				{
 					@if (type is NodeDev.Core.NodeProvider.MethodCallNode methodCallNode)
 					{
-						<MudListItem Text="@($"{type.Type.Name}.{methodCallNode.MethodInfo.Name}")" Value="type"/>
+						<MudListItem Text="@($"{methodCallNode.MethodInfo.DeclaringType!.Name}.{methodCallNode.MethodInfo.Name}")" Value="type" />
 					}
 					else
 					{
