@@ -49,7 +49,7 @@ namespace NodeDev.Core.Types
 				return null;
 
 			var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-			return assemblies.Select(ass => ass.GetType(name)).FirstOrDefault( x=> x != null);
+			return assemblies.Select(ass => ass.GetType(name, false, true)).FirstOrDefault( x=> x != null);
 		}
 
 		#region CreateBaseFromUserInput
