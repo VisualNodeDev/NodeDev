@@ -12,21 +12,36 @@
     background-color: white;
 }
 
+.react-flow .react-flow__handle {
+    height: 25px;
+    width: 14px;
+    border-radius: 3px;
+    background-color: #784be8;
+}
+.react-flow .react-flow__handle-left {
+    left: -10px;
+}
+
+.react-flow .react-flow__handle-right {
+    right: -10px;
+}
+
 .nodeConnection_source {
     display: flex;
     flex-direction: row;
     justify-content: right;
     position: relative;
+    height: 25px;
+    padding-top: 5px;
 }
-.react-flow__handle {
-    min-height: 12px;
-    min-width: 12px;
-}
+
 .nodeConnection_target {
     display: flex;
     flex-direction: row;
     justify-content: left;
     position: relative;
+    height: 25px;
+    padding-top: 5px;
 }
 
 .react-flow__handle-valid {
