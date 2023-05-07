@@ -11,13 +11,17 @@
     border-color: #1a192b;
     background-color: white;
 }
+    .react-flow__node-NodeWithMultipleHandles.selected {
+        border-radius: 5px;
+        border-width: 3px;
+    }
 
-.react-flow .react-flow__handle {
-    height: 25px;
-    width: 14px;
-    border-radius: 3px;
-    background-color: #784be8;
-}
+    .react-flow .react-flow__handle {
+        height: 25px;
+        width: 14px;
+        border-radius: 3px;
+        background-color: #784be8;
+    }
 .react-flow .react-flow__handle-left {
     left: -10px;
 }
@@ -68,6 +72,7 @@
 
 .nodeConnection_target input {
     border: 1px black solid;
+    border-radius: 3px;
     width: 100%;
     margin-right: 20px;
 }
