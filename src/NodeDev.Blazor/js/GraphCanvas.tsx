@@ -11,7 +11,8 @@ import ReactFlow, {
     NodePositionChange,
     useReactFlow,
     OnConnectStartParams,
-    ReactFlowProvider
+    ReactFlowProvider,
+    NodeRemoveChange
 } from "reactflow";
 
 import NodeWithMultipleHandles from "./NodeWithMultipleHandles";
@@ -32,8 +33,8 @@ const nodeTypes = {
 
 let nodeMoveTimeoutId: any = {};
 export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+    var [_Nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+    var [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
     const onConnect = useCallback(
         (params: Edge | Connection) => setEdges((els) => addEdge(params, els)),
         [setEdges]
@@ -42,72 +43,10 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
     const { project } = useReactFlow();
     const connectingNodeId = useRef<OnConnectStartParams>(null);
 
-    props.CanvasInfos.AddNodes = function (newNodes: Types.NodeCreationInfo[]) {
-
-        if (newNodes.length === undefined)
-            newNodes = [newNodes] as any;
-
-        for (let i = 0; i < newNodes.length; i++) {
-            nodes.push({
-                id: newNodes[i].id,
-                data: {
-                    name: newNodes[i].name,
-                    inputs: newNodes[i].inputs,
-                    outputs: newNodes[i].outputs,
-                    isValidConnection: isValidConnection,
-                    onGenericTypeSelectionMenuAsked: onGenericTypeSelectionMenuAsked,
-                    onTextboxValueChanged: onTextboxValueChanged
-                },
-                position: { x: newNodes[i].x, y: newNodes[i].y },
-                type: 'NodeWithMultipleHandles'
-            });
-
-            for (let j = 0; j < newNodes[i].inputs.length; j++) {
-                let input = newNodes[i].inputs[j];
-                if (!input.connections)
-                    continue;
-                for (let j = 0; j < input.connections.length; j++) {
-                    edges.push({
-                        id: input.id + '_' + input.connections[j].connectionId,
-                        target: newNodes[i].id,
-                        targetHandle: input.id,
-                        source: input.connections[j].nodeId,
-                        sourceHandle: input.connections[j].connectionId
-                    });
-                }
-            }
-        }
-
-        setNodes(nodes.map(x => x)); // the 'map' is a patch, the nodes are not updated otherwise
-        setEdges(edges.map(x => x)); // the 'map' is a patch, the nodes are not updated otherwise
-    }
-    props.CanvasInfos.UpdateConnectionType = function (type: { nodeId: string, id: string, type: string, isGeneric: boolean, color: string, allowTextboxEdit: boolean, textboxValue: string | undefined }) {
-        setNodes((nds) =>
-            nds.map((node) => {
-                if (node.id === type.nodeId) {
-                    // find the connection
-                    let connection = node.data.inputs.find(x => x.id === type.id);
-                    if (!connection)
-                        connection = node.data.outputs.find(x => x.id === type.id);
-                    if (!connection)
-                        return node;
-
-                    connection.type = type.type;
-                    connection.isGeneric = type.isGeneric;
-                    connection.color = type.color;
-                    connection.allowTextboxEdit = type.allowTextboxEdit;
-                    connection.textboxValue = type.textboxValue;
-
-                    // it's important that you create a new object here
-                    // in order to notify react flow about the change
-                    node.data = {
-                        ...node.data
-                    };
-                }
-
-                return node;
-            })
-        );
+    function getNodes() {
+        let nodes: Node<Types.NodeData>[] = [];
+        setNodes(nds => nodes = nds);
+        return nodes;
     }
     function onTextboxValueChanged(nodeId: string, connectionId: string, value: string) {
         setNodes((nds) =>
@@ -138,6 +77,8 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         if (!connection.source || !connection.target)
             return false;
 
+        let nodes = getNodes();
+
         let source = Utility.findNode(nodes, connection.source);
         let target = Utility.findNode(nodes, connection.target);
 
@@ -167,12 +108,18 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
             if (change.type === 'select')
                 props.CanvasInfos.dotnet.invokeMethodAsync(change.selected ? 'OnNodeSelectedInClient' : 'OnNodeUnselectedInClient', change.id);
             else if (change.type === 'position' && change.position) {
+
                 nodeMoveTimeoutId[change.id] = Utility.limitFunctionCall(nodeMoveTimeoutId[change.id], () => {
                     change = change as NodePositionChange;
                     props.CanvasInfos.dotnet.invokeMethodAsync('OnNodeMoved', change.id, change.position!.x, change.position!.y);
                 }, 250);
             }
+            else if (change.type == 'remove') {
+                props.CanvasInfos.dotnet.invokeMethodAsync('OnNodeRemoved', change.id);
+                setNodes(nds => nds.filter(x => x.id != (change as any).id));
+            }
         }
+
     }
     function nodeConnected(changes: Edge | Connection) {
         onConnect(changes);
@@ -186,11 +133,6 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         for (let i = 0; i < edge.length; i++)
             props.CanvasInfos.dotnet.invokeMethodAsync('OnConnectionRemoved', edge[i].source, edge[i].sourceHandle, edge[i].target, edge[i].targetHandle);
     }
-    function nodesDeleted(nodes: Node[]) {
-        for (let i = 0; i < nodes.length; i++)
-            props.CanvasInfos.dotnet.invokeMethodAsync('OnNodeRemoved', nodes[i].id);
-    }
-
 
     function connectStart(event: any, params: OnConnectStartParams) {
         (connectingNodeId as any).current = params;
@@ -205,15 +147,104 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         }
     }
 
+    props.CanvasInfos.UpdateConnectionType = function (type: { nodeId: string, id: string, type: string, isGeneric: boolean, color: string, allowTextboxEdit: boolean, textboxValue: string | undefined }) {
+        setNodes((nds) =>
+            props.CanvasInfos.nodes = nds.map((node) => {
+                if (node.id === type.nodeId) {
+                    // find the connection
+                    let connection = node.data.inputs.find(x => x.id === type.id);
+                    if (!connection)
+                        connection = node.data.outputs.find(x => x.id === type.id);
+                    if (!connection)
+                        return node;
 
+                    connection.type = type.type;
+                    connection.isGeneric = type.isGeneric;
+                    connection.color = type.color;
+                    connection.allowTextboxEdit = type.allowTextboxEdit;
+                    connection.textboxValue = type.textboxValue;
+
+                    // it's important that you create a new object here
+                    // in order to notify react flow about the change
+                    node.data = {
+                        ...node.data
+                    };
+                }
+
+                return node;
+            })
+        );
+    }
+    props.CanvasInfos.AddNodes = function (newNodes: Types.NodeCreationInfo[]) {
+
+        if (newNodes.length === undefined)
+            newNodes = [newNodes] as any;
+
+        let nodesToAdd : Node<Types.NodeData>[] = [];
+        let edgesToAdd : Edge[] = [];
+        for (let i = 0; i < newNodes.length; i++) {
+            nodesToAdd.push({
+                id: newNodes[i].id,
+                data: {
+                    name: newNodes[i].name,
+                    inputs: newNodes[i].inputs,
+                    outputs: newNodes[i].outputs,
+                    isValidConnection: isValidConnection,
+                    onGenericTypeSelectionMenuAsked: onGenericTypeSelectionMenuAsked,
+                    onTextboxValueChanged: onTextboxValueChanged
+                },
+                position: { x: newNodes[i].x, y: newNodes[i].y },
+                type: 'NodeWithMultipleHandles'
+            });
+
+            for (let j = 0; j < newNodes[i].inputs.length; j++) {
+                let input = newNodes[i].inputs[j];
+                if (!input.connections)
+                    continue;
+                for (let j = 0; j < input.connections.length; j++) {
+                    let id = input.id + '_' + input.connections[j].connectionId;
+                    if (edges.concat(edgesToAdd).find(x => x.id === id))
+                        continue;
+                    edgesToAdd.push({
+                        id: id,
+                        target: newNodes[i].id,
+                        targetHandle: input.id,
+                        source: input.connections[j].nodeId,
+                        sourceHandle: input.connections[j].connectionId
+                    });
+                }
+            }
+            for (let j = 0; j < newNodes[i].outputs.length; j++) {
+                let output = newNodes[i].outputs[j];
+                if (!output.connections)
+                    continue;
+                for (let j = 0; j < output.connections.length; j++) {
+                    let id = output.connections[j].connectionId + '_' + output.id;
+                    if (edges.concat(edgesToAdd).find(x => x.id === id))
+                        continue;
+                    edgesToAdd.push({
+                        id: id,
+                        target: output.connections[j].nodeId,
+                        targetHandle: output.connections[j].connectionId,
+                        source: newNodes[i].id,
+                        sourceHandle: output.id
+                    });
+                }
+            }
+        }
+
+        setNodes(nds => nds.concat(nodesToAdd));
+        setEdges(edg => edg.concat(edgesToAdd));
+    };
+
+    (window as any)['Canvas_' + props.CanvasInfos.id] = { ...props.CanvasInfos };
 
     return (
-        <div style={{height: '100%', width: '100%'}} ref={reactFlowWrapper}>
+        <div style={{ height: '100%', width: '100%' }} ref={reactFlowWrapper}>
             <ReactFlow
-                nodes={nodes}
+                nodes={_Nodes}
                 edges={edges}
                 nodeTypes={nodeTypes}
-                onNodesDelete={nodesDeleted}
                 onNodesChange={nodesChanged}
                 onEdgesChange={onEdgesChange}
                 onConnect={nodeConnected}

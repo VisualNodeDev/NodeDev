@@ -1,4 +1,4 @@
-import { Connection } from 'reactflow'
+import { Connection, Node } from 'reactflow'
 
 export interface NodeCreationInfo {
     id: string;
@@ -30,8 +30,10 @@ export interface NodeData {
 }
 
 export interface CanvasInfos {
+    id: string;
     dotnet: any;
     AddNodes: (props: NodeCreationInfo[]) => void;
     UpdateConnectionType: (type: { nodeId: string, id: string, type: string, isGeneric: boolean, color: string, allowTextboxEdit: boolean, textboxValue: string | undefined }) => void;
     Destroy: () => void;
+    nodes: Node<NodeData>[];
 }
