@@ -152,8 +152,20 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
 
     props.CanvasInfos.UpdateConnectionType = function (type: { nodeId: string, id: string, type: string, isGeneric: boolean, color: string, allowTextboxEdit: boolean, textboxValue: string | undefined }) {
         setNodes((nds) =>
-            props.CanvasInfos.nodes = nds.map((node) => {
+            nds.map((node) => {
                 if (node.id === type.nodeId) {
+
+                    // update all edges
+                    setEdges((edges) =>
+                        edges.map(edge => {
+
+                            if (edge.source == type.nodeId || edge.target == type.nodeId)
+                                edge.className = 'stroke_color_' + type.color;
+
+                            return edge;
+                        })
+                    );
+
                     // find the connection
                     let connection = node.data.inputs.find(x => x.id === type.id);
                     if (!connection)

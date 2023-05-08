@@ -243,6 +243,11 @@ namespace NodeDev.Blazor.Components
 					PopupNodeConnection.Connections.Add(destination);
 					destination.Connections.Add(PopupNodeConnection);
 
+					if(destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit)
+						UpdateConnectionType(destination);
+					if(PopupNodeConnection.Connections.Count == 1 && PopupNodeConnection.Type.AllowTextboxEdit)
+						UpdateConnectionType(PopupNodeConnection);
+
 					// if one of the connection ( destination or PopupNodeConnection ) is generic and the other isn't
 					// We have to propagate the non-generic type to the generic one
 					if (destination.Type.IsGeneric && !PopupNodeConnection.Type.IsGeneric)

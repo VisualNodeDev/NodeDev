@@ -37,5 +37,4 @@ export interface CanvasInfos {
     AddNodes: (props: NodeCreationInfo[]) => void;
     UpdateConnectionType: (type: { nodeId: string, id: string, type: string, isGeneric: boolean, color: string, allowTextboxEdit: boolean, textboxValue: string | undefined }) => void;
     Destroy: () => void;
-    nodes: Node<NodeData>[];
 }
