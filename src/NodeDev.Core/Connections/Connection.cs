@@ -17,7 +17,7 @@ namespace NodeDev.Core.Connections
 
 		public Node Parent { get; }
 
-		public TypeBase Type { get; set; }
+		public TypeBase Type { get; private set; }
 
 		public ICollection<Connection> Connections { get; } = new List<Connection>();
 

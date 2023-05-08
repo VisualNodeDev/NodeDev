@@ -9,6 +9,7 @@ namespace NodeDev.Core.Nodes.Math
 {
 	public class Modulo: TwoOperationMath
 	{
+		protected override string OperatorName => "Modulus";
 		public Modulo(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Modulo";

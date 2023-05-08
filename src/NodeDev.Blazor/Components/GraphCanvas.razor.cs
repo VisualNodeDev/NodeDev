@@ -299,10 +299,12 @@ namespace NodeDev.Blazor.Components
 			PopupNodeConnection = null;
 		}
 
-		private bool GetAllowTextboxEdit(Connection connection) => connection.Type.AllowTextboxEdit && connection.Connections.Count == 0;
+		private bool GetAllowTextboxEdit(Connection connection) => connection.Type.AllowTextboxEdit && connection.Connections.Count == 0 && connection.Parent.Inputs.Contains(connection);
 		private record class UpdateConnectionTypeParameters(string NodeId, string Id, string Type, bool IsGeneric, string Color, bool AllowTextboxEdit, string? TextboxValue);
 		private void PropagateNewGeneric(Node node, UndefinedGenericType generic, TypeBase newType)
 		{
+			var inputsOrOutputs = node.InputsAndOutputs.ToDictionary(x => x, x => x.Type);
+
 			foreach (var connection in node.InputsAndOutputs)
 			{
 				if (connection.Type == generic)
@@ -315,6 +317,16 @@ namespace NodeDev.Blazor.Components
 					{
 						if (other.Type is UndefinedGenericType generic2)
 							PropagateNewGeneric(other.Parent, generic2, newType);
+					}
+
+					var updated = node.GenericConnectionTypeDefined(generic);
+					foreach(var other in updated)
+					{
+						UpdateConnectionType(other);
+
+						var oldType = inputsOrOutputs[other];
+						if(oldType is UndefinedGenericType generic2)
+							PropagateNewGeneric(node, generic2, other.Type);
 					}
 				}
 			}

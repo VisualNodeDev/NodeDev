@@ -9,6 +9,7 @@ namespace NodeDev.Core.Nodes.Math
 {
 	public class Subtract: TwoOperationMath
 	{
+		protected override string OperatorName => "Subtraction";
 		public Subtract(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Subtract";

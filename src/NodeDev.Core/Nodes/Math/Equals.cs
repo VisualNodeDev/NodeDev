@@ -9,6 +9,8 @@ namespace NodeDev.Core.Nodes.Math
 {
 	public class Equals: TwoOperationMath
 	{
+		protected override string OperatorName => "Equality";
+
 		public Equals(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Equals";

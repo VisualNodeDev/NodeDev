@@ -36,14 +36,19 @@ namespace NodeDev.Core.Nodes
 
 		public abstract bool IsFlowNode { get; }
 
-		#region Execution
+		/// <summary>
+		/// returns a list of changed connections, if any
+		/// </summary>
+		/// <param name="connection">The connection that was generic, it is not generic anymore</param>
+		public virtual List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType)
+		{
+			return new();
+		}
 
 		/// <summary>
 		/// Returns the next node to execute. The connection is on the current node, must look at what it's connected to
 		/// </summary>
 		public abstract Connection? Execute(Connection? connectionBeingExecuted, object?[] inputs, object?[] nodeOutputs);
-
-		#endregion
 
 		#region Decorations
 

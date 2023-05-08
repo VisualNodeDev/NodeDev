@@ -26,6 +26,8 @@ namespace NodeDev.Core.Types
 
 		public virtual object? ParseTextboxEdit(string text) => throw new NotImplementedException();
 
+		public bool Is<T>() => this == TypeFactory.Get<T>();
+
 		internal static TypeBase Deserialize(string typeFullName, string serializedType)
 		{
 			var type = TypeFactory.GetTypeByFullName(typeFullName) ?? throw new Exception($"Type not found: {typeFullName}");

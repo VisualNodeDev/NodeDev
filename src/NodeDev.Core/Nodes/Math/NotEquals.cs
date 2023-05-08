@@ -9,6 +9,7 @@ namespace NodeDev.Core.Nodes.Math
 {
 	public class NotEquals: TwoOperationMath
 	{
+		protected override string OperatorName => "Inequality";
 		public NotEquals(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "NotEquals";

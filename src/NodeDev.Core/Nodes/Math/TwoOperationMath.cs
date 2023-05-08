@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Types;
+﻿using NodeDev.Core.Connections;
+using NodeDev.Core.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,8 +8,9 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Nodes.Math
 {
-	public abstract class TwoOperationMath: NoFlowNode
+	public abstract class TwoOperationMath : NoFlowNode
 	{
+		protected abstract string OperatorName { get; }
 
 		public TwoOperationMath(Graph graph, string? id = null) : base(graph, id)
 		{
@@ -20,5 +22,57 @@ namespace NodeDev.Core.Nodes.Math
 
 			Outputs.Add(new("c", this, t3));
 		}
+
+		public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType)
+		{
+			if (Inputs.Count(x => x.Type is RealType t && (t.BackendType.IsPrimitive || t.BackendType == typeof(string))) == 2)
+			{
+				if (!Outputs[0].Type.IsGeneric)
+					return new();
+
+				var type1 = (Inputs[0].Type as RealType)!.BackendType;
+				var type2 = (Inputs[1].Type as RealType)!.BackendType;
+
+				Type resultingType;
+				// both inputs are basic types like int or float
+				// find the type with the highest precision
+				if(type1 == typeof(string) || type2 == typeof(string))
+					resultingType = typeof(string);
+				else if (type1 == typeof(decimal) || type2 == typeof(decimal))
+					resultingType = typeof(decimal);
+				else if (type1 == typeof(double) || type2 == typeof(double))
+					resultingType = typeof(double);
+				else if (type1 == typeof(float) || type2 == typeof(float))
+					resultingType = typeof(float);
+				else if (type1 == typeof(long) || type2 == typeof(long))
+					resultingType = typeof(long);
+				else if(type1 == typeof(uint) && type2 == typeof(uint))
+					resultingType = typeof(uint);
+				else if((type1 == typeof(uint) && type2 == typeof(int)) || (type2 == typeof(uint) && type1 == typeof(int)))
+					resultingType = typeof(long);
+				else
+					resultingType = typeof(int);
+
+				Outputs[0].UpdateType(TypeFactory.Get(resultingType));
+
+				return new() { Outputs[0] };
+			}
+			else if (Inputs[0].Type is RealType type1 && Inputs[1].Type is RealType type2)
+			{
+				var operationName = "op_" + OperatorName;
+				var operations = type1.BackendType.GetMethods().Where(x => x.IsSpecialName && x.Name == operationName);
+
+				var correctOne = operations.FirstOrDefault(x => x.GetParameters().Length == 2 && x.GetParameters()[1].ParameterType == type2.BackendType);
+
+				if(correctOne != null)
+				{
+					Outputs[0].UpdateType(TypeFactory.Get(correctOne.ReturnType));
+					return new() { Outputs[0] };
+				}
+			}
+
+			return new();
+		}
+
 	}
 }

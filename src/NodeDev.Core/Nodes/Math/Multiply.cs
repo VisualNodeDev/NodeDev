@@ -9,6 +9,7 @@ namespace NodeDev.Core.Nodes.Math
 {
 	public class Multiply: TwoOperationMath
 	{
+		protected override string OperatorName => "Multiply";
 		public Multiply(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Multiply";
