@@ -365,10 +365,14 @@ namespace NodeDev.Blazor.Components
 		{
 			if (type.IsGeneric)
 				return "yellow";
-			if (type.IsClass)
+			else if (type == TypeFactory.Get<string>())
+				return "purple";
+			else if (type.IsClass)
 				return "green";
 			else if (type.IsExec)
 				return "gray";
+			else if (type == TypeFactory.Get<bool>())
+				return "red";
 			else
 				return "blue";
 		}

@@ -183,8 +183,8 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         if (newNodes.length === undefined)
             newNodes = [newNodes] as any;
 
-        let nodesToAdd : Node<Types.NodeData>[] = [];
-        let edgesToAdd : Edge[] = [];
+        let nodesToAdd: Node<Types.NodeData>[] = [];
+        let edgesToAdd: Edge[] = [];
         for (let i = 0; i < newNodes.length; i++) {
             nodesToAdd.push({
                 id: newNodes[i].id,
@@ -214,7 +214,8 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                         target: newNodes[i].id,
                         targetHandle: input.id,
                         source: input.connections[j].nodeId,
-                        sourceHandle: input.connections[j].connectionId
+                        sourceHandle: input.connections[j].connectionId,
+                        className: 'stroke_color_' + input.color
                     });
                 }
             }
@@ -231,7 +232,8 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                         target: output.connections[j].nodeId,
                         targetHandle: output.connections[j].connectionId,
                         source: newNodes[i].id,
-                        sourceHandle: output.id
+                        sourceHandle: output.id,
+                        className: 'stroke_color_' + output.color
                     });
                 }
             }

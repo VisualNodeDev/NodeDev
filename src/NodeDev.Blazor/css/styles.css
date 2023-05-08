@@ -87,3 +87,31 @@
     width: 100%;
     margin-right: 20px;
 }
+
+.stroke_color_yellow path {
+    stroke: yellow;
+}
+
+.stroke_color_purple path {
+    stroke: purple;
+}
+
+.stroke_color_green path {
+    stroke: green;
+}
+
+.stroke_color_gray path {
+    stroke: gray;
+}
+
+.stroke_color_red path {
+    stroke: red;
+}
+
+.stroke_color_blue path {
+    stroke: blue;
+}
+
+.react-flow__edge path {
+    stroke-width: 3px;
+}
