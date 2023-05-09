@@ -12,7 +12,7 @@ namespace NodeDev.Core.Nodes.Creation
         public New(Graph graph, string? id = null) : base(graph, id)
         {
             var t1 = TypeFactory.CreateUndefinedGenericType("T1");
-            Outputs.Add(new("a", this, t1));
+            Outputs.Add(new("Obj", this, t1));
         }
 
         protected override void ExecuteInternal(object?[] inputs, object?[] outputs)
