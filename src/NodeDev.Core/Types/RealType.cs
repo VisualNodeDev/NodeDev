@@ -16,6 +16,9 @@ public class RealType : TypeBase
 
     public override bool IsClass => BackendType.IsClass;
 
+    /// <summary>
+    /// Types that the UI will show a textbox for editing
+    /// </summary>
     private static List<Type> AllowedEditTypes = new List<Type>()
     {
         typeof(int),
@@ -61,6 +64,8 @@ public class RealType : TypeBase
             return "0";
         }
     }
+
+    public override TypeBase[]? Generics => BackendType.GetGenericArguments().Select(TypeFactory.Get).ToArray();
 
     internal RealType(Type backendType)
     {

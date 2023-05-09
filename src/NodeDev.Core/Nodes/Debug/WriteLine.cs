@@ -13,7 +13,7 @@ namespace NodeDev.Core.Nodes.Debug
         {
             Name = "WriteLine";
 
-            Inputs.Add(new("Line", this, TypeFactory.CreateGenericType("T")));
+            Inputs.Add(new("Line", this, TypeFactory.CreateUndefinedGenericType("T")));
         }
 
         protected override void ExecuteInternal(object?[] inputs, object?[] outputs)

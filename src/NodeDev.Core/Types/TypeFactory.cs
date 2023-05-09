@@ -37,7 +37,7 @@ namespace NodeDev.Core.Types
 		private static ExecType ExecType_ = new();
 		public static ExecType ExecType => ExecType_;
 
-		public static UndefinedGenericType CreateGenericType(string name) => new(name);
+		public static UndefinedGenericType CreateUndefinedGenericType(string name) => new(name);
 
 		public static Type? GetTypeByFullName(string name)
 		{
@@ -53,9 +53,9 @@ namespace NodeDev.Core.Types
 			return assemblies.Select(ass => ass.GetType(name, false, true)).FirstOrDefault( x=> x != null);
 		}
 
-		#region CreateBaseFromUserInput
+        #region CreateBaseFromUserInput
 
-		public static string? CreateBaseFromUserInput(string typeName, out Type? type)
+        public static string? CreateBaseFromUserInput(string typeName, out Type? type)
 		{
 			typeName = typeName.Replace(" ", "");
 			if( typeName.Count(c => c == '<') != typeName.Count(c => c == '>') )

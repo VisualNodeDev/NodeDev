@@ -14,9 +14,9 @@ namespace NodeDev.Core.Nodes.Math
 
 		public TwoOperationMath(Graph graph, string? id = null) : base(graph, id)
 		{
-			var t1 = TypeFactory.CreateGenericType("T1");
-			var t2 = TypeFactory.CreateGenericType("T2");
-			var t3 = TypeFactory.CreateGenericType("T3");
+			var t1 = TypeFactory.CreateUndefinedGenericType("T1");
+			var t2 = TypeFactory.CreateUndefinedGenericType("T2");
+			var t3 = TypeFactory.CreateUndefinedGenericType("T3");
 			Inputs.Add(new("a", this, t1));
 			Inputs.Add(new("b", this, t2));
 
@@ -27,7 +27,7 @@ namespace NodeDev.Core.Nodes.Math
 		{
 			if (Inputs.Count(x => x.Type is RealType t && (t.BackendType.IsPrimitive || t.BackendType == typeof(string))) == 2)
 			{
-				if (!Outputs[0].Type.IsGeneric)
+				if (!Outputs[0].Type.HasUndefinedGenerics)
 					return new();
 
 				var type1 = (Inputs[0].Type as RealType)!.BackendType;

@@ -136,10 +136,10 @@ namespace NodeDev.Blazor.Components
 						source.Connections.Add(destination);
 						destination.Connections.Add(source);
 
-						if (source.Type.IsGeneric && !destination.Type.IsGeneric)
-							PropagateNewGeneric(nodeSource, (UndefinedGenericType)source.Type, destination.Type);
-						else if (destination.Type.IsGeneric && !source.Type.IsGeneric)
-							PropagateNewGeneric(nodeDestination, (UndefinedGenericType)destination.Type, source.Type);
+						if (source.Type is UndefinedGenericType type && destination.Type is not UndefinedGenericType)
+							PropagateNewGeneric(nodeSource, type, destination.Type);
+						else if (destination.Type is UndefinedGenericType destinationType && source.Type is not UndefinedGenericType)
+							PropagateNewGeneric(nodeDestination, destinationType, source.Type);
 
 						if (destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit) // gotta remove the textbox
 							UpdateConnectionType(destination);
@@ -232,10 +232,10 @@ namespace NodeDev.Blazor.Components
 				}
 
 				Connection? destination = null;
-				if (PopupNodeConnection.Type.IsGeneric) // can connect to anything except exec
+				if (PopupNodeConnection.Type is UndefinedGenericType) // can connect to anything except exec
 					destination = destinations.FirstOrDefault(x => !x.Type.IsExec);
 				else // can connect to anything that is the same type or generic (except exec)
-					destination = destinations.FirstOrDefault(x => x.Type == PopupNodeConnection.Type || (x.Type.IsGeneric && !PopupNodeConnection.Type.IsExec));
+					destination = destinations.FirstOrDefault(x => x.Type == PopupNodeConnection.Type || (x.Type is UndefinedGenericType && !PopupNodeConnection.Type.IsExec));
 
 				// if we found a connection, connect them together
 				if (destination != null)
@@ -250,10 +250,10 @@ namespace NodeDev.Blazor.Components
 
 					// if one of the connection ( destination or PopupNodeConnection ) is generic and the other isn't
 					// We have to propagate the non-generic type to the generic one
-					if (destination.Type.IsGeneric && !PopupNodeConnection.Type.IsGeneric)
-						PropagateNewGeneric(destination.Parent, (UndefinedGenericType)destination.Type, PopupNodeConnection.Type);
-					else if (!destination.Type.IsGeneric && PopupNodeConnection.Type.IsGeneric)
-						PropagateNewGeneric(PopupNodeConnection.Parent, (UndefinedGenericType)PopupNodeConnection.Type, destination.Type);
+					if (destination.Type is UndefinedGenericType && PopupNodeConnection.Type is not UndefinedGenericType)
+                        PropagateNewGeneric(destination.Parent, (UndefinedGenericType)destination.Type, PopupNodeConnection.Type);
+					else if (destination.Type is not UndefinedGenericType && PopupNodeConnection.Type is UndefinedGenericType)
+                        PropagateNewGeneric(PopupNodeConnection.Parent, (UndefinedGenericType)PopupNodeConnection.Type, destination.Type);
 				}
 			}
 			PopupNode = null;
@@ -380,7 +380,7 @@ namespace NodeDev.Blazor.Components
 
 		private string GetTypeShapeColor(TypeBase type)
 		{
-			if (type.IsGeneric)
+			if (type.HasUndefinedGenerics)
 				return "yellow";
 			else if (type == TypeFactory.Get<string>())
 				return "purple";
@@ -403,8 +403,8 @@ namespace NodeDev.Blazor.Components
 				node.TitleColor,
 				positionAttribute.X,
 				positionAttribute.Y,
-				node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric, GetAllowTextboxEdit(x), x.TextboxValue)).ToList(),
-				node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type.IsGeneric, false, null)).ToList());
+				node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type is UndefinedGenericType, GetAllowTextboxEdit(x), x.TextboxValue)).ToList(),
+				node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type is UndefinedGenericType, false, null)).ToList());
 		}
 
 		#endregion

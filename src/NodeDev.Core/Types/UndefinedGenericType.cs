@@ -12,9 +12,11 @@ namespace NodeDev.Core.Types
 
 		public override string FullName { get; }
 
-		public override bool IsGeneric => true;
+        public override TypeBase[]? Generics => null;
 
-		public UndefinedGenericType(string name)
+		public override bool HasUndefinedGenerics => true;
+
+        public UndefinedGenericType(string name)
 		{
 			FullName = Name = name;
 		}

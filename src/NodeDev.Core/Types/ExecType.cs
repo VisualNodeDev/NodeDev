@@ -15,6 +15,8 @@ namespace NodeDev.Core.Types
 		public override bool IsClass => false;
 
         public override bool IsExec => true;
+		
+		public override TypeBase[]? Generics => null;
 
         internal override string Serialize()
 		{

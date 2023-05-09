@@ -14,7 +14,9 @@ namespace NodeDev.Core.Types
 
 		public virtual bool IsClass => true;
 
-		public virtual bool IsGeneric => false;
+		public virtual bool HasUndefinedGenerics => Generics?.Any(x => x is UndefinedGenericType) ?? false;
+
+		public abstract TypeBase[]? Generics { get; }
 
 		public virtual bool IsExec => false;
 

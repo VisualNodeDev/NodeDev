@@ -12,8 +12,8 @@ namespace NodeDev.Core.Nodes.Math
 
 		public BinaryOperationMath(Graph graph, string? id = null) : base(graph, id)
 		{
-			var t1 = TypeFactory.CreateGenericType("T1");
-			var t2 = TypeFactory.CreateGenericType("T2");
+			var t1 = TypeFactory.CreateUndefinedGenericType("T1");
+			var t2 = TypeFactory.CreateUndefinedGenericType("T2");
 			Inputs.Add(new("a", this, t1));
 			Outputs.Add(new("b", this, t2));
 		}
