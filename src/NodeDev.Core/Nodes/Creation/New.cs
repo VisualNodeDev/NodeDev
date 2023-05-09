@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Types;
+﻿using NodeDev.Core.Connections;
+using NodeDev.Core.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,24 @@ namespace NodeDev.Core.Nodes.Creation
     {
         public New(Graph graph, string? id = null) : base(graph, id)
         {
+            Name = "New";
+
             var t1 = TypeFactory.CreateUndefinedGenericType("T1");
             Outputs.Add(new("Obj", this, t1));
+        }
+
+        public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType)
+        {
+            if(Outputs[1].Type is not RealType realType)
+                throw new Exception("Output type is not real");
+
+            // get the first constructor parameters
+            var constructor = realType.BackendType.GetConstructors().First();
+            var parameters = constructor.GetParameters();
+            Inputs.AddRange(parameters.Select(x => new Connection(x.Name ?? "??", this, TypeFactory.Get(x.ParameterType))));
+
+            Name = $"New {realType.FriendlyName}";
+            return new();
         }
 
         protected override void ExecuteInternal(object?[] inputs, object?[] outputs)
