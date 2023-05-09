@@ -65,6 +65,20 @@ public class RealType : TypeBase
         }
     }
 
+
+    private string GetFriendlyName(Type t)
+    {
+        // if the type has generics, replace the `1 with the generic type names
+        var generics = t.GetGenericArguments();
+        if(generics.Length == 0)
+            return t.Name;
+
+        // return the name of 't' without the ` and the number, replaced with the actual generic type names
+        var name = t.Name[..t.Name.IndexOf('`')];
+        return $"{name}<{string.Join(", ", generics.Select(GetFriendlyName))}>";
+    }
+    public override string FriendlyName => GetFriendlyName(BackendType);
+
     public override TypeBase[]? Generics => BackendType.GetGenericArguments().Select(TypeFactory.Get).ToArray();
 
     internal RealType(Type backendType)

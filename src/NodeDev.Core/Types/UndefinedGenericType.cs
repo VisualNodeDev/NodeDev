@@ -16,6 +16,8 @@ namespace NodeDev.Core.Types
 
 		public override bool HasUndefinedGenerics => true;
 
+		public override string FriendlyName => Name;
+
         public UndefinedGenericType(string name)
 		{
 			FullName = Name = name;

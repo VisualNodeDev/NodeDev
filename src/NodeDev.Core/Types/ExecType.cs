@@ -18,6 +18,8 @@ namespace NodeDev.Core.Types
 		
 		public override TypeBase[]? Generics => null;
 
+		public override string FriendlyName => "Exec";
+
         internal override string Serialize()
 		{
 			return "";

@@ -24,6 +24,8 @@ namespace NodeDev.Core.Types
 
 		public virtual string? DefaultTextboxValue => null;
 
+		public abstract string FriendlyName { get; }
+
         internal abstract string Serialize();
 
 		public virtual object? ParseTextboxEdit(string text) => throw new NotImplementedException();
