@@ -21,7 +21,7 @@ namespace NodeDev.Core.Nodes.Creation
                 throw new InvalidOperationException("Output type is not defined");
 
             if (Outputs[1].Type is RealType realType)
-                outputs[1w] = Activator.CreateInstance(realType.BackendType);
+                outputs[1] = Activator.CreateInstance(realType.BackendType);
             else
                 throw new InvalidOperationException("Output type is not real");
         }
