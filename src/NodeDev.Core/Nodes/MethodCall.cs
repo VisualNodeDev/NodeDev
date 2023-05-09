@@ -54,7 +54,7 @@ namespace NodeDev.Core.Nodes
 			if (Decorations.TryGetValue(typeof(TargetMethodDecoration), out var targetMethod))
 			{
 				TargetMethod = ((TargetMethodDecoration)targetMethod).TargetMethod;
-				Name = TargetMethod.DeclaringType!.Name + "." + TargetMethod.Name;
+				Name = TypeFactory.Get(TargetMethod.DeclaringType!).FriendlyName + "." + TargetMethod.Name;
 			}
 		}
 
