@@ -167,7 +167,7 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                     setEdges((edges) =>
                         edges.map(edge => {
 
-                            if (edge.source == type.nodeId || edge.target == type.nodeId)
+                            if ((edge.source == type.nodeId && edge.sourceHandle == type.id) || (edge.target == type.nodeId && edge.targetHandle == type.id))
                                 edge.className = 'stroke_color_' + type.color;
 
                             return edge;
