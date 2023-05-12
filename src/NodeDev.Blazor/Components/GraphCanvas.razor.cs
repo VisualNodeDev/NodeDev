@@ -312,7 +312,7 @@ namespace NodeDev.Blazor.Components
 			var nodesToUpdate = new List<Node>();
 			foreach (var removedConnection in removedConnections)
 			{
-				const var newConnection = newConnections.FirstOrDefault(x => x.Name == removedConnection.Name && x.Type == removedConnection.Type);
+				var newConnection = newConnections.FirstOrDefault(x => x.Name == removedConnection.Name && x.Type == removedConnection.Type);
 
 				foreach (var oldLink in removedConnection.Connections)
 				{
