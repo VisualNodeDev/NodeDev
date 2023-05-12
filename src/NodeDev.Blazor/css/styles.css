@@ -81,6 +81,16 @@
     cursor: default;
 }
 
+.overload_icon {
+    height: 20px;
+    width: 20px;
+    pointer-events: all;
+    cursor: default;
+    position: absolute;
+    top: -1px;
+    right: -1px;
+}
+
 .nodeConnection_target input {
     border: 1px black solid;
     border-radius: 3px;

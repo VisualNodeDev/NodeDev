@@ -1,0 +1,37 @@
+﻿
+<div style="@($"position: absolute; left: calc(50% - 400px); top: calc(50% - 200px); width: 800px; height: 400px")" @onclick:stopPropagation="true">
+
+    <MudPaper Style="height: 100%; width: 100%; overflow: hidden; display: flex">
+
+        <MudList Clickable="true" SelectedItemChanged="@( x => OnNodeMethodSelected.InvokeAsync((NodeDev.Core.Nodes.Node.AlternateOverload)x.Value))" Class="flex-1 overflow-y-scroll">
+            @foreach (var overload in Node.AlternatesOverloads)
+            {
+                <MudListItem Value="overload">
+                    <MudText Inline="true" Class="pr-2">@overload.ReturnType.FriendlyName</MudText>
+                    <MudText Inline="true">@Node.Name</MudText>
+                    <MudText Inline="true">( </MudText>
+                    @foreach (var parameter in overload.Parameters)
+                    {
+                        <MudText Inline="true" Class="pr-1">@parameter.Type.FriendlyName</MudText>
+                        <MudText Inline="true">@parameter.Name</MudText>
+                        if (parameter != overload.Parameters.Last())
+                        {
+                            <MudText Inline="true">, </MudText>
+                        }
+                    }
+                    <MudText Inline="true"> )</MudText>
+                </MudListItem>
+            }
+        </MudList>
+
+    </MudPaper>
+</div>
+
+@code {
+
+    [Parameter]
+    public NodeDev.Core.Nodes.Node Node { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<NodeDev.Core.Nodes.Node.AlternateOverload> OnNodeMethodSelected { get; set; }
+}

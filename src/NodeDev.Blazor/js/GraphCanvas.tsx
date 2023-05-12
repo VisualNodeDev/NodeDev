@@ -48,6 +48,11 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
         setNodes(nds => nodes = nds);
         return nodes;
     }
+    function getEdges() {
+        let edges: Edge[] = [];
+        setEdges(edg => edges = edg);
+        return edges;
+    }
     function onTextboxValueChanged(nodeId: string, connectionId: string, value: string) {
         setNodes((nds) =>
             nds.map((node) => {
@@ -72,6 +77,9 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
     }
     function onGenericTypeSelectionMenuAsked(nodeId: string, connectionId: string, x: number, y: number) {
         props.CanvasInfos.dotnet.invokeMethodAsync('OnGenericTypeSelectionMenuAsked', nodeId, connectionId, x, y);
+    }
+    function onOverloadSelectionMenuAsked(nodeId: string) {
+        props.CanvasInfos.dotnet.invokeMethodAsync('OnOverloadSelectionRequested', nodeId);
     }
     function isValidConnection(connection: Connection) {
         if (!connection.source || !connection.target)
@@ -119,7 +127,6 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                 setNodes(nds => nds.filter(x => x.id != (change as any).id));
             }
         }
-
     }
 
     function nodeConnected(changes: Edge | Connection) {
@@ -190,69 +197,129 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
             })
         );
     }
+    function getNodeData(nodeInfo: Types.NodeCreationInfo) {
+        return {
+            name: nodeInfo.name,
+            titleColor: nodeInfo.titleColor,
+            hasOverloads: nodeInfo.hasOverloads,
+            inputs: nodeInfo.inputs,
+            outputs: nodeInfo.outputs,
+            isValidConnection: isValidConnection,
+            onGenericTypeSelectionMenuAsked: onGenericTypeSelectionMenuAsked,
+            onTextboxValueChanged: onTextboxValueChanged,
+            onOverloadSelectionMenuAsked: onOverloadSelectionMenuAsked
+        } as Types.NodeData;
+    }
+    function getEdgesForNodesIfNecessary(edges: Edge[], edgesToAdd: Edge[], info: Types.NodeCreationInfo) {
+        for (let j = 0; j < info.inputs.length; j++) {
+            let input = info.inputs[j];
+            if (!input.connections)
+                continue;
+            for (let j = 0; j < input.connections.length; j++) {
+                let id = input.id + '_' + input.connections[j].connectionId;
+                if (edges.concat(edgesToAdd).find(x => x.id === id))
+                    continue;
+                edgesToAdd.push({
+                    id: id,
+                    target: info.id,
+                    targetHandle: input.id,
+                    source: input.connections[j].nodeId,
+                    sourceHandle: input.connections[j].connectionId,
+                    className: 'stroke_color_' + input.color
+                });
+            }
+        }
+        for (let j = 0; j < info.outputs.length; j++) {
+            let output = info.outputs[j];
+            if (!output.connections)
+                continue;
+            for (let j = 0; j < output.connections.length; j++) {
+                let id = output.connections[j].connectionId + '_' + output.id;
+                if (edges.concat(edgesToAdd).find(x => x.id === id))
+                    continue;
+                edgesToAdd.push({
+                    id: id,
+                    target: output.connections[j].nodeId,
+                    targetHandle: output.connections[j].connectionId,
+                    source: info.id,
+                    sourceHandle: output.id,
+                    className: 'stroke_color_' + output.color
+                });
+            }
+        }
+    }
     props.CanvasInfos.AddNodes = function (newNodes: Types.NodeCreationInfo[]) {
 
         if (newNodes.length === undefined)
             newNodes = [newNodes] as any;
 
+        let edges = getEdges();
         let nodesToAdd: Node<Types.NodeData>[] = [];
         let edgesToAdd: Edge[] = [];
         for (let i = 0; i < newNodes.length; i++) {
             nodesToAdd.push({
                 id: newNodes[i].id,
-                data: {
-                    name: newNodes[i].name,
-                    titleColor: newNodes[i].titleColor,
-                    inputs: newNodes[i].inputs,
-                    outputs: newNodes[i].outputs,
-                    isValidConnection: isValidConnection,
-                    onGenericTypeSelectionMenuAsked: onGenericTypeSelectionMenuAsked,
-                    onTextboxValueChanged: onTextboxValueChanged
-                } as Types.NodeData,
+                data: getNodeData(newNodes[i]),
                 position: { x: newNodes[i].x, y: newNodes[i].y },
                 type: 'NodeWithMultipleHandles'
             });
 
-            for (let j = 0; j < newNodes[i].inputs.length; j++) {
-                let input = newNodes[i].inputs[j];
-                if (!input.connections)
-                    continue;
-                for (let j = 0; j < input.connections.length; j++) {
-                    let id = input.id + '_' + input.connections[j].connectionId;
-                    if (edges.concat(edgesToAdd).find(x => x.id === id))
-                        continue;
-                    edgesToAdd.push({
-                        id: id,
-                        target: newNodes[i].id,
-                        targetHandle: input.id,
-                        source: input.connections[j].nodeId,
-                        sourceHandle: input.connections[j].connectionId,
-                        className: 'stroke_color_' + input.color
-                    });
-                }
-            }
-            for (let j = 0; j < newNodes[i].outputs.length; j++) {
-                let output = newNodes[i].outputs[j];
-                if (!output.connections)
-                    continue;
-                for (let j = 0; j < output.connections.length; j++) {
-                    let id = output.connections[j].connectionId + '_' + output.id;
-                    if (edges.concat(edgesToAdd).find(x => x.id === id))
-                        continue;
-                    edgesToAdd.push({
-                        id: id,
-                        target: output.connections[j].nodeId,
-                        targetHandle: output.connections[j].connectionId,
-                        source: newNodes[i].id,
-                        sourceHandle: output.id,
-                        className: 'stroke_color_' + output.color
-                    });
-                }
-            }
+            getEdgesForNodesIfNecessary(edges, edgesToAdd, newNodes[i]);
         }
 
         setNodes(nds => nds.concat(nodesToAdd));
         setEdges(edg => edg.concat(edgesToAdd));
+    };
+    props.CanvasInfos.UpdateNodes = function (props: Types.UpdateNodesParameters) {
+        let nodes: Node<Types.NodeData>[];
+        setNodes(nds => {
+            for (let i = 0; i < props.nodes.length; i++) {
+                let info = props.nodes[i];
+                let node = nds.find(x => x.id === info.id);
+                if (node)
+                    node.data = getNodeData(info);
+            }
+            return nodes = nds.map(x => x);
+        });
+        setEdges(edg => {
+
+            let newEdges : Edge[] = [];
+            // find the new edges to add
+
+            for (let i = 0; i < props.nodes.length; i++)
+                getEdgesForNodesIfNecessary(edg, newEdges, props.nodes[i]);
+
+            return edg.filter(edge => {
+                // find if the edge is still connected to valid nodes
+                let sourceNode = nodes.find(x => x.id === edge.source);
+                let targetNode = nodes.find(x => x.id === edge.target);
+
+                if (!sourceNode || !targetNode) // should never happen since we didn't remove any node
+                    return false; // just remove that edge I guess ?
+
+                let sourceConnection = sourceNode.data.outputs.find(x => x.id === edge.sourceHandle);
+                let targetConnection = targetNode.data.inputs.find(x => x.id === edge.targetHandle);
+
+                return sourceConnection && targetConnection; // keep the edge if both source and target are still valid
+            }).concat(newEdges);
+        });
+    };
+    props.CanvasInfos.UpdateNodeBaseInfo = function (info: Types.UpdateNodeBaseInfoParameters) {
+        setNodes(nds =>
+            nds.map(node => {
+                if (node.id !== info.id)
+                    return node;
+
+                node.data.name = info.name;
+                node.data.titleColor = info.titleColor;
+                node.data.hasOverloads = info.hasOverloads;
+                node.data = {
+                    ...node.data
+                };
+
+                return node;
+            })
+        );
     };
 
     (window as any)['Canvas_' + props.CanvasInfos.id] = { ...props.CanvasInfos };

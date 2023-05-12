@@ -13,6 +13,12 @@
 			<NodeDev.Blazor.Components.TypeSelector PositionX="PopupX" PositionY="PopupY" GraphCanvas="this" OnTypeSelected="OnGenericTypeSelected" />
 		</div>
 	}
+	@if (IsShowingOverloadSelection && PopupNode != null)
+	{
+		<div @onclick="@(() => IsShowingOverloadSelection = false)" style="background-color: var(--mud-palette-overlay-dark); width: 100%; height: 100%; position: absolute; z-index: 1">
+			<NodeDev.Blazor.Components.AlternateOverloadsSelection OnNodeMethodSelected="OnNewOverloadSelected" Node="PopupNode" />
+		</div>
+	}
 
 	<div @key="Id" id="@Id" style="width:100%; height:100%;"></div>
 

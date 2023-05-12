@@ -17,406 +17,489 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace NodeDev.Blazor.Components
 {
-	public partial class GraphCanvas : ComponentBase, IDisposable
-	{
-		[Inject]
-		private IJSRuntime JS { get; set; } = null!;
+    public partial class GraphCanvas : ComponentBase, IDisposable
+    {
+        [Inject]
+        private IJSRuntime JS { get; set; } = null!;
 
 
-		private readonly string Id = Guid.NewGuid().ToString();
-		private DotNetObjectReference<GraphCanvas> Ref = null!;
+        private readonly string Id = Guid.NewGuid().ToString();
+        private DotNetObjectReference<GraphCanvas> Ref = null!;
 
-		[Parameter, EditorRequired]
-		public Graph Graph { get; set; } = null!;
+        [Parameter, EditorRequired]
+        public Graph Graph { get; set; } = null!;
 
-		private string CanvasJS => $"Canvas_{Id}";
+        private string CanvasJS => $"Canvas_{Id}";
 
-		private List<Node> SelectedNodes { get; } = new();
+        private List<Node> SelectedNodes { get; } = new();
 
-		private int PopupX = 0;
-		private int PopupY = 0;
-		private Vector2 PopupNodePosition;
-		private Connection? PopupNodeConnection;
-		private Node? PopupNode;
+        private int PopupX = 0;
+        private int PopupY = 0;
+        private Vector2 PopupNodePosition;
+        private Connection? PopupNodeConnection;
+        private Node? PopupNode;
 
-		private ValueTask InvokeJSVoid(string name, params object?[]? parameters) => JS.InvokeVoidAsync($"{CanvasJS}.{name}", parameters);
-		private ValueTask<T> InvokeJS<T>(string name, params object?[]? parameters) => JS.InvokeAsync<T>($"{CanvasJS}.{name}", parameters);
+        private ValueTask InvokeJSVoid(string name, params object?[]? parameters) => JS.InvokeVoidAsync($"{CanvasJS}.{name}", parameters);
+        private ValueTask<T> InvokeJS<T>(string name, params object?[]? parameters) => JS.InvokeAsync<T>($"{CanvasJS}.{name}", parameters);
 
-		#region OnAfterRenderAsync
+        #region OnAfterRenderAsync
 
-		protected override async Task OnAfterRenderAsync(bool firstRender)
-		{
-			await base.OnAfterRenderAsync(firstRender);
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            await base.OnAfterRenderAsync(firstRender);
 
-			if (firstRender)
-			{
-				Ref = DotNetObjectReference.Create(this);
-				await JS.InvokeVoidAsync("InitializeCanvas", Ref, Id);
+            if (firstRender)
+            {
+                Ref = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("InitializeCanvas", Ref, Id);
 
-				await Task.Delay(100);
-				await Graph.Invoke(InitializeCanvasWithGraphNodes);
-			}
-		}
+                await Task.Delay(100);
+                await Graph.Invoke(InitializeCanvasWithGraphNodes);
+            }
+        }
 
-		#endregion
+        #endregion
 
-		#region UpdateConnectionType
+        #region UpdateConnectionType
 
-		private void UpdateConnectionType(Connection connection)
-		{
-			InvokeJSVoid("UpdateConnectionType", new UpdateConnectionTypeParameters(connection.Parent.Id, connection.Id, connection.Type.Name, false, GetTypeShapeColor(connection.Type), GetAllowTextboxEdit(connection), connection.TextboxValue)).AndForget();
-		}
+        private void UpdateConnectionType(Connection connection)
+        {
+            InvokeJSVoid("UpdateConnectionType", new UpdateConnectionTypeParameters(connection.Parent.Id, connection.Id, connection.Type.Name, false, GetTypeShapeColor(connection.Type), GetAllowTextboxEdit(connection), connection.TextboxValue)).AndForget();
+        }
 
-		#endregion
+        #endregion
 
-		#region Events from client
+        #region UpdateNodeBaseInfo
 
-		#region Node Selected / unselected
+        private record class UpdateNodeBaseInfoParameters(string Id, string Name, string TitleColor, bool HasOverloads);
+        private void UpdateNodeBaseInfo(Node node)
+        {
+            InvokeJSVoid("UpdateNodeBaseInfo", new UpdateNodeBaseInfoParameters(node.Id, node.Name, node.TitleColor, node.AlternatesOverloads.Any())).AndForget();
+        }
 
-		[JSInvokable]
-		public void OnNodeSelectedInClient(string nodeId)
-		{
-			if (Graph.Nodes.TryGetValue(nodeId, out var node))
-				SelectedNodes.Add(node);
-		}
+        #endregion
 
-		[JSInvokable]
-		public void OnNodeUnselectedInClient(string nodeId)
-		{
-			if (Graph.Nodes.TryGetValue(nodeId, out var node))
-				SelectedNodes.Remove(node);
-		}
+        #region UpdateNodes
 
-		#endregion
+        private record class UpdateNodesConnectionsParameters(List<NodeCreationInfo> Nodes);
+        private void UpdateNodes(IEnumerable<Node> nodes)
+        {
+            InvokeJSVoid("UpdateNodes", new UpdateNodesConnectionsParameters(nodes.Select(GetNodeCreationInfo).ToList())).AndForget();
+        }
 
-		#region Node Removed
+        #endregion
 
-		[JSInvokable]
-		public void OnNodeRemoved(string nodeId)
-		{
-			Graph.Invoke(() =>
-			{
-				if (!Graph.Nodes.TryGetValue(nodeId, out var node))
-					return;
-				foreach (var input in node.Inputs)
-				{
-					foreach (var connection in input.Connections)
-					{
-						connection.Connections.Remove(input);
-					}
-				}
-				foreach (var output in node.Outputs)
-				{
-					foreach (var connection in output.Connections)
-					{
-						connection.Connections.Remove(output);
-					}
-				}
+        #region Events from client
 
-				Graph.RemoveNode(node);
-			});
-		}
+        #region Node Selected / unselected
 
-		#endregion
+        [JSInvokable]
+        public void OnNodeSelectedInClient(string nodeId)
+        {
+            if (Graph.Nodes.TryGetValue(nodeId, out var node))
+                SelectedNodes.Add(node);
+        }
 
-		#region Connection Added / Removed
+        [JSInvokable]
+        public void OnNodeUnselectedInClient(string nodeId)
+        {
+            if (Graph.Nodes.TryGetValue(nodeId, out var node))
+                SelectedNodes.Remove(node);
+        }
 
-		[JSInvokable]
-		public void OnConnectionAdded(string nodeSourceId, string outputId, string nodeDestinationID, string inputId)
-		{
-			Graph.Invoke(() =>
-			{
-				if (Graph.Nodes.TryGetValue(nodeSourceId, out var nodeSource) && Graph.Nodes.TryGetValue(nodeDestinationID, out var nodeDestination))
-				{
-					var source = nodeSource.Outputs.FirstOrDefault(x => x.Id == outputId);
-					var destination = nodeDestination.Inputs.FirstOrDefault(x => x.Id == inputId);
+        #endregion
 
-					if (source != null && destination != null)
-					{
-						source.Connections.Add(destination);
-						destination.Connections.Add(source);
+        #region Node Removed
 
-						if (source.Type is UndefinedGenericType type && destination.Type is not UndefinedGenericType)
-							PropagateNewGeneric(nodeSource, type, destination.Type);
-						else if (destination.Type is UndefinedGenericType destinationType && source.Type is not UndefinedGenericType)
-							PropagateNewGeneric(nodeDestination, destinationType, source.Type);
+        [JSInvokable]
+        public void OnNodeRemoved(string nodeId)
+        {
+            Graph.Invoke(() =>
+            {
+                if (!Graph.Nodes.TryGetValue(nodeId, out var node))
+                    return;
+                foreach (var input in node.Inputs)
+                {
+                    foreach (var connection in input.Connections)
+                    {
+                        connection.Connections.Remove(input);
+                    }
+                }
+                foreach (var output in node.Outputs)
+                {
+                    foreach (var connection in output.Connections)
+                    {
+                        connection.Connections.Remove(output);
+                    }
+                }
 
-						if (destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit) // gotta remove the textbox
-							UpdateConnectionType(destination);
-					}
-				}
-			});
-		}
+                Graph.RemoveNode(node);
+            });
+        }
 
-		[JSInvokable]
-		public void OnConnectionRemoved(string nodeSourceId, string outputId, string nodeDestinationID, string inputId)
-		{
-			Graph.Invoke(() =>
-			{
-				if (Graph.Nodes.TryGetValue(nodeSourceId, out var nodeSource) && Graph.Nodes.TryGetValue(nodeDestinationID, out var nodeDestination))
-				{
-					var source = nodeSource.InputsAndOutputs.FirstOrDefault(x => x.Id == outputId || x.Id == inputId);
-					var destination = nodeDestination.InputsAndOutputs.FirstOrDefault(x => x.Id == inputId || x.Id == outputId);
+        #endregion
 
-					if (source != null && destination != null)
-					{
-						source.Connections.Remove(destination);
-						destination.Connections.Remove(source);
+        #region Connection Added / Removed
 
-						if (destination.Connections.Count == 0 && destination.Type.AllowTextboxEdit) // gotta add back the textbox
-							UpdateConnectionType(destination);
-					}
-				}
-			});
-		}
+        [JSInvokable]
+        public void OnConnectionAdded(string nodeSourceId, string outputId, string nodeDestinationID, string inputId)
+        {
+            Graph.Invoke(() =>
+            {
+                if (Graph.Nodes.TryGetValue(nodeSourceId, out var nodeSource) && Graph.Nodes.TryGetValue(nodeDestinationID, out var nodeDestination))
+                {
+                    var source = nodeSource.Outputs.FirstOrDefault(x => x.Id == outputId);
+                    var destination = nodeDestination.Inputs.FirstOrDefault(x => x.Id == inputId);
 
-		#endregion
+                    if (source != null && destination != null)
+                    {
+                        source.Connections.Add(destination);
+                        destination.Connections.Add(source);
 
-		#region Node Moved
+                        if (source.Type is UndefinedGenericType type && destination.Type is not UndefinedGenericType)
+                            PropagateNewGeneric(nodeSource, type, destination.Type);
+                        else if (destination.Type is UndefinedGenericType destinationType && source.Type is not UndefinedGenericType)
+                            PropagateNewGeneric(nodeDestination, destinationType, source.Type);
 
-		[JSInvokable]
-		public void OnNodeMoved(string nodeId, float x, float y)
-		{
-			if (!Graph.Nodes.TryGetValue(nodeId, out var node))
-				return;
-			var decoration = node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero));
-			decoration.Position = new(x, y);
-		}
+                        if (destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit) // gotta remove the textbox
+                            UpdateConnectionType(destination);
+                    }
+                }
+            });
+        }
 
-		#endregion
+        [JSInvokable]
+        public void OnConnectionRemoved(string nodeSourceId, string outputId, string nodeDestinationID, string inputId)
+        {
+            Graph.Invoke(() =>
+            {
+                if (Graph.Nodes.TryGetValue(nodeSourceId, out var nodeSource) && Graph.Nodes.TryGetValue(nodeDestinationID, out var nodeDestination))
+                {
+                    var source = nodeSource.InputsAndOutputs.FirstOrDefault(x => x.Id == outputId || x.Id == inputId);
+                    var destination = nodeDestination.InputsAndOutputs.FirstOrDefault(x => x.Id == inputId || x.Id == outputId);
 
-		#region OnPortDroppedOnCanvas
+                    if (source != null && destination != null)
+                    {
+                        source.Connections.Remove(destination);
+                        destination.Connections.Remove(source);
 
-		private bool IsShowingNodeSelection = false;
+                        if (destination.Connections.Count == 0 && destination.Type.AllowTextboxEdit) // gotta add back the textbox
+                            UpdateConnectionType(destination);
+                    }
+                }
+            });
+        }
 
-		[JSInvokable]
-		public void OnPortDroppedOnCanvas(string nodeId, string connectionId, int x, int y, float nodeX, float nodeY)
-		{
-			if (!Graph.Nodes.TryGetValue(nodeId, out var node))
-				return;
+        #endregion
 
-			var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
-			if (connection == null)
-				return;
+        #region Node Moved
 
-			PopupNode = node;
-			PopupNodeConnection = connection;
-			PopupX = x;
-			PopupY = y;
-			PopupNodePosition = new(nodeX, nodeY);
-			IsShowingNodeSelection = true;
+        [JSInvokable]
+        public void OnNodeMoved(string nodeId, float x, float y)
+        {
+            if (!Graph.Nodes.TryGetValue(nodeId, out var node))
+                return;
+            var decoration = node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero));
+            decoration.Position = new(x, y);
+        }
 
-			StateHasChanged();
-		}
+        #endregion
 
-		private void OnNewNodeTypeSelected(NodeProvider.NodeSearchResult searchResult)
-		{
-			IsShowingNodeSelection = false; // remove the node type selection popup
+        #region OnPortDroppedOnCanvas
 
-			var node = Graph.AddNode(searchResult);
-			node.AddDecoration(new NodeDecorationPosition(new(PopupNodePosition.X, PopupNodePosition.Y)));
+        private bool IsShowingNodeSelection = false;
 
-			if (PopupNodeConnection != null && PopupNode != null)
-			{
-				// check if the source was an input or output and choose the proper destination based on that
-				List<Connection> sources, destinations;
-				if (PopupNode.Inputs.Contains(PopupNodeConnection))
-				{
-					sources = PopupNode.Inputs;
-					destinations = node.Outputs;
-				}
-				else
-				{
-					sources = PopupNode.Outputs;
-					destinations = node.Inputs;
-				}
+        [JSInvokable]
+        public void OnPortDroppedOnCanvas(string nodeId, string connectionId, int x, int y, float nodeX, float nodeY)
+        {
+            if (!Graph.Nodes.TryGetValue(nodeId, out var node))
+                return;
 
-				Connection? destination = null;
-				if (PopupNodeConnection.Type is UndefinedGenericType) // can connect to anything except exec
-					destination = destinations.FirstOrDefault(x => !x.Type.IsExec);
-				else // can connect to anything that is the same type or generic (except exec)
-					destination = destinations.FirstOrDefault(x => x.Type == PopupNodeConnection.Type || (x.Type is UndefinedGenericType && !PopupNodeConnection.Type.IsExec));
+            var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
+            if (connection == null)
+                return;
 
-				// if we found a connection, connect them together
-				if (destination != null)
-				{
-					PopupNodeConnection.Connections.Add(destination);
-					destination.Connections.Add(PopupNodeConnection);
+            PopupNode = node;
+            PopupNodeConnection = connection;
+            PopupX = x;
+            PopupY = y;
+            PopupNodePosition = new(nodeX, nodeY);
+            IsShowingNodeSelection = true;
 
-					if(destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit)
-						UpdateConnectionType(destination);
-					if(PopupNodeConnection.Connections.Count == 1 && PopupNodeConnection.Type.AllowTextboxEdit)
-						UpdateConnectionType(PopupNodeConnection);
+            StateHasChanged();
+        }
 
-					// if one of the connection ( destination or PopupNodeConnection ) is generic and the other isn't
-					// We have to propagate the non-generic type to the generic one
-					if (destination.Type is UndefinedGenericType && PopupNodeConnection.Type is not UndefinedGenericType)
+        private void OnNewNodeTypeSelected(NodeProvider.NodeSearchResult searchResult)
+        {
+            IsShowingNodeSelection = false; // remove the node type selection popup
+
+            var node = Graph.AddNode(searchResult);
+            node.AddDecoration(new NodeDecorationPosition(new(PopupNodePosition.X, PopupNodePosition.Y)));
+
+            if (PopupNodeConnection != null && PopupNode != null)
+            {
+                // check if the source was an input or output and choose the proper destination based on that
+                List<Connection> sources, destinations;
+                if (PopupNode.Inputs.Contains(PopupNodeConnection))
+                {
+                    sources = PopupNode.Inputs;
+                    destinations = node.Outputs;
+                }
+                else
+                {
+                    sources = PopupNode.Outputs;
+                    destinations = node.Inputs;
+                }
+
+                Connection? destination = null;
+                if (PopupNodeConnection.Type is UndefinedGenericType) // can connect to anything except exec
+                    destination = destinations.FirstOrDefault(x => !x.Type.IsExec);
+                else // can connect to anything that is the same type or generic (except exec)
+                    destination = destinations.FirstOrDefault(x => x.Type == PopupNodeConnection.Type || (x.Type is UndefinedGenericType && !PopupNodeConnection.Type.IsExec));
+
+                // if we found a connection, connect them together
+                if (destination != null)
+                {
+                    PopupNodeConnection.Connections.Add(destination);
+                    destination.Connections.Add(PopupNodeConnection);
+
+                    if (destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit)
+                        UpdateConnectionType(destination);
+                    if (PopupNodeConnection.Connections.Count == 1 && PopupNodeConnection.Type.AllowTextboxEdit)
+                        UpdateConnectionType(PopupNodeConnection);
+
+                    // if one of the connection ( destination or PopupNodeConnection ) is generic and the other isn't
+                    // We have to propagate the non-generic type to the generic one
+                    if (destination.Type is UndefinedGenericType && PopupNodeConnection.Type is not UndefinedGenericType)
                         PropagateNewGeneric(destination.Parent, (UndefinedGenericType)destination.Type, PopupNodeConnection.Type);
-					else if (destination.Type is not UndefinedGenericType && PopupNodeConnection.Type is UndefinedGenericType)
+                    else if (destination.Type is not UndefinedGenericType && PopupNodeConnection.Type is UndefinedGenericType)
                         PropagateNewGeneric(PopupNodeConnection.Parent, (UndefinedGenericType)PopupNodeConnection.Type, destination.Type);
-				}
-			}
-			PopupNode = null;
-			PopupNodeConnection = null;
+                }
+            }
+            PopupNode = null;
+            PopupNodeConnection = null;
 
-			InvokeJSVoid("AddNodes", GetNodeCreationInfo(node)).AndForget();
-		}
+            InvokeJSVoid("AddNodes", GetNodeCreationInfo(node)).AndForget();
+        }
 
-		#endregion
+        #endregion
 
-		#region OnGenericTypeSelectionMenuAsked
+        #region OnOverloadSelectionRequested
 
-		private bool IsShowingGenericTypeSelection = false;
+        private bool IsShowingOverloadSelection = false;
 
-		[JSInvokable]
-		public void OnGenericTypeSelectionMenuAsked(string nodeId, string connectionId, int x, int y)
-		{
-			if (!Graph.Nodes.TryGetValue(nodeId, out var node))
-				return;
-			var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
-			if (connection == null)
-				return;
+        [JSInvokable]
+        public void OnOverloadSelectionRequested(string nodeId)
+        {
+            if (!Graph.Nodes.TryGetValue(nodeId, out var node))
+                return;
 
-			PopupNode = node;
-			PopupNodeConnection = connection;
-			PopupX = x;
-			PopupY = y;
-			IsShowingGenericTypeSelection = true;
+            PopupNode = node;
+            IsShowingOverloadSelection = true;
 
-			StateHasChanged();
-		}
+            StateHasChanged();
+        }
 
-		private void OnGenericTypeSelected(Type type)
-		{
-			IsShowingGenericTypeSelection = false;
+        private void OnNewOverloadSelected(Node.AlternateOverload overload)
+        {
+            IsShowingNodeSelection = false; // remove the node type selection popup
 
-			if (PopupNode == null || PopupNodeConnection?.Type is not UndefinedGenericType generic)
-				return;
+            if (PopupNode == null)
+                return;
 
-			PropagateNewGeneric(PopupNode, generic, TypeFactory.Get(type));
+            PopupNode.SelectOverload(overload, out var newConnections, out var removedConnections);
 
-			PopupNode = null;
-			PopupNodeConnection = null;
-		}
+            var nodesToUpdate = new List<Node>();
+            foreach (var removedConnection in removedConnections)
+            {
+                var newConnection = newConnections.FirstOrDefault(x => x.Name == removedConnection.Name && x.Type == removedConnection.Type);
 
-		private bool GetAllowTextboxEdit(Connection connection) => connection.Type.AllowTextboxEdit && connection.Connections.Count == 0 && connection.Parent.Inputs.Contains(connection);
-		private record class UpdateConnectionTypeParameters(string NodeId, string Id, string Type, bool IsGeneric, string Color, bool AllowTextboxEdit, string? TextboxValue);
-		private void PropagateNewGeneric(Node node, UndefinedGenericType generic, TypeBase newType)
-		{
-			var inputsOrOutputs = node.InputsAndOutputs.ToDictionary(x => x, x => x.Type);
+                // if we found a new connection, connect them together and remove the old connection
+                if (newConnection != null)
+                {
+                    foreach (var oldLink in removedConnection.Connections)
+                    {
+                        newConnection.Connections.Add(oldLink);
+                        oldLink.Connections.Remove(removedConnection);
+                        oldLink.Connections.Add(newConnection);
 
-			foreach (var connection in node.InputsAndOutputs)
-			{
-				if (connection.Type == generic)
-				{
-					connection.UpdateType(newType);
+                        nodesToUpdate.Add(oldLink.Parent);
+                    }
+                }
+                else
+                {
+                    // if we didn't find a new connection, remove the old connection
+                    foreach (var oldLink in removedConnection.Connections)
+                    {
+                        oldLink.Connections.Remove(removedConnection);
+                        nodesToUpdate.Add(oldLink.Parent);
+                    }
+                }
+            }
 
-					UpdateConnectionType(connection);
+            UpdateNodes(nodesToUpdate.Prepend(PopupNode).Distinct());
 
-					foreach (var other in connection.Connections)
-					{
-						if (other.Type is UndefinedGenericType generic2)
-							PropagateNewGeneric(other.Parent, generic2, newType);
-					}
+            PopupNode = null;
+        }
 
-					var updated = node.GenericConnectionTypeDefined(generic);
-					foreach(var other in updated)
-					{
-						UpdateConnectionType(other);
+        #endregion
 
-						var oldType = inputsOrOutputs[other];
-						if(oldType is UndefinedGenericType generic2)
-							PropagateNewGeneric(node, generic2, other.Type);
-					}
-				}
-			}
-		}
+        #region OnGenericTypeSelectionMenuAsked
 
-		#endregion
+        private bool IsShowingGenericTypeSelection = false;
 
-		#region OnTextboxValueChanged
+        [JSInvokable]
+        public void OnGenericTypeSelectionMenuAsked(string nodeId, string connectionId, int x, int y)
+        {
+            if (!Graph.Nodes.TryGetValue(nodeId, out var node))
+                return;
+            var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
+            if (connection == null)
+                return;
 
-		[JSInvokable]
-		public void OnTextboxValueChanged(string nodeId, string connectionId, string? text)
-		{
-			if (!Graph.Nodes.TryGetValue(nodeId, out var node))
-				return;
+            PopupNode = node;
+            PopupNodeConnection = connection;
+            PopupX = x;
+            PopupY = y;
+            IsShowingGenericTypeSelection = true;
 
-			var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
-			if (connection == null)
-				return;
+            StateHasChanged();
+        }
 
-			if (connection.Type.AllowTextboxEdit)
-				connection.UpdateTextboxText(text);
-		}
+        private void OnGenericTypeSelected(Type type)
+        {
+            IsShowingGenericTypeSelection = false;
 
-		#endregion
+            if (PopupNode == null || PopupNodeConnection?.Type is not UndefinedGenericType generic)
+                return;
 
-		#endregion
+            PropagateNewGeneric(PopupNode, generic, TypeFactory.Get(type));
 
-		#region ShowAddNode
+            PopupNode = null;
+            PopupNodeConnection = null;
+        }
 
-		public void ShowAddNode()
-		{
-			IsShowingNodeSelection = true;
-			PopupX = 300;
-			PopupY = 300;
-		}
+        private bool GetAllowTextboxEdit(Connection connection) => connection.Type.AllowTextboxEdit && connection.Connections.Count == 0 && connection.Parent.Inputs.Contains(connection);
+        private record class UpdateConnectionTypeParameters(string NodeId, string Id, string Type, bool IsGeneric, string Color, bool AllowTextboxEdit, string? TextboxValue);
+        private void PropagateNewGeneric(Node node, UndefinedGenericType generic, TypeBase newType)
+        {
+            var inputsOrOutputs = node.InputsAndOutputs.ToDictionary(x => x, x => x.Type);
 
-		#endregion
+            foreach (var connection in node.InputsAndOutputs)
+            {
+                if (connection.Type == generic)
+                {
+                    connection.UpdateType(newType);
 
-		#region Initialize
+                    UpdateNodeBaseInfo(node);
+                    UpdateConnectionType(connection);
 
-		private async Task InitializeCanvasWithGraphNodes()
-		{
-			var infos = Graph.Nodes.Values.Select(GetNodeCreationInfo).ToList();
+                    foreach (var other in connection.Connections)
+                    {
+                        if (other.Type is UndefinedGenericType generic2)
+                            PropagateNewGeneric(other.Parent, generic2, newType);
+                    }
 
-			await InvokeJSVoid("AddNodes", infos);
-		}
+                    var updated = node.GenericConnectionTypeDefined(generic);
+                    foreach (var other in updated)
+                    {
+                        UpdateNodeBaseInfo(node);
+                        UpdateConnectionType(other);
 
-		private record class NodeCreationInfo(string Id, string Name, string TitleColor, float X, float Y, List<NodeCreationInfo_Connection> Inputs, List<NodeCreationInfo_Connection> Outputs);
-		private record class NodeCreationInfo_Connection(string Id, string Name, List<NodeCreationInfo_Connection_Connection>? Connections, string Color, string Type, bool IsGeneric, bool AllowTextboxEdit, string? TextboxValue);
-		private record class NodeCreationInfo_Connection_Connection(string ConnectionId, string NodeId);
+                        var oldType = inputsOrOutputs[other];
+                        if (oldType is UndefinedGenericType generic2)
+                            PropagateNewGeneric(node, generic2, other.Type);
+                    }
+                }
+            }
+        }
 
-		private string GetTypeShapeColor(TypeBase type)
-		{
-			if (type.HasUndefinedGenerics)
-				return "yellow";
-			else if (type == TypeFactory.Get<string>())
-				return "purple";
-			else if (type.IsClass)
-				return "green";
-			else if (type.IsExec)
-				return "gray";
-			else if (type == TypeFactory.Get<bool>())
-				return "red";
-			else
-				return "blue";
-		}
+        #endregion
 
-		private NodeCreationInfo GetNodeCreationInfo(Node node)
-		{
-			var positionAttribute = node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero));
+        #region OnTextboxValueChanged
 
-			return new(node.Id.ToString(),
-				node.Name,
-				node.TitleColor,
-				positionAttribute.X,
-				positionAttribute.Y,
-				node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type is UndefinedGenericType, GetAllowTextboxEdit(x), x.TextboxValue)).ToList(),
-				node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type is UndefinedGenericType, false, null)).ToList());
-		}
+        [JSInvokable]
+        public void OnTextboxValueChanged(string nodeId, string connectionId, string? text)
+        {
+            if (!Graph.Nodes.TryGetValue(nodeId, out var node))
+                return;
 
-		#endregion
+            var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
+            if (connection == null)
+                return;
 
-		#region Dispose
+            if (connection.Type.AllowTextboxEdit)
+                connection.UpdateTextboxText(text);
+        }
 
-		public void Dispose()
-		{
-			Ref?.Dispose();
-			Ref = null!;
-		}
+        #endregion
 
-		#endregion
-	}
+        #endregion
+
+        #region ShowAddNode
+
+        public void ShowAddNode()
+        {
+            IsShowingNodeSelection = true;
+            PopupX = 300;
+            PopupY = 300;
+        }
+
+        #endregion
+
+        #region Initialize
+
+        private async Task InitializeCanvasWithGraphNodes()
+        {
+            var infos = Graph.Nodes.Values.Select(GetNodeCreationInfo).ToList();
+
+            await InvokeJSVoid("AddNodes", infos);
+        }
+
+        private record class NodeCreationInfo(string Id, string Name, bool HasOverloads, string TitleColor, float X, float Y, List<NodeCreationInfo_Connection> Inputs, List<NodeCreationInfo_Connection> Outputs);
+        private record class NodeCreationInfo_Connection(string Id, string Name, List<NodeCreationInfo_Connection_Connection>? Connections, string Color, string Type, bool IsGeneric, bool AllowTextboxEdit, string? TextboxValue);
+        private record class NodeCreationInfo_Connection_Connection(string ConnectionId, string NodeId);
+
+        private string GetTypeShapeColor(TypeBase type)
+        {
+            if (type.HasUndefinedGenerics)
+                return "yellow";
+            else if (type == TypeFactory.Get<string>())
+                return "purple";
+            else if (type.IsClass)
+                return "green";
+            else if (type.IsExec)
+                return "gray";
+            else if (type == TypeFactory.Get<bool>())
+                return "red";
+            else
+                return "blue";
+        }
+
+        private NodeCreationInfo GetNodeCreationInfo(Node node)
+        {
+            var positionAttribute = node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero));
+
+            return new(node.Id.ToString(),
+                node.Name,
+                node.AlternatesOverloads.Any(),
+                node.TitleColor,
+                positionAttribute.X,
+                positionAttribute.Y,
+                node.Inputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type is UndefinedGenericType, GetAllowTextboxEdit(x), x.TextboxValue)).ToList(),
+                node.Outputs.Select(x => new NodeCreationInfo_Connection(x.Id, x.Name, x.Connections.Select(y => new NodeCreationInfo_Connection_Connection(y.Id, y.Parent.Id)).ToList(), GetTypeShapeColor(x.Type), x.Type.Name, x.Type is UndefinedGenericType, false, null)).ToList());
+        }
+
+        #endregion
+
+        #region Dispose
+
+        public void Dispose()
+        {
+            Ref?.Dispose();
+            Ref = null!;
+        }
+
+        #endregion
+    }
 }

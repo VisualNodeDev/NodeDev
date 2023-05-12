@@ -17,6 +17,8 @@ let Canvas = {} as any;
         AddNodes: function (props: Types.NodeCreationInfo[]) { },
         Destroy: function () { delete (window as any)['Canvas_' + id]; },
         UpdateConnectionType: function (type: { nodeId: string, id: string, type: string, isGeneric: boolean, color: string, allowTextboxEdit: boolean, textboxValue: string | undefined }) { },
+        UpdateNodeBaseInfo: function (props: Types.UpdateNodeBaseInfoParameters) { },
+        UpdateNodes: function (props: Types.UpdateNodesParameters) { },
     } as Types.CanvasInfos;
     (window as any)['Canvas_' + id] = Canvas[id];
 

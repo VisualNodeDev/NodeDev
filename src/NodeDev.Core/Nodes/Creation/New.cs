@@ -18,17 +18,24 @@ namespace NodeDev.Core.Nodes.Creation
             Outputs.Add(new("Obj", this, t1));
         }
 
+        public override IEnumerable<AlternateOverload> AlternatesOverloads
+        {
+            get 
+            {
+                if (Outputs[1].Type is not RealType realType)
+                    throw new Exception("Output type is not real");
+
+                var constructors = realType.BackendType.GetConstructors();
+                return constructors.Select(x => new AlternateOverload(Outputs[1].Type, x.GetParameters().Select(y => (y.Name ?? "??", (TypeBase)TypeFactory.Get(y.ParameterType))).ToList()));
+            }
+        }
         public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType)
         {
-            if(Outputs[1].Type is not RealType realType)
-                throw new Exception("Output type is not real");
+            var constructor = AlternatesOverloads.First();
 
-            // get the first constructor parameters
-            var constructor = realType.BackendType.GetConstructors().First();
-            var parameters = constructor.GetParameters();
-            Inputs.AddRange(parameters.Select(x => new Connection(x.Name ?? "??", this, TypeFactory.Get(x.ParameterType))));
+            Inputs.AddRange(constructor.Parameters.Select(x => new Connection(x.Name ?? "??", this, x.Type)));
 
-            Name = $"New {realType.FriendlyName}";
+            Name = $"New {Outputs[1].Type.FriendlyName}";
             return new();
         }
 

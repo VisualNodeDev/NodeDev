@@ -10,123 +10,130 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Nodes
 {
-	public abstract class Node
-	{
-		public Node(Graph graph, string? id = null)
-		{
-			Graph = graph;
-			Id = id ?? (Guid.NewGuid().ToString());
-		}
+    public abstract class Node
+    {
+        public Node(Graph graph, string? id = null)
+        {
+            Graph = graph;
+            Id = id ?? (Guid.NewGuid().ToString());
+        }
 
-		public string Id { get; }
+        public string Id { get; }
 
-		public string Name { get; set; } = "";
+        public string Name { get; set; } = "";
 
-		public Graph Graph { get; }
+        public Graph Graph { get; }
 
-		public abstract string TitleColor { get; }
+        public abstract string TitleColor { get; }
 
-		public List<Connection> Inputs { get; } = new();
+        public List<Connection> Inputs { get; } = new();
 
-		public List<Connection> Outputs { get; } = new();
+        public List<Connection> Outputs { get; } = new();
 
-		public IEnumerable<Connection> InputsAndOutputs => Inputs.Concat(Outputs);
+        public IEnumerable<Connection> InputsAndOutputs => Inputs.Concat(Outputs);
 
-		public abstract bool AlterExecutionStackOnPop { get; }
+        public abstract bool AlterExecutionStackOnPop { get; }
 
-		public abstract bool IsFlowNode { get; }
+        public abstract bool IsFlowNode { get; }
 
-		/// <summary>
-		/// returns a list of changed connections, if any
-		/// </summary>
-		/// <param name="connection">The connection that was generic, it is not generic anymore</param>
-		public virtual List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType)
-		{
-			return new();
-		}
+        public record class AlternateOverload(TypeBase ReturnType, List<(string Name, TypeBase Type)> Parameters);
+        public virtual IEnumerable<AlternateOverload> AlternatesOverloads => Enumerable.Empty<AlternateOverload>();
 
-		/// <summary>
-		/// Returns the next node to execute. The connection is on the current node, must look at what it's connected to
-		/// </summary>
-		public abstract Connection? Execute(Connection? connectionBeingExecuted, object?[] inputs, object?[] nodeOutputs);
+        /// <summary>
+        /// returns a list of changed connections, if any
+        /// </summary>
+        /// <param name="connection">The connection that was generic, it is not generic anymore</param>
+        public virtual List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType)
+        {
+            return new();
+        }
 
-		#region Decorations
+        /// <summary>
+        /// Returns the next node to execute. The connection is on the current node, must look at what it's connected to
+        /// </summary>
+        public abstract Connection? Execute(Connection? connectionBeingExecuted, object?[] inputs, object?[] nodeOutputs);
 
-		public Dictionary<Type, INodeDecoration> Decorations { get; init; } = new();
+        public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
+        {
+            throw new NotImplementedException();
+        }
+        #region Decorations
 
-		public void AddDecoration<T>(T attribute) where T : INodeDecoration => Decorations[typeof(T)] = attribute;
+        public Dictionary<Type, INodeDecoration> Decorations { get; init; } = new();
 
-		public T GetOrAddDecoration<T>(Func<T> creator) where T : INodeDecoration
-		{
-			if (Decorations.TryGetValue(typeof(T), out var decoration))
-				return (T)decoration;
+        public void AddDecoration<T>(T attribute) where T : INodeDecoration => Decorations[typeof(T)] = attribute;
 
-			var v = creator();
-			Decorations[typeof(T)] = v;
+        public T GetOrAddDecoration<T>(Func<T> creator) where T : INodeDecoration
+        {
+            if (Decorations.TryGetValue(typeof(T), out var decoration))
+                return (T)decoration;
 
-			return v;
-		}
+            var v = creator();
+            Decorations[typeof(T)] = v;
 
-		#endregion
+            return v;
+        }
 
-		#region Serialization
+        #endregion
 
-		public record SerializedNode(string Type, string Id, string Name, List<string> Inputs, List<string> Outputs, Dictionary<string, string> Decorations);
-		internal string Serialize()
-		{
-			var serializedNode = new SerializedNode(GetType().FullName!, Id, Name, Inputs.Select(x => x.Serialize()).ToList(), Outputs.Select(x => x.Serialize()).ToList(), Decorations.ToDictionary(x => x.Key.FullName!, x => x.Value.Serialize()));
+        #region Serialization
 
-			return JsonSerializer.Serialize(serializedNode);
-		}
+        public record SerializedNode(string Type, string Id, string Name, List<string> Inputs, List<string> Outputs, Dictionary<string, string> Decorations);
+        internal string Serialize()
+        {
+            var serializedNode = new SerializedNode(GetType().FullName!, Id, Name, Inputs.Select(x => x.Serialize()).ToList(), Outputs.Select(x => x.Serialize()).ToList(), Decorations.ToDictionary(x => x.Key.FullName!, x => x.Value.Serialize()));
+
+            return JsonSerializer.Serialize(serializedNode);
+        }
 
 
-		public static Node Deserialize(Graph graph, string serializedNode)
-		{
-			var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
+        public static Node Deserialize(Graph graph, string serializedNode)
+        {
+            var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
 
-			var type = TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
-			var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
+            var type = TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
+            var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
 
-			foreach (var decoration in serializedNodeObj.Decorations)
-			{
-				var decorationType = TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
+            foreach (var decoration in serializedNodeObj.Decorations)
+            {
+                var decorationType = TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
 
-				var method = decorationType.GetMethod(nameof(INodeDecoration.Deserialize), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                var method = decorationType.GetMethod(nameof(INodeDecoration.Deserialize), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
-				if (method == null)
-					throw new Exception($"Unable to find Deserialize method on type: {decoration.Key}");
+                if (method == null)
+                    throw new Exception($"Unable to find Deserialize method on type: {decoration.Key}");
 
-				var decorationObj = method.Invoke(null, new object[] { decoration.Value }) as INodeDecoration;
+                var decorationObj = method.Invoke(null, new object[] { decoration.Value }) as INodeDecoration;
 
-				if (decorationObj == null)
-					throw new Exception($"Unable to deserialize decoration: {decoration.Key}");
+                if (decorationObj == null)
+                    throw new Exception($"Unable to deserialize decoration: {decoration.Key}");
 
-				node.Decorations[decorationType] = decorationObj;
-			}
+                node.Decorations[decorationType] = decorationObj;
+            }
 
-			node.Deserialize(serializedNodeObj);
+            node.Deserialize(serializedNodeObj);
 
-			return node;
-		}
+            return node;
+        }
 
-		protected virtual void Deserialize(SerializedNode serializedNodeObj)
-		{
-			Inputs.Clear();
-			Outputs.Clear();
+        protected virtual void Deserialize(SerializedNode serializedNodeObj)
+        {
+            Inputs.Clear();
+            Outputs.Clear();
 
-			Name = serializedNodeObj.Name;
-			foreach (var input in serializedNodeObj.Inputs)
-			{
-				var connection = Connection.Deserialize(this, input);
-				Inputs.Add(connection);
-			}
-			foreach (var output in serializedNodeObj.Outputs)
-			{
-				var connection = Connection.Deserialize(this, output);
-				Outputs.Add(connection);
-			}
-		}
+            Name = serializedNodeObj.Name;
+            foreach (var input in serializedNodeObj.Inputs)
+            {
+                var connection = Connection.Deserialize(this, input);
+                Inputs.Add(connection);
+            }
+            foreach (var output in serializedNodeObj.Outputs)
+            {
+                var connection = Connection.Deserialize(this, output);
+                Outputs.Add(connection);
+            }
+        }
 
-		#endregion
-	}
+        #endregion
+    }
 }
