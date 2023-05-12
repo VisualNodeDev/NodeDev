@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -52,12 +53,26 @@ namespace NodeDev.Core
 			else if (startConnection?.Type is RealType realType)
 			{
 				// find if the method exists
-				var methods = realType.BackendType.GetMethods(BindingFlags.Public).Where(x => x.Name.Contains(methodCallSplit[1], StringComparison.OrdinalIgnoreCase));
+				IEnumerable<MethodInfo> methods = realType.BackendType.GetMethods(BindingFlags.Public | BindingFlags.FlattenHierarchy | BindingFlags.Instance);
+				// get extensions methods for the realType.BackendType
+
+				methods = methods.Concat(GetExtensionMethods(realType.BackendType)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 
 				results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
 			}
 
 			return results;
+		}
+
+		private static IEnumerable<MethodInfo> GetExtensionMethods(Type t)
+		{
+			var query = AppDomain.CurrentDomain.GetAssemblies()
+				.SelectMany(x => x.GetTypes())
+				.Where(type => !type.IsGenericType)
+				.SelectMany(type => type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
+				.Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && method.GetParameters()[0].ParameterType.IsAssignableFrom(t));
+
+			return query;
 		}
 	}
 }

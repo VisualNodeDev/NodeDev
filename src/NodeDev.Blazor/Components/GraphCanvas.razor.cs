@@ -231,8 +231,6 @@ namespace NodeDev.Blazor.Components
 
 		private void OnNewNodeTypeSelected(NodeProvider.NodeSearchResult searchResult)
 		{
-			IsShowingNodeSelection = false; // remove the node type selection popup
-
 			var node = Graph.AddNode(searchResult);
 			node.AddDecoration(new NodeDecorationPosition(new(PopupNodePosition.X, PopupNodePosition.Y)));
 
@@ -276,8 +274,8 @@ namespace NodeDev.Blazor.Components
 						PropagateNewGeneric(PopupNodeConnection.Parent, (UndefinedGenericType)PopupNodeConnection.Type, destination.Type);
 				}
 			}
-			PopupNode = null;
-			PopupNodeConnection = null;
+
+			CancelPopup();
 
 			InvokeJSVoid("AddNodes", GetNodeCreationInfo(node)).AndForget();
 		}
@@ -302,8 +300,6 @@ namespace NodeDev.Blazor.Components
 
 		private void OnNewOverloadSelected(Node.AlternateOverload overload)
 		{
-			IsShowingNodeSelection = false; // remove the node type selection popup
-
 			if (PopupNode == null)
 				return;
 
@@ -330,7 +326,7 @@ namespace NodeDev.Blazor.Components
 
 			UpdateNodes(nodesToUpdate.Prepend(PopupNode).Distinct());
 
-			PopupNode = null;
+			CancelPopup();
 		}
 
 		#endregion
@@ -359,15 +355,12 @@ namespace NodeDev.Blazor.Components
 
 		private void OnGenericTypeSelected(Type type)
 		{
-			IsShowingGenericTypeSelection = false;
-
 			if (PopupNode == null || PopupNodeConnection?.Type is not UndefinedGenericType generic)
 				return;
 
 			PropagateNewGeneric(PopupNode, generic, TypeFactory.Get(type));
 
-			PopupNode = null;
-			PopupNodeConnection = null;
+			CancelPopup();
 		}
 
 		private bool GetAllowTextboxEdit(Connection connection) => connection.Type.AllowTextboxEdit && connection.Connections.Count == 0 && connection.Parent.Inputs.Contains(connection);
@@ -382,7 +375,6 @@ namespace NodeDev.Blazor.Components
 				{
 					connection.UpdateType(newType);
 
-					UpdateNodeBaseInfo(node);
 					UpdateConnectionType(connection);
 
 					foreach (var other in connection.Connections)
@@ -392,9 +384,10 @@ namespace NodeDev.Blazor.Components
 					}
 
 					var updated = node.GenericConnectionTypeDefined(generic);
+					UpdateNodeBaseInfo(node);
+
 					foreach (var other in updated)
 					{
-						UpdateNodeBaseInfo(node);
 						UpdateConnectionType(other);
 
 						var oldType = inputsOrOutputs[other];
@@ -434,6 +427,17 @@ namespace NodeDev.Blazor.Components
 			IsShowingNodeSelection = true;
 			PopupX = 300;
 			PopupY = 300;
+		}
+
+		#endregion
+
+		#region CancelPopup
+
+		private void CancelPopup()
+		{
+			IsShowingGenericTypeSelection = IsShowingNodeSelection = IsShowingOverloadSelection = false;
+			PopupNode = null;
+			PopupNodeConnection = null;
 		}
 
 		#endregion

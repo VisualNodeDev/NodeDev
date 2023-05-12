@@ -1,5 +1,6 @@
-﻿
-<div style="@($"position: absolute; left: {PositionX - 100}px; top: {PositionY - 30}px; width: 200px; height: 400px")" @onclick:stopPropagation="true">
+﻿@using NodeDev.Core.Types;
+
+<div style="@($"position: absolute; left: {PositionX - 250}px; top: {PositionY - 30}px; width: 500px; height: 400px")" @onclick:stopPropagation="true">
 
 	<MudPaper Style="height: 100%; width: 100%">
 
@@ -12,7 +13,7 @@
 				{
 					@if (type is NodeDev.Core.NodeProvider.MethodCallNode methodCallNode)
 					{
-						<MudListItem Text="@($"{methodCallNode.MethodInfo.DeclaringType!.Name}.{methodCallNode.MethodInfo.Name}")" Value="type" />
+						<MudListItem Text="@($"{TypeFactory.Get(methodCallNode.MethodInfo.DeclaringType!).FriendlyName}.{methodCallNode.MethodInfo.Name}")" Value="type" />
 					}
 					else
 					{

@@ -12,7 +12,8 @@ import ReactFlow, {
     useReactFlow,
     OnConnectStartParams,
     ReactFlowProvider,
-    NodeRemoveChange
+    NodeRemoveChange,
+    BackgroundVariant
 } from "reactflow";
 
 import NodeWithMultipleHandles from "./NodeWithMultipleHandles";
@@ -337,7 +338,8 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                 onConnectEnd={connectEnd as any}
                 onConnectStart={connectStart as any}
             >
-                <Background />
+                <Background id="1" gap={10} color="#f1f1f1" variant={BackgroundVariant.Lines} />
+                <Background id="2" gap={100} offset={1} color="#ccc" variant={BackgroundVariant.Lines} />
             </ReactFlow>
         </div>
     );
