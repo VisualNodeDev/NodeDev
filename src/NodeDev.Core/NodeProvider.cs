@@ -38,6 +38,19 @@ namespace NodeDev.Core
 
 			var results = nodes.Select(x => new NodeSearchResult(x));
 
+			IEnumerable<NodeSearchResult> GetPropertiesAndFields(Type type, string text)
+			{
+				IEnumerable<MemberInfo> members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanRead);
+				members = members.Concat(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
+				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
+				IEnumerable<NodeSearchResult> results = members.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x));
+
+				members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanWrite);
+				members = members.Concat(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
+				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
+				return results.Concat(members.Select(x => new SetPropertyOrFieldNode(typeof(GetPropertyOrField), x)));
+			}
+
 			// check if the text is a method call like 'ClassName.MethodName'
 			var methodCallSplit = text.Split('.');
 			if (methodCallSplit.Length == 2)
@@ -51,15 +64,7 @@ namespace NodeDev.Core
 
 					results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
 
-					IEnumerable<MemberInfo> members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanRead);
-					members = members.Concat(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
-					members = members.Where(x => x.Name.Contains(methodCallSplit[1], StringComparison.OrdinalIgnoreCase));
-					results = results.Concat(members.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x)));
-
-					members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanWrite);
-					members = members.Concat(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
-					members = members.Where(x => x.Name.Contains(methodCallSplit[1], StringComparison.OrdinalIgnoreCase));
-					results = results.Concat(members.Select(x => new SetPropertyOrFieldNode(typeof(GetPropertyOrField), x)));
+					results = results.Concat(GetPropertiesAndFields(type, methodCallSplit[1]));
 				}
 			}
 			else if (startConnection?.Type is RealType realType)
@@ -71,16 +76,6 @@ namespace NodeDev.Core
 				methods = methods.Concat(GetExtensionMethods(realType.BackendType)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 
 				results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
-
-				IEnumerable<MemberInfo> members = realType.BackendType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanRead);
-				members = members.Concat(realType.BackendType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
-				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
-				results = results.Concat(members.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x)));
-
-				members = realType.BackendType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanWrite);
-				members = members.Concat(realType.BackendType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
-				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
-				results = results.Concat(members.Select(x => new SetPropertyOrFieldNode(typeof(GetPropertyOrField), x)));
 			}
 
 			return results;
