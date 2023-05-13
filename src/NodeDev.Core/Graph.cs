@@ -38,9 +38,12 @@ public class Graph
 		var node = (Node)Activator.CreateInstance(searchResult.Type, this, null)!;
 		AddNode(node);
 		if (searchResult is NodeProvider.MethodCallNode methodCall && node is Nodes.MethodCall methodCallNode)
-		{
 			methodCallNode.SetMethodTarget(methodCall.MethodInfo);
-		}
+		else if (searchResult is NodeProvider.GetPropertyOrFieldNode getPropertyOrField && node is Nodes.GetPropertyOrField getPropertyOrFieldNode)
+			getPropertyOrFieldNode.SetMemberTarget(getPropertyOrField.MemberInfo);
+		else if (searchResult is NodeProvider.SetPropertyOrFieldNode setPropertyOrField && node is Nodes.GetPropertyOrField setPropertyOrFieldNode)
+			setPropertyOrFieldNode.SetMemberTarget(setPropertyOrField.MemberInfo);
+
 		return node;
 	}
 

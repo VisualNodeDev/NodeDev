@@ -15,6 +15,14 @@
 					{
 						<MudListItem Text="@($"{TypeFactory.Get(methodCallNode.MethodInfo.DeclaringType!).FriendlyName}.{methodCallNode.MethodInfo.Name}")" Value="type" />
 					}
+					else if (type is NodeDev.Core.NodeProvider.GetPropertyOrFieldNode getPropertyOrFieldNode)
+					{
+						<MudListItem Text="@($"{TypeFactory.Get(getPropertyOrFieldNode.MemberInfo.DeclaringType!).FriendlyName}.{getPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
+					}
+					else if (type is NodeDev.Core.NodeProvider.SetPropertyOrFieldNode setPropertyOrFieldNode)
+					{
+						<MudListItem Text="@($"{TypeFactory.Get(setPropertyOrFieldNode.MemberInfo.DeclaringType!).FriendlyName}.{setPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
+					}
 					else
 					{
 						<MudListItem Text="@type.Type.Name" Value="type" />
