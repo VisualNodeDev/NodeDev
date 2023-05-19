@@ -1,0 +1,46 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace NodeDev.Core.Class
+{
+    public class NodeClass
+    {
+
+		public record class SerializedNodeClass(string Name, string Namespace, List<string> Methods);
+
+        public string Name { get; set; }
+
+        public string Namespace { get; set; }
+
+        public List<NodeClassMethod> Methods { get; } = new();
+
+		public NodeClass(string name, string @namespace)
+		{
+			Name = name;
+			Namespace = @namespace;
+		}
+
+
+        public static NodeClass Deserialize(string serialized)
+        {
+            var serializedNodeClass = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClass>(serialized) ?? throw new Exception("Unable to deserialize node class");
+           
+            var nodeClass = new NodeClass(serializedNodeClass.Name, serializedNodeClass.Namespace);
+
+            foreach(var method in serializedNodeClass.Methods)
+                nodeClass.Methods.Add(NodeClassMethod.Deserialize(nodeClass, method));
+
+            return nodeClass;
+        }
+
+        public string Serialize()
+        {
+            var serializedNodeClass = new SerializedNodeClass(Name, Namespace, Methods.Select(x => x.Serialize()).ToList());
+
+            return System.Text.Json.JsonSerializer.Serialize(serializedNodeClass);
+        }
+    }
+}
