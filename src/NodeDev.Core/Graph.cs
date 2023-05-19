@@ -1,4 +1,5 @@
 ﻿using NodeDev.Core.Nodes;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 
@@ -8,11 +9,12 @@ public class Graph
 {
 	public IReadOnlyDictionary<string, Node> Nodes { get; } = new Dictionary<string, Node>();
 
-
 	static Graph()
 	{
 		NodeProvider.Initialize();
 	}
+
+	#region Invoke
 
 	public Task Invoke(Action action)
 	{
@@ -27,6 +29,10 @@ public class Graph
 	{
 		await action(); // temporary
 	}
+
+	#endregion
+
+	#region AddNode
 
 	public void AddNode(Node node)
 	{
@@ -47,11 +53,16 @@ public class Graph
 		return node;
 	}
 
+	#endregion
+
+	#region RemoveNode
+
 	public void RemoveNode(Node node)
 	{
 		((IDictionary<string, Node>)Nodes).Remove(node.Id);
 	}
 
+	#endregion
 
 	#region Serialization
 
