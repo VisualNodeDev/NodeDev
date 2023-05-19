@@ -2,6 +2,7 @@
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,11 +10,11 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core
 {
-    public class GraphExecutor
+    public class GraphExecutor: IDisposable
     {
         public readonly Graph Graph;
 
-        private readonly Dictionary<Connection, object?> Connections = new();
+		private readonly Dictionary<Connection, object?> Connections = new();
 
         public GraphExecutor(Graph graph)
         {
@@ -116,5 +117,15 @@ namespace NodeDev.Core
 
             return myOutput;
         }
-    }
+
+		public void Dispose()
+		{
+            foreach(var value in Connections)
+            {
+                if(value.Value is IDisposable disposable)
+					disposable.Dispose();
+            }
+            Connections.Clear();
+		}
+	}
 }

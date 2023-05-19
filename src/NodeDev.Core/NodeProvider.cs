@@ -76,6 +76,8 @@ namespace NodeDev.Core
 				methods = methods.Concat(GetExtensionMethods(realType.BackendType)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 
 				results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
+
+				results = results.Concat(GetPropertiesAndFields(realType.BackendType, text));
 			}
 
 			return results;
