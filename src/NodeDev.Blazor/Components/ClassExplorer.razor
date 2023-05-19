@@ -1,0 +1,68 @@
+﻿<MudStack Row="false" Class="wh100">
+	<MudText>Project</MudText>
+
+	<MudTreeView T="TreeItem" Items="Items" SelectedValueChanged="OnSelectedItemChanged" Class="flex-1">
+		<ItemTemplate>
+			@if (context.Type == TreeItemType.Folder)
+			{
+				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
+			}
+			else if (context.Type == TreeItemType.Method)
+			{
+				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
+			}
+		</ItemTemplate>
+	</MudTreeView>
+</MudStack>
+
+@code {
+
+	private enum TreeItemType
+	{
+		Folder,
+		Method
+	}
+	private record class TreeItem(string Name, HashSet<TreeItem> Children, TreeItemType Type, NodeDev.Core.Class.NodeClassMethod? Method)
+	{
+		public bool IsExpanded { get; set; } = true;
+	}
+
+	[Parameter]
+	public NodeDev.Core.Class.NodeClass Class { get; set; } = null!;
+
+	[Parameter]
+	public NodeDev.Core.Class.NodeClassMethod? SelectedMethod { get; set; }
+
+	[Parameter]
+	public EventCallback<NodeDev.Core.Class.NodeClassMethod?> SelectedMethodChanged { get; set; }
+
+
+	private HashSet<TreeItem> Items { get; } = new();
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+
+		Items.Add(new("Methods", new(), TreeItemType.Folder, null));
+
+		foreach (var method in Class.Methods)
+			Items.First().Children.Add(new(method.Name, new(), TreeItemType.Method, method));
+	}
+
+
+	private void OnSelectedItemChanged(TreeItem? tree)
+	{
+		if (tree?.Type == TreeItemType.Method)
+		{
+			SelectedMethod = tree.Method;
+			_ = SelectedMethodChanged.InvokeAsync(SelectedMethod);
+		}
+		else
+		{
+			SelectedMethod = null;
+			_ = SelectedMethodChanged.InvokeAsync(SelectedMethod);
+		}
+
+	}
+
+}

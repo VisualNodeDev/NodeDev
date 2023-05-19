@@ -23,7 +23,6 @@
     <ProjectReference Include="..\NodeDev.Core\NodeDev.Core.csproj" />
   </ItemGroup>
 
-
   <Target Name="webpack" AfterTargets="Build">
     <Exec Command="npm run build" />
   </Target>

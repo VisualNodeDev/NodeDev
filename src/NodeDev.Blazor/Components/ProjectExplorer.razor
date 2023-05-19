@@ -1,0 +1,86 @@
+﻿
+<MudStack Row="false" Class="wh100">
+	<MudText>Project</MudText>
+
+	<MudTreeView T="TreeItem" Items="Items" SelectedValueChanged="OnSelectedItemChanged" Class="flex-1">
+		<ItemTemplate>
+			@if (context.Type == TreeItemType.Folder)
+			{
+				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
+			}
+			else if (context.Type == TreeItemType.Class)
+			{
+				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
+			}
+		</ItemTemplate>
+	</MudTreeView>
+</MudStack>
+
+@code {
+
+	private enum TreeItemType
+	{
+		Folder,
+		Class
+	}
+	private record class TreeItem(string Name, HashSet<TreeItem>? Children, TreeItemType Type, NodeDev.Core.Class.NodeClass? Class)
+	{
+		public bool IsExpanded { get; set; } = true;
+	}
+
+	[Parameter]
+	public NodeDev.Core.Project Project { get; set; } = null!;
+
+	[Parameter]
+	public NodeDev.Core.Class.NodeClass? SelectedClass { get; set; }
+
+	[Parameter]
+	public EventCallback<NodeDev.Core.Class.NodeClass?> SelectedClassChanged { get; set; }
+
+	private HashSet<TreeItem> Items { get; } = new();
+
+	private void OnSelectedItemChanged(TreeItem treeItem)
+	{
+		if (treeItem?.Type == TreeItemType.Class)
+		{
+			SelectedClass = treeItem.Class;
+			_ = SelectedClassChanged.InvokeAsync(SelectedClass);
+		}
+		else
+		{
+			SelectedClass = null;
+			_ = SelectedClassChanged.InvokeAsync(SelectedClass);
+		}
+	}
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+
+		foreach (var nodeClass in Project.Classes)
+			AddClass(nodeClass);
+	}
+
+	private void AddClass(NodeDev.Core.Class.NodeClass nodeClass)
+	{
+		// find the the folder already exists in the tree
+		var folders = nodeClass.Namespace.Split('.');
+		TreeItem? folder = null;
+		for (int i = 0; i < folders.Length; ++i)
+		{
+			var parent = folder?.Children ?? Items;
+			folder = parent.FirstOrDefault(x => x.Name == folders[i] && x.Type == TreeItemType.Folder);
+			if (folder == null)
+			{
+				folder = new TreeItem(folders[i], new(), TreeItemType.Folder, null);
+				parent.Add(folder);
+			}
+		}
+
+		if (folder == null)
+			throw new Exception("Call cannot have no namespace ??");
+
+		folder.Children?.Add(new(nodeClass.Name, null, TreeItemType.Class, nodeClass));
+	}
+
+}
