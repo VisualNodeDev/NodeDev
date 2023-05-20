@@ -45,7 +45,7 @@ namespace NodeDev.Core.Class
 
         public string Serialize()
         {
-			var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.FullName, ReturnType.GetType().FullName!, Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize());
+			var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.GetType().FullName!, ReturnType.FullName, Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize());
 			return System.Text.Json.JsonSerializer.Serialize(serializedNodeClassMethod);
 		}
     }
