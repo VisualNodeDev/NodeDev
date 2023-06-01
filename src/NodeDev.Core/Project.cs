@@ -18,7 +18,7 @@ namespace NodeDev.Core
 		{
 			var project = new Project();
 
-			var programClass = new Class.NodeClass("Program", "NewProject");
+			var programClass = new Class.NodeClass("Program", "NewProject", project);
 
 			var main = new Class.NodeClassMethod(programClass, "Main", TypeFactory.Get(typeof(void)), new Graph());
 			main.Graph.AddNode(new EntryNode(main.Graph));
@@ -44,7 +44,7 @@ namespace NodeDev.Core
 			var project = new Project();
 
 			foreach (var nodeClass in serializedProject.Classes)
-				project.Classes.Add(Class.NodeClass.Deserialize(nodeClass));
+				project.Classes.Add(Class.NodeClass.Deserialize(nodeClass, project));
 
 			return project;
 		}

@@ -3,9 +3,21 @@
 
 	<MudTreeView T="TreeItem" Items="Items" SelectedValueChanged="OnSelectedItemChanged" Class="flex-1">
 		<ItemTemplate>
-			@if (context.Type == TreeItemType.Folder)
+
+			@if (context == CurrentlyEditingItem)
 			{
-				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
+				<MudTextField T="string" @bind-Value="Text" @bind-Value:after="MethodNameChanged" Variant="Variant.Text" OnKeyUp="OnEditTextKeyUp"></MudTextField>
+			}
+			else if (context.Type == TreeItemType.Folder)
+			{
+				<MudMenu ActivationEvent="@MouseEvent.RightClick">
+					<ActivatorContent>
+						<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
+					</ActivatorContent>
+					<ChildContent>
+						<MudMenuItem OnClick="ShowAddMethodMenu">Create new method</MudMenuItem>
+					</ChildContent>
+				</MudMenu>
 			}
 			else if (context.Type == TreeItemType.Method)
 			{
@@ -39,6 +51,10 @@
 
 	private HashSet<TreeItem> Items { get; } = new();
 
+	private TreeItem? CurrentlyEditingItem = null;
+	private string? Text = null;
+	public bool IsNew = false;
+
 	protected override void OnInitialized()
 	{
 		base.OnInitialized();
@@ -49,6 +65,42 @@
 			Items.First().Children.Add(new(method.Name, new(), TreeItemType.Method, method));
 	}
 
+	private async Task ShowAddMethodMenu()
+	{
+		CurrentlyEditingItem = new TreeItem("NewMethod", new(), TreeItemType.Method, null);
+		IsNew = true;
+		Text = CurrentlyEditingItem.Name;
+
+		Items.First().Children.Add(CurrentlyEditingItem);
+	}
+
+	private async Task MethodNameChanged()
+	{
+
+	}
+
+	private async Task OnEditTextKeyUp(KeyboardEventArgs args)
+	{
+		if (args.Key != "Enter" || string.IsNullOrWhiteSpace(Text) || CurrentlyEditingItem == null)
+			return;
+
+		if (IsNew)
+		{
+			var method = new Core.Class.NodeClassMethod(Class, Text, Core.Types.TypeFactory.Get(typeof(void)), new Core.Graph());
+			method.Graph.AddNode(new Core.Nodes.Flow.EntryNode(method.Graph));
+			method.Graph.AddNode(new Core.Nodes.Flow.ReturnNode(method.Graph));
+			Class.Methods.Add(method);
+
+			Items.First().Children.Remove(CurrentlyEditingItem);
+			Items.First().Children.Add(new(Text, new(), TreeItemType.Method, method));
+		}
+		else if(CurrentlyEditingItem.Method != null)
+			CurrentlyEditingItem.Method.Rename(Text);
+
+
+		CurrentlyEditingItem = null;
+		Text = null;
+	}
 
 	private void OnSelectedItemChanged(TreeItem? tree)
 	{

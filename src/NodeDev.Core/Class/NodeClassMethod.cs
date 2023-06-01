@@ -21,7 +21,7 @@ namespace NodeDev.Core.Class
 
         public NodeClass Class { get; }
 
-        public string Name { get; }
+        public string Name { get; private set; }
 
         public TypeBase ReturnType { get; }
 
@@ -29,7 +29,17 @@ namespace NodeDev.Core.Class
 
         public Graph Graph { get; }
 
-        public static NodeClassMethod Deserialize(NodeClass owner, string serialized)
+		public void Rename(string newName)
+		{
+			if(string.IsNullOrWhiteSpace(newName)) 
+				return;
+
+			Name = newName;
+		}
+
+		#region Serialization
+
+		public static NodeClassMethod Deserialize(NodeClass owner, string serialized)
         {
             var serializedNodeClassMethod = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethod>(serialized) ?? throw new Exception("Unable to deserialize node class method");
 
@@ -48,5 +58,7 @@ namespace NodeDev.Core.Class
 			var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.GetType().FullName!, ReturnType.FullName, Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize());
 			return System.Text.Json.JsonSerializer.Serialize(serializedNodeClassMethod);
 		}
-    }
+
+		#endregion
+	}
 }
