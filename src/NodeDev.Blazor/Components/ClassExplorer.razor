@@ -65,7 +65,7 @@
 			Items.First().Children.Add(new(method.Name, new(), TreeItemType.Method, method));
 	}
 
-	private async Task ShowAddMethodMenu()
+	private void ShowAddMethodMenu()
 	{
 		CurrentlyEditingItem = new TreeItem("NewMethod", new(), TreeItemType.Method, null);
 		IsNew = true;
@@ -74,12 +74,12 @@
 		Items.First().Children.Add(CurrentlyEditingItem);
 	}
 
-	private async Task MethodNameChanged()
+	private void MethodNameChanged()
 	{
 
 	}
 
-	private async Task OnEditTextKeyUp(KeyboardEventArgs args)
+	private void OnEditTextKeyUp(KeyboardEventArgs args)
 	{
 		if (args.Key != "Enter" || string.IsNullOrWhiteSpace(Text) || CurrentlyEditingItem == null)
 			return;

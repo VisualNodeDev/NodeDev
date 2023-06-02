@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import ReactFlow, {
     Node,
     addEdge,
@@ -33,6 +33,7 @@ const nodeTypes = {
 };
 
 let nodeMoveTimeoutId: any = {};
+
 export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
     var [_Nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     var [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -43,6 +44,18 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
     const reactFlowWrapper = useRef(null);
     const { project } = useReactFlow();
     const connectingNodeId = useRef<OnConnectStartParams>(null);
+
+    const [backgroundId1, setBackgroundId1] = useState();
+    const [backgroundId2, setBackgroundId2] = useState();
+
+    if (!backgroundId1) {
+        let id = (window as any).id;
+        if (!id)
+            id = 1;
+        setBackgroundId1(id + 1);
+        setBackgroundId2(id + 2);
+        (window as any).id = id + 3;
+    }
 
     function getNodes() {
         let nodes: Node<Types.NodeData>[] = [];
@@ -338,8 +351,8 @@ export default function BasicFlow(props: { CanvasInfos: Types.CanvasInfos }) {
                 onConnectEnd={connectEnd as any}
                 onConnectStart={connectStart as any}
             >
-                <Background id="1" gap={10} color="#f1f1f1" variant={BackgroundVariant.Lines} />
-                <Background id="2" gap={100} offset={1} color="#ccc" variant={BackgroundVariant.Lines} />
+                <Background id={backgroundId1} gap={10} color="#f1f1f1" variant={BackgroundVariant.Lines} />
+                <Background id={backgroundId2} gap={100} offset={1} color="#ccc" variant={BackgroundVariant.Lines} />
             </ReactFlow>
         </div>
     );
