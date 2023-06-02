@@ -1,30 +1,39 @@
 ﻿<MudStack Row="false" Class="wh100">
 	<MudText>@Class.Name</MudText>
 
-	<MudTreeView T="TreeItem" Items="Items" SelectedValueChanged="OnSelectedItemChanged" Class="flex-1">
-		<ItemTemplate>
-
-			@if (context == CurrentlyEditingItem)
-			{
-				<MudTextField T="string" @bind-Value="Text" @bind-Value:after="MethodNameChanged" Variant="Variant.Text" OnKeyUp="OnEditTextKeyUp"></MudTextField>
-			}
-			else if (context.Type == TreeItemType.Folder)
-			{
-				<MudMenu ActivationEvent="@MouseEvent.RightClick">
-					<ActivatorContent>
+	<MudMenu ActivationEvent="@MouseEvent.RightClick" PositionAtCursor="true" Class="flex-1 w100" AnchorOrigin="Origin.CenterRight" TransformOrigin="Origin.TopLeft">
+		<ActivatorContent>
+			<MudTreeView T="TreeItem" Items="Items" SelectedValueChanged="OnSelectedItemChanged">
+				<ItemTemplate>
+					@if (context == CurrentlyEditingItem)
+					{
+						<MudTextField T="string" @bind-Value="Text" Variant="Variant.Text" OnKeyUp="OnEditTextKeyUp" AutoFocus="true"></MudTextField>
+					}
+					else if (context.Type == TreeItemType.Folder)
+					{
 						<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
-					</ActivatorContent>
-					<ChildContent>
-						<MudMenuItem OnClick="ShowAddMethodMenu">Create new method</MudMenuItem>
-					</ChildContent>
-				</MudMenu>
-			}
-			else if (context.Type == TreeItemType.Method)
+					}
+					else if (context.Type == TreeItemType.Method)
+					{
+						<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
+					}
+				</ItemTemplate>
+			</MudTreeView>
+		</ActivatorContent>
+		<ChildContent>
+			@if (SelectedTreeItem != null)
 			{
-				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
+				if (SelectedTreeItem.Type == TreeItemType.Folder)
+				{
+					<MudMenuItem OnClick="ShowAddMethodMenu">Create new method</MudMenuItem>
+				}
+				else
+				{
+					<MudMenuItem OnClick="ShowRenameMenu">Rename method</MudMenuItem>
+				}
 			}
-		</ItemTemplate>
-	</MudTreeView>
+		</ChildContent>
+	</MudMenu>
 </MudStack>
 
 @code {
@@ -34,8 +43,9 @@
 		Folder,
 		Method
 	}
-	private record class TreeItem(string Name, HashSet<TreeItem> Children, TreeItemType Type, NodeDev.Core.Class.NodeClassMethod? Method)
+	private record class TreeItem(HashSet<TreeItem> Children, TreeItemType Type, NodeDev.Core.Class.NodeClassMethod? Method)
 	{
+		public string Name { get; set; } = "";
 		public bool IsExpanded { get; set; } = true;
 	}
 
@@ -48,6 +58,7 @@
 	[Parameter]
 	public EventCallback<NodeDev.Core.Class.NodeClassMethod?> SelectedMethodChanged { get; set; }
 
+	private TreeItem? SelectedTreeItem;
 
 	private HashSet<TreeItem> Items { get; } = new();
 
@@ -59,24 +70,40 @@
 	{
 		base.OnInitialized();
 
-		Items.Add(new("Methods", new(), TreeItemType.Folder, null));
+		Items.Add(new(new(), TreeItemType.Folder, null)
+			{
+				Name = "NewMethod"
+			});
 
 		foreach (var method in Class.Methods)
-			Items.First().Children.Add(new(method.Name, new(), TreeItemType.Method, method));
+		{
+			Items.First().Children.Add(new(new(), TreeItemType.Method, method)
+				{
+					Name = method.Name
+				});
+		}
 	}
 
 	private void ShowAddMethodMenu()
 	{
-		CurrentlyEditingItem = new TreeItem("NewMethod", new(), TreeItemType.Method, null);
+		CurrentlyEditingItem = new TreeItem(new(), TreeItemType.Method, null)
+			{
+				Name = "NewMethod"
+			};
 		IsNew = true;
 		Text = CurrentlyEditingItem.Name;
 
 		Items.First().Children.Add(CurrentlyEditingItem);
 	}
 
-	private void MethodNameChanged()
+	private void ShowRenameMenu()
 	{
+		if (SelectedTreeItem == null)
+			return;
 
+		CurrentlyEditingItem = SelectedTreeItem;
+		IsNew = false;
+		Text = CurrentlyEditingItem.Name;
 	}
 
 	private void OnEditTextKeyUp(KeyboardEventArgs args)
@@ -92,10 +119,16 @@
 			Class.Methods.Add(method);
 
 			Items.First().Children.Remove(CurrentlyEditingItem);
-			Items.First().Children.Add(new(Text, new(), TreeItemType.Method, method));
+			Items.First().Children.Add(new(new(), TreeItemType.Method, method)
+				{
+					Name = method.Name
+				});
 		}
-		else if(CurrentlyEditingItem.Method != null)
+		else if (CurrentlyEditingItem.Method != null)
+		{
 			CurrentlyEditingItem.Method.Rename(Text);
+			CurrentlyEditingItem.Name = Text;
+		}
 
 
 		CurrentlyEditingItem = null;
@@ -104,6 +137,18 @@
 
 	private void OnSelectedItemChanged(TreeItem? tree)
 	{
+		if (CurrentlyEditingItem != null)
+		{
+			// remove the textbox
+			if(IsNew)
+				Items.First().Children.Remove(CurrentlyEditingItem);
+
+			CurrentlyEditingItem = null;
+			Text = null;
+		}
+
+		SelectedTreeItem = tree;
+
 		if (tree?.Type == TreeItemType.Method)
 		{
 			SelectedMethod = tree.Method;
