@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Nodes;
+﻿using NodeDev.Core.Connections;
+using NodeDev.Core.Nodes;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
@@ -28,6 +29,24 @@ public class Graph
 	public async Task Invoke(Func<Task> action)
 	{
 		await action(); // temporary
+	}
+
+	#endregion
+
+	#region Connect/Disconnect
+
+	public void Connect(Connection connection1, Connection connection2)
+	{
+		if(!connection1.Connections.Contains(connection2))
+			connection1.Connections.Add(connection2);
+		if(!connection2.Connections.Contains(connection1))
+			connection2.Connections.Add(connection1);
+	}
+
+	public void Disconnect(Connection connection1, Connection connection2)
+	{
+		connection1.Connections.Remove(connection2);
+		connection2.Connections.Remove(connection1);
 	}
 
 	#endregion

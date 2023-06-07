@@ -51,7 +51,7 @@ namespace NodeDev.Core.Nodes
         /// <summary>
         /// Returns the next node to execute. The connection is on the current node, must look at what it's connected to
         /// </summary>
-        public abstract Connection? Execute(Connection? connectionBeingExecuted, object?[] inputs, object?[] nodeOutputs);
+        public abstract Connection? Execute(object? self, Connection? connectionBeingExecuted, object?[] inputs, object?[] nodeOutputs);
 
         public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
         {

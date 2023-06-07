@@ -23,7 +23,7 @@ namespace NodeDev.Core.Nodes.Flow
 
         public override bool IsFlowNode => throw new NotImplementedException();
 
-        public override Connection? Execute(Connection? execInput, object?[] inputs, object?[] outputs)
+        public override Connection? Execute(object? self, Connection? execInput, object?[] inputs, object?[] outputs)
         {
             return null;
         }

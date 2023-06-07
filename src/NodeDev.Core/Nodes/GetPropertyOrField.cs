@@ -86,7 +86,7 @@ namespace NodeDev.Core.Nodes
 		}
 
 
-		protected override void ExecuteInternal(object?[] inputs, object?[] outputs)
+		protected override void ExecuteInternal(object? self, object?[] inputs, object?[] outputs)
 		{
 			if (TargetMember == null)
 				throw new Exception("Target method is not set");

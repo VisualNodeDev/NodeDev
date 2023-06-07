@@ -51,7 +51,7 @@ namespace NodeDev.Core.Nodes
             Inputs.AddRange(newConnections);
 		}
 
-		protected override void ExecuteInternal(object?[] inputs, object?[] outputs)
+		protected override void ExecuteInternal(object? self, object?[] inputs, object?[] outputs)
         {
             if (Outputs[1].Type is UndefinedGenericType)
                 throw new InvalidOperationException("Output type is not defined");

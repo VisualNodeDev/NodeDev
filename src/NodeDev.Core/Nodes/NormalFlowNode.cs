@@ -26,13 +26,13 @@ namespace NodeDev.Core.Nodes
             Outputs.Add(new("Exec", this, TypeFactory.ExecType));
         }
 
-        public override Connection Execute(Connection? inputExec, object?[] inputs, object?[] outputs)
+        public override Connection Execute(object? self, Connection? inputExec, object?[] inputs, object?[] outputs)
         {
-            ExecuteInternal(inputs, outputs);
+            ExecuteInternal(self, inputs, outputs);
 
             return Outputs[0];
         }
 
-        protected abstract void ExecuteInternal(object?[] inputs, object?[] outputs);
+        protected abstract void ExecuteInternal(object? self, object?[] inputs, object?[] outputs);
     }
 }

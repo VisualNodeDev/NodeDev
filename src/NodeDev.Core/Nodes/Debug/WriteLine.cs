@@ -16,7 +16,7 @@ namespace NodeDev.Core.Nodes.Debug
             Inputs.Add(new("Line", this, TypeFactory.CreateUndefinedGenericType("T")));
         }
 
-        protected override void ExecuteInternal(object?[] inputs, object?[] outputs)
+        protected override void ExecuteInternal(object? self, object?[] inputs, object?[] outputs)
         {
             Console.WriteLine(inputs[1]);
         }

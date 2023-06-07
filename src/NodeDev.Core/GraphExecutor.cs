@@ -26,13 +26,19 @@ namespace NodeDev.Core
             return Graph.Nodes.First(n => n.Value is EntryNode).Value;
         }
 
-        public void Execute(object?[] inputs, object?[] outputs)
+        public void Execute(object? self, object?[] inputs, object?[] outputs)
         {
             var node = FindEntryNode();
 
-            var execConnection = node.Execute(null, inputs, inputs);
+            var execConnection = node.Execute(self, null, inputs, inputs);
             if (execConnection == null)
                 throw new Exception("Entry node should have an output connection");
+            if (inputs.Length != node.Outputs.Count)
+                throw new Exception("EntryNode doesn't have the same amount of inputs as the provided inputs array");
+
+            for (int i = 0; i < inputs.Length; ++i)
+                Connections[node.Outputs[i]] = inputs[i];
+
 
             var stack = new Stack<Connection>(); // stack of input connections on nodes that can alter execution path
 
@@ -55,15 +61,15 @@ namespace NodeDev.Core
                     for(int i = 0; i < outputs.Length; i++)
                     {
                         var output = nodeToExecute.Inputs[i];
-                        outputs[i] = CrawlBackInputs(output);
+                        outputs[i] = CrawlBackInputs(self, output);
                     }
                     return;
                 }
 
-                var nodeInputs = GetNodeInputs(nodeToExecute);
+                var nodeInputs = GetNodeInputs(self, nodeToExecute);
                 var nodeOutputs = new object?[nodeToExecute.Outputs.Count];
 
-                execConnection = nodeToExecute.Execute(connectionToExecute, nodeInputs, nodeOutputs);
+                execConnection = nodeToExecute.Execute(self, connectionToExecute, nodeInputs, nodeOutputs);
                 for(int i = 0; i < nodeOutputs.Length; i++)
                 {
                     var output = nodeToExecute.Outputs[i];
@@ -75,7 +81,7 @@ namespace NodeDev.Core
             }
         }
 
-        private object?[] GetNodeInputs(Node node)
+        private object?[] GetNodeInputs(object? self, Node node)
         {
             var inputs = new object?[node.Inputs.Count];
 
@@ -83,13 +89,13 @@ namespace NodeDev.Core
             {
                 var input = node.Inputs[i];
 
-                inputs[i] = CrawlBackInputs(input);
+                inputs[i] = CrawlBackInputs(self, input);
             }
 
             return inputs;
         }
 
-        private object? CrawlBackInputs(Connection inputConnection)
+        private object? CrawlBackInputs(object? self, Connection inputConnection)
         {
             var other = inputConnection.Connections.FirstOrDefault();
             if (other == null)
@@ -101,11 +107,11 @@ namespace NodeDev.Core
 
             // if this is not a flow node, we are allowed to execute the node on demande to calculate the outputs
             // this will also automatically crawl back the inputs of the node we are executing
-            var inputs = GetNodeInputs(other.Parent);
+            var inputs = GetNodeInputs(self, other.Parent);
             var outputs = new object?[other.Parent.Outputs.Count];
 
             object? myOutput = null;
-            other.Parent.Execute(null, inputs, outputs);
+            other.Parent.Execute(self, null, inputs, outputs);
             for (int i = 0; i < outputs.Length; i++)
             {
                 var output = other.Parent.Outputs[i];
