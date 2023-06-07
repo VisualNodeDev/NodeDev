@@ -9,7 +9,7 @@ namespace NodeDev.Core.Class
     public class NodeClass
     {
 
-		public record class SerializedNodeClass(string Name, string Namespace, List<string> Methods);
+		public record class SerializedNodeClass(string Name, string Namespace, List<string> Methods, List<string> Properties);
 
 		public readonly Project Project;
 
@@ -18,6 +18,8 @@ namespace NodeDev.Core.Class
 		public string Namespace { get; set; }
 
         public List<NodeClassMethod> Methods { get; } = new();
+
+        public List<NodeClassProperty> Properties { get; } = new();
 
 		public NodeClass(string name, string @namespace, Project project)
 		{
@@ -33,15 +35,18 @@ namespace NodeDev.Core.Class
            
             var nodeClass = new NodeClass(serializedNodeClass.Name, serializedNodeClass.Namespace, project);
 
-            foreach(var method in serializedNodeClass.Methods)
-                nodeClass.Methods.Add(NodeClassMethod.Deserialize(nodeClass, method));
+			foreach (var method in serializedNodeClass.Methods)
+				nodeClass.Methods.Add(NodeClassMethod.Deserialize(nodeClass, method));
 
-            return nodeClass;
+			foreach (var property in serializedNodeClass.Properties)
+				nodeClass.Properties.Add(NodeClassProperty.Deserialize(nodeClass, property));
+
+			return nodeClass;
         }
 
         public string Serialize()
         {
-            var serializedNodeClass = new SerializedNodeClass(Name, Namespace, Methods.Select(x => x.Serialize()).ToList());
+            var serializedNodeClass = new SerializedNodeClass(Name, Namespace, Methods.Select(x => x.Serialize()).ToList(), Properties.Select( x=> x.Serialize()).ToList());
 
             return System.Text.Json.JsonSerializer.Serialize(serializedNodeClass);
         }
