@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NodeDev.Core.Class;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -31,6 +32,8 @@ namespace NodeDev.Core.Types
 		};
 
 		public static RealType Get(Type type) => RealTypes.TryGetValue(type, out var realType) ? realType : RealTypes[type] = new(type);
+
+		public static NodeClassType Get(NodeClass nodeClass) => nodeClass.Project.GetNodeClassType(nodeClass);
 
 		public static RealType Get<T>() => Get(typeof(T));
 
