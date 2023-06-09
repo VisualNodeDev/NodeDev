@@ -44,7 +44,7 @@ namespace NodeDev.Core.Class
             var serializedNodeClassMethod = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethod>(serialized) ?? throw new Exception("Unable to deserialize node class method");
 
             var returnType = TypeBase.Deserialize(serializedNodeClassMethod.ReturnTypeFullName, serializedNodeClassMethod.ReturnType);
-            var graph = Graph.Deserialize(serializedNodeClassMethod.Graph);
+            var graph = Graph.Deserialize(serializedNodeClassMethod.Graph, owner);
 			var nodeClassMethod = new NodeClassMethod(owner, serializedNodeClassMethod.Name, returnType, graph);
 
             foreach (var parameter in serializedNodeClassMethod.Parameters)

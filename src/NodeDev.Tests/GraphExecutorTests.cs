@@ -1,4 +1,5 @@
 using NodeDev.Core;
+using NodeDev.Core.Class;
 using NodeDev.Core.Nodes.Flow;
 
 namespace NodeDev.Tests;
@@ -7,7 +8,8 @@ public class GraphExecutorTests
 {
 	private Graph CreateSimpleAddGraph<TIn, TOut>(out Core.Nodes.Flow.EntryNode entryNode, out Core.Nodes.Flow.ReturnNode returnNode, out Core.Nodes.Math.Add addNode)
 	{
-		var graph = new Graph();
+		var nodeClass = new NodeClass("Test", "Test", new Project(Guid.NewGuid()));
+		var graph = new Graph(nodeClass);
 
 		entryNode = new Core.Nodes.Flow.EntryNode(graph);
 		entryNode.Outputs.Add(new("A", entryNode, Core.Types.TypeFactory.Get<TIn>()));

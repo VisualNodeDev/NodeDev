@@ -31,7 +31,7 @@ namespace NodeDev.Core
 
 			var programClass = new Class.NodeClass("Program", "NewProject", project);
 
-			var main = new Class.NodeClassMethod(programClass, "Main", TypeFactory.Get(typeof(void)), new Graph());
+			var main = new Class.NodeClassMethod(programClass, "Main", TypeFactory.Get(typeof(void)), new Graph(programClass));
 			main.Graph.AddNode(new EntryNode(main.Graph));
 			main.Graph.AddNode(new ReturnNode(main.Graph));
 			programClass.Methods.Add(main);

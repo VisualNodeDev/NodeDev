@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Class;
+using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using System.Collections.Concurrent;
 using System.Reflection;
@@ -10,9 +11,16 @@ public class Graph
 {
 	public IReadOnlyDictionary<string, Node> Nodes { get; } = new Dictionary<string, Node>();
 
+	public NodeClass SelfClass { get; set; }
+
 	static Graph()
 	{
 		NodeProvider.Initialize();
+	}
+
+	public Graph(NodeClass selfClass)
+	{
+		SelfClass = selfClass;
 	}
 
 	#region Invoke
@@ -98,9 +106,9 @@ public class Graph
 		return JsonSerializer.Serialize(serializedGraph);
 	}
 
-	public static Graph Deserialize(string serializedGraph)
+	public static Graph Deserialize(string serializedGraph, NodeClass ownerClass)
 	{
-		var graph = new Graph();
+		var graph = new Graph(ownerClass);
 		var serializedGraphObj = JsonSerializer.Deserialize<SerializedGraph>(serializedGraph) ?? throw new Exception("Unable to deserialize graph");
 		foreach (var serializedNode in serializedGraphObj.Nodes)
 		{
