@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Class;
+using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
 using System;
@@ -8,40 +9,16 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using static NodeDev.Core.Nodes.GetPropertyOrField;
 
 namespace NodeDev.Core.Nodes
 {
 	public class SetPropertyOrField : NormalFlowNode
 	{
-		public class SetPropertyOrFieldDecoration : INodeDecoration
-		{
-			private record class SavedSetPropertyOrField(string Type, string Name);
-			internal MemberInfo TargetPropertyOrField { get; set; }
-
-			public SetPropertyOrFieldDecoration(MemberInfo targetPropertyOrField)
-			{
-				TargetPropertyOrField = targetPropertyOrField;
-			}
-
-			public string Serialize()
-			{
-				return JsonSerializer.Serialize(new SavedSetPropertyOrField(TargetPropertyOrField.DeclaringType!.FullName!, TargetPropertyOrField.Name));
-			}
-
-			public static INodeDecoration Deserialize(string Json)
-			{
-				var info = JsonSerializer.Deserialize<SavedSetPropertyOrField>(Json) ?? throw new Exception("Unable to deserialize property or field info");
-				var type = Type.GetType(info.Type) ?? throw new Exception("Unable to find type: " + info.Type);
-				var member = type.GetMember(info.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.GetField | BindingFlags.GetProperty).FirstOrDefault() ?? throw new Exception("Unable to find member: " + info.Name);
-
-				return new SetPropertyOrFieldDecoration(member);
-			}
-		}
-
 		public override string TitleColor => "lightblue";
 
 
-		internal MemberInfo? TargetMember;
+		internal Class.IMemberInfo? TargetMember;
 
 
 		public SetPropertyOrField(Graph graph, string? id = null) : base(graph, id)
@@ -53,68 +30,70 @@ namespace NodeDev.Core.Nodes
 		{
 			base.Deserialize(serializedNodeObj);
 
-			if (Decorations.TryGetValue(typeof(SetPropertyOrFieldDecoration), out var decoration))
+			if (Decorations.TryGetValue(typeof(GetPropertyOrFieldDecoration), out var decoration))
 			{
-				TargetMember = ((SetPropertyOrFieldDecoration)decoration).TargetPropertyOrField;
-				Name = TypeFactory.Get(TargetMember.DeclaringType!).FriendlyName + "." + TargetMember.Name;
+				TargetMember = ((GetPropertyOrFieldDecoration)decoration).TargetPropertyOrField;
+				Name = TargetMember.DeclaringType.FriendlyName + "." + TargetMember.Name;
 			}
 		}
 
-		internal void SetMemberTarget(MemberInfo memberInfo)
+		internal void SetMemberTarget(Class.IMemberInfo memberInfo)
 		{
 			TargetMember = memberInfo;
-			Decorations[typeof(SetPropertyOrFieldDecoration)] = new SetPropertyOrFieldDecoration(TargetMember);
+			Decorations[typeof(GetPropertyOrFieldDecoration)] = new GetPropertyOrFieldDecoration(TargetMember);
 
-			Name = TypeFactory.Get(TargetMember.DeclaringType!).FriendlyName + "." + TargetMember.Name;
+			Name = TargetMember.DeclaringType.FriendlyName + "." + TargetMember.Name;
 
-			bool isStatic = TargetMember switch
-			{
-				FieldInfo field => field.IsStatic,
-				PropertyInfo property => property.GetMethod?.IsStatic ?? false,
-				_ => throw new Exception("Invalid member type")
-			};
+			bool isStatic = TargetMember.IsStatic;
+
 			if (!isStatic)
-				Inputs.Add(new("Target", this, TypeFactory.Get(TargetMember.DeclaringType!)));
+				Inputs.Add(new("Target", this, TargetMember.DeclaringType));
 
-			var type = TargetMember switch
-			{
-				FieldInfo field => field.FieldType,
-				PropertyInfo property => property.PropertyType,
-				_ => throw new Exception("Invalid member type")
-			};
-			Inputs.Add(new Connection("Value", this, TypeFactory.Get(type)));
-			Outputs.Add(new Connection("Value", this, TypeFactory.Get(type)));
+			Inputs.Add(new Connection("Value", this, TargetMember.MemberType));
+			Outputs.Add(new Connection("Value", this, TargetMember.MemberType));
 		}
 
 
 		protected override void ExecuteInternal(object? self, object?[] inputs, object?[] outputs)
 		{
+			if(self == null)
+				throw new ArgumentNullException(nameof(self));
+
 			if (TargetMember == null)
 				throw new Exception("Target method is not set");
 
-			if (TargetMember.MemberType == MemberTypes.Field)
+			if (TargetMember is RealMemberInfo realMemberInfo)
 			{
-				var field = (FieldInfo)TargetMember;
-				object? value;
-				if (field.IsStatic)
-					field.SetValue(null, value = inputs[1]);
-				else
-					field.SetValue(inputs[1], value = inputs[2]);
+				if (realMemberInfo.MemberInfo.MemberType == MemberTypes.Field)
+				{
+					var field = (FieldInfo)TargetMember;
+					object? value;
+					if (field.IsStatic)
+						field.SetValue(null, value = inputs[1]);
+					else
+						field.SetValue(inputs[1], value = inputs[2]);
 
-				outputs[1] = value;
+					outputs[1] = value;
 
-				return;
+					return;
+				}
+				else if (realMemberInfo.MemberInfo.MemberType == MemberTypes.Property)
+				{
+					var property = (PropertyInfo)TargetMember;
+					object? value;
+					if (property.GetMethod!.IsStatic)
+						property.SetValue(null, value = inputs[1]);
+					else
+						property.SetValue(inputs[1], value = inputs[2]);
+					outputs[1] = value;
+					return;
+				}
 			}
-			else if(TargetMember.MemberType == MemberTypes.Property)
+			else if(TargetMember is NodeClassPropertyMemberInfo)
 			{
-				var property = (PropertyInfo)TargetMember;
-				object? value;
-				if (property.GetMethod!.IsStatic)
-					property.SetValue(null, value = inputs[1]);
-				else
-					property.SetValue(inputs[1], value = inputs[2]);
-				outputs[1] = value;
-				return;
+				var property = self.GetType().GetProperty(TargetMember.Name, BindingFlags.Public | BindingFlags.Instance) ?? throw new Exception("unable to get property: " + TargetMember.Name);
+				property.SetValue(self, inputs[1]);
+				outputs[1] = inputs[1];
 			}
 		}
 

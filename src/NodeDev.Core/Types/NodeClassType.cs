@@ -9,7 +9,7 @@ namespace NodeDev.Core.Types
 {
 	public class NodeClassType : TypeBase
 	{
-		private readonly NodeClass NodeClass;
+		public readonly NodeClass NodeClass;
 
 		public NodeClassType(NodeClass nodeClass) : base(nodeClass.Project.TypeFactory)
 		{

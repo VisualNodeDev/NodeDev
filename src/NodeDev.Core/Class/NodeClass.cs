@@ -32,19 +32,22 @@ namespace NodeDev.Core.Class
 		}
 
 
-		public static NodeClass Deserialize(string serialized, Project project)
+		public static NodeClass Deserialize(string serialized, Project project, out SerializedNodeClass serializedNodeClass)
 		{
-			var serializedNodeClass = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClass>(serialized) ?? throw new Exception("Unable to deserialize node class");
+			serializedNodeClass = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClass>(serialized) ?? throw new Exception("Unable to deserialize node class");
 
 			var nodeClass = new NodeClass(serializedNodeClass.Name, serializedNodeClass.Namespace, project);
 
+			return nodeClass;
+		}
+
+		public void Deserialize_Step2(SerializedNodeClass serializedNodeClass)
+		{
 			foreach (var method in serializedNodeClass.Methods)
-				nodeClass.Methods.Add(NodeClassMethod.Deserialize(nodeClass, method));
+				Methods.Add(NodeClassMethod.Deserialize(this, method));
 
 			foreach (var property in serializedNodeClass.Properties ?? new())
-				nodeClass.Properties.Add(NodeClassProperty.Deserialize(nodeClass, property));
-
-			return nodeClass;
+				Properties.Add(NodeClassProperty.Deserialize(this, property));
 		}
 
 		public string Serialize()

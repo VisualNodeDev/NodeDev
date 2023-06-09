@@ -17,11 +17,11 @@
 					}
 					else if (type is NodeDev.Core.NodeProvider.GetPropertyOrFieldNode getPropertyOrFieldNode)
 					{
-						<MudListItem Text="@($"{TypeFactory.Get(getPropertyOrFieldNode.MemberInfo.DeclaringType!).FriendlyName}.{getPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
+						<MudListItem Text="@($"{getPropertyOrFieldNode.MemberInfo.DeclaringType.FriendlyName}.{getPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
 					}
 					else if (type is NodeDev.Core.NodeProvider.SetPropertyOrFieldNode setPropertyOrFieldNode)
 					{
-						<MudListItem Text="@($"{TypeFactory.Get(setPropertyOrFieldNode.MemberInfo.DeclaringType!).FriendlyName}.{setPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
+						<MudListItem Text="@($"{setPropertyOrFieldNode.MemberInfo.DeclaringType.FriendlyName}.{setPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
 					}
 					else
 					{

@@ -83,8 +83,18 @@ public class Project
 
 		var project = new Project(serializedProject.Id == default ? Guid.NewGuid() : serializedProject.Id);
 
-		foreach (var nodeClass in serializedProject.Classes)
-			project.Classes.Add(Class.NodeClass.Deserialize(nodeClass, project));
+		var nodeClasses = new Dictionary<NodeClass, NodeClass.SerializedNodeClass>();
+		foreach (var nodeClassStr in serializedProject.Classes)
+		{
+			var nodeClass = NodeClass.Deserialize(nodeClassStr, project, out var serializedNodeClass);
+			project.Classes.Add(nodeClass);
+
+			nodeClasses[nodeClass] = serializedNodeClass;
+		}
+
+		foreach(var nodeClass in nodeClasses)
+			nodeClass.Key.Deserialize_Step2(nodeClass.Value);
+
 
 		return project;
 	}

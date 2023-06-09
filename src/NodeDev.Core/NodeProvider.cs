@@ -30,8 +30,8 @@ namespace NodeDev.Core
 
 		public record class NodeSearchResult(Type Type);
 		public record class MethodCallNode(Type Type, MethodInfo MethodInfo) : NodeSearchResult(Type);
-		public record class GetPropertyOrFieldNode(Type Type, MemberInfo MemberInfo) : NodeSearchResult(Type);
-		public record class SetPropertyOrFieldNode(Type Type, MemberInfo MemberInfo) : NodeSearchResult(Type);
+		public record class GetPropertyOrFieldNode(Type Type, Class.IMemberInfo MemberInfo) : NodeSearchResult(Type);
+		public record class SetPropertyOrFieldNode(Type Type, Class.IMemberInfo MemberInfo) : NodeSearchResult(Type);
 		public static IEnumerable<NodeSearchResult> Search(Project project, string text, Connection? startConnection)
 		{
 			var nodes = NodeTypes.Where(x => x != typeof(MethodCall)).Where(p => p.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
@@ -43,12 +43,12 @@ namespace NodeDev.Core
 				IEnumerable<MemberInfo> members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanRead);
 				members = members.Concat(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
 				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
-				IEnumerable<NodeSearchResult> results = members.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x));
+				IEnumerable<NodeSearchResult> results = members.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), new GetPropertyOrField.RealMemberInfo(x, project.TypeFactory)));
 
 				members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanWrite);
 				members = members.Concat(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
 				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
-				return results.Concat(members.Select(x => new SetPropertyOrFieldNode(typeof(GetPropertyOrField), x)));
+				return results.Concat(members.Select(x => new SetPropertyOrFieldNode(typeof(GetPropertyOrField), new GetPropertyOrField.RealMemberInfo(x, project.TypeFactory))));
 			}
 
 			// check if the text is a method call like 'ClassName.MethodName'
