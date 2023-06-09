@@ -358,7 +358,7 @@ namespace NodeDev.Blazor.Components
 			if (PopupNode == null || PopupNodeConnection?.Type is not UndefinedGenericType generic)
 				return;
 
-			PropagateNewGeneric(PopupNode, generic, TypeFactory.Get(type));
+			PropagateNewGeneric(PopupNode, generic, Graph.SelfClass.TypeFactory.Get(type));
 
 			CancelPopup();
 		}
@@ -459,13 +459,13 @@ namespace NodeDev.Blazor.Components
 		{
 			if (type.HasUndefinedGenerics)
 				return "yellow";
-			else if (type == TypeFactory.Get<string>())
+			else if (type == type.TypeFactory.Get<string>())
 				return "purple";
 			else if (type.IsClass)
 				return "green";
 			else if (type.IsExec)
 				return "gray";
-			else if (type == TypeFactory.Get<bool>())
+			else if (type == type.TypeFactory.Get<bool>())
 				return "red";
 			else
 				return "blue";

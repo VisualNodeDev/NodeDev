@@ -32,7 +32,7 @@ namespace NodeDev.Core
 		public record class MethodCallNode(Type Type, MethodInfo MethodInfo) : NodeSearchResult(Type);
 		public record class GetPropertyOrFieldNode(Type Type, MemberInfo MemberInfo) : NodeSearchResult(Type);
 		public record class SetPropertyOrFieldNode(Type Type, MemberInfo MemberInfo) : NodeSearchResult(Type);
-		public static IEnumerable<NodeSearchResult> Search(string text, Connection? startConnection)
+		public static IEnumerable<NodeSearchResult> Search(Project project, string text, Connection? startConnection)
 		{
 			var nodes = NodeTypes.Where(x => x != typeof(MethodCall)).Where(p => p.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 
@@ -56,7 +56,7 @@ namespace NodeDev.Core
 			if (methodCallSplit.Length == 2)
 			{
 				// try to find the class specified
-				TypeFactory.CreateBaseFromUserInput(methodCallSplit[0], out var type);
+				project.TypeFactory.CreateBaseFromUserInput(methodCallSplit[0], out var type);
 				if (type != null)
 				{
 					// find if the method exists

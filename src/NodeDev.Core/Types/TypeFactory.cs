@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Types
 {
-	public static class TypeFactory
+	public class TypeFactory
 	{
 		private static readonly Dictionary<Type, RealType> RealTypes = new();
 
-		public static List<string> IncludedNamespaces = new()
+		public List<string> IncludedNamespaces = new()
 		{
 			"System",
 			"System.Collections.Generic",
@@ -20,7 +20,7 @@ namespace NodeDev.Core.Types
 			"System.Text",
 			"System.Threading.Tasks",
 		};
-		private static Dictionary<string, List<string>> TypeCorrespondances = new()
+		private Dictionary<string, List<string>> TypeCorrespondances = new()
 		{
 			["System.Int32"] = new() { "int" },
 			["System.Int64"] = new() { "long" },
@@ -31,23 +31,32 @@ namespace NodeDev.Core.Types
 			["System.Void"] = new() { "void" },
 		};
 
-		public static RealType Get(Type type) => RealTypes.TryGetValue(type, out var realType) ? realType : RealTypes[type] = new(type);
+		public RealType Get(Type type) => RealTypes.TryGetValue(type, out var realType) ? realType : RealTypes[type] = new(this, type);
 
-		public static NodeClassType Get(NodeClass nodeClass) => nodeClass.Project.GetNodeClassType(nodeClass);
+		public RealType Get<T>() => Get(typeof(T));
 
-		public static RealType Get<T>() => Get(typeof(T));
+		public NodeClassType Get(NodeClass nodeClass) => Project.GetNodeClassType(nodeClass);
 
-		private static ExecType ExecType_ = new();
-		public static ExecType ExecType => ExecType_;
+		private ExecType ExecType_;
 
-		public static UndefinedGenericType CreateUndefinedGenericType(string name) => new(name);
+		private readonly Project Project;
 
-		public static Type? GetTypeByFullName(string name)
+		public TypeFactory(Project project)
+		{
+			ExecType_ = new(this);
+			Project = project;
+		}
+
+		public ExecType ExecType => ExecType_;
+
+		public UndefinedGenericType CreateUndefinedGenericType(string name) => new(this, name);
+
+		public Type? GetTypeByFullName(string name)
 		{
 			return AppDomain.CurrentDomain.GetAssemblies().Select(x => x.GetType(name)).FirstOrDefault(x => x != null);
 		}
 
-		private static Type? GetTypeFromAllAssemblies(string name)
+		private Type? GetTypeFromAllAssemblies(string name)
 		{
 			if (string.IsNullOrWhiteSpace(name))
 				return null;
@@ -58,7 +67,7 @@ namespace NodeDev.Core.Types
 
         #region CreateBaseFromUserInput
 
-        public static string? CreateBaseFromUserInput(string typeName, out Type? type)
+        public string? CreateBaseFromUserInput(string typeName, out Type? type)
 		{
 			typeName = typeName.Replace(" ", "");
 			if( typeName.Count(c => c == '<') != typeName.Count(c => c == '>') )

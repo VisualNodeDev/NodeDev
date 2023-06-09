@@ -81,7 +81,7 @@ public class RealType : TypeBase
 
     public override TypeBase[]? Generics => BackendType.GetGenericArguments().Select(TypeFactory.Get).ToArray();
 
-    internal RealType(Type backendType)
+    internal RealType(TypeFactory typeFactory, Type backendType) : base(typeFactory)
     {
         BackendType = backendType;
     }
@@ -91,11 +91,11 @@ public class RealType : TypeBase
         return FullName;
     }
 
-    public static RealType Deserialize(string fullName)
+    public static RealType Deserialize(TypeFactory typeFactory, string fullName)
     {
         var type = Type.GetType(fullName) ?? throw new Exception($"Type not found {fullName}"); ;
 
-        return TypeFactory.Get(type);
+        return typeFactory.Get(type);
     }
 
     public override object? ParseTextboxEdit(string text)

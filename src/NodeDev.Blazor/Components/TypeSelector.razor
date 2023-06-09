@@ -42,7 +42,7 @@
 
 	private void TypeToCreateChanged()
 	{
-		Error = NodeDev.Core.Types.TypeFactory.CreateBaseFromUserInput(TypeText, out Type);
+		Error = GraphCanvas.Graph.SelfClass.TypeFactory.CreateBaseFromUserInput(TypeText, out Type);
 	}
 
 	private async Task OnKeyDown(KeyboardEventArgs args)

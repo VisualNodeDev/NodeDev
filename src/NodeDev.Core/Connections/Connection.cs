@@ -47,7 +47,7 @@ namespace NodeDev.Core.Connections
 		internal static Connection Deserialize(Node parent, string serializedConnection)
 		{
 			var serializedConnectionObj = JsonSerializer.Deserialize<SerializedConnection>(serializedConnection) ?? throw new Exception($"Unable to deserialize connection");
-			var type = TypeBase.Deserialize(serializedConnectionObj.TypeInfo, serializedConnectionObj.SerializedType);
+			var type = TypeBase.Deserialize(parent.TypeFactory, serializedConnectionObj.TypeInfo, serializedConnectionObj.SerializedType);
 			var connection = new Connection(serializedConnectionObj.Name, parent, type, serializedConnectionObj.Id);
 
 			connection.TextboxValue = serializedConnectionObj.TextboxValue;

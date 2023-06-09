@@ -113,7 +113,7 @@
 
 		if (IsNew)
 		{
-			var method = new Core.Class.NodeClassMethod(Class, Text, Core.Types.TypeFactory.Get(typeof(void)), new Core.Graph(Class));
+			var method = new Core.Class.NodeClassMethod(Class, Text, Class.TypeFactory.Get(typeof(void)), new Core.Graph(Class));
 			method.Graph.AddNode(new Core.Nodes.Flow.EntryNode(method.Graph));
 			method.Graph.AddNode(new Core.Nodes.Flow.ReturnNode(method.Graph));
 			Class.Methods.Add(method);

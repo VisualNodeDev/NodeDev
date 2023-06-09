@@ -40,7 +40,7 @@ namespace NodeDev.Core.Class
 		{
 			var serializedNodeClassProperty = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassProperty>(serialized) ?? throw new Exception("Unable to deserialize node class property");
 
-			var returnType = TypeBase.Deserialize(serializedNodeClassProperty.TypeFullName, serializedNodeClassProperty.Type);
+			var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassProperty.TypeFullName, serializedNodeClassProperty.Type);
 			var nodeClassProperty = new NodeClassProperty(owner, serializedNodeClassProperty.Name, returnType);
 
 			return nodeClassProperty;

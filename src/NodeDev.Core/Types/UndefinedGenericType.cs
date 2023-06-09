@@ -18,13 +18,13 @@ namespace NodeDev.Core.Types
 
 		public override string FriendlyName => Name;
 
-        public UndefinedGenericType(string name)
+        public UndefinedGenericType(TypeFactory typeFactory, string name) : base(typeFactory)
 		{
 			FullName = Name = name;
 		}
 
 		internal override string Serialize() => Name;
 
-		public static UndefinedGenericType Deserialize(string name) => new(name);
+		public static UndefinedGenericType Deserialize(TypeFactory typeFactory, string name) => new(typeFactory, name);
 	}
 }

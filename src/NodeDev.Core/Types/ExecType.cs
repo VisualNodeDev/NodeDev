@@ -8,6 +8,10 @@ namespace NodeDev.Core.Types
 {
 	public class ExecType : TypeBase
 	{
+		public ExecType(TypeFactory typeFactory) : base(typeFactory)
+		{
+		}
+
 		public override string Name => "Exec";
 
 		public override string FullName => "__Exec__";
@@ -25,9 +29,9 @@ namespace NodeDev.Core.Types
 			return "";
 		}
 
-		public static ExecType Deserialize(string serialized)
+		public static ExecType Deserialize(TypeFactory typeFactory, string serialized)
 		{
-			return TypeFactory.ExecType;
+			return typeFactory.ExecType;
 		}
 	}
 }

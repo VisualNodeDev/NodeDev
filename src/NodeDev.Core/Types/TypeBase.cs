@@ -30,15 +30,20 @@ namespace NodeDev.Core.Types
 
 		public virtual object? ParseTextboxEdit(string text) => throw new NotImplementedException();
 
-		public bool Is<T>() => this == TypeFactory.Get<T>();
+		public readonly TypeFactory TypeFactory;
 
-		internal static TypeBase Deserialize(string typeFullName, string serializedType)
+		public TypeBase(TypeFactory typeFactory)
 		{
-			var type = TypeFactory.GetTypeByFullName(typeFullName) ?? throw new Exception($"Type not found: {typeFullName}");
+			TypeFactory = typeFactory;
+		}
+
+		internal static TypeBase Deserialize(TypeFactory typeFactory, string typeFullName, string serializedType)
+		{
+			var type = typeFactory.GetTypeByFullName(typeFullName) ?? throw new Exception($"Type not found: {typeFullName}");
 
 			var deserializeMethod = type.GetMethod("Deserialize", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) ?? throw new Exception($"Deserialize method not found in type: {typeFullName}");
 
-			var deserializedType = deserializeMethod.Invoke(null, new[] { serializedType });
+			var deserializedType = deserializeMethod.Invoke(null, new object[] { typeFactory, serializedType });
 
 			if(deserializedType is TypeBase typeBase)
 				return typeBase;

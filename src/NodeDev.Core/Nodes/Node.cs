@@ -36,6 +36,8 @@ namespace NodeDev.Core.Nodes
 
         public abstract bool IsFlowNode { get; }
 
+        public TypeFactory TypeFactory => Graph.SelfClass.Project.TypeFactory;
+
         public record class AlternateOverload(TypeBase ReturnType, List<(string Name, TypeBase Type)> Parameters);
         public virtual IEnumerable<AlternateOverload> AlternatesOverloads => Enumerable.Empty<AlternateOverload>();
 
@@ -91,12 +93,12 @@ namespace NodeDev.Core.Nodes
         {
             var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
 
-            var type = TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
+            var type = graph.SelfClass.Project.TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
             var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
 
             foreach (var decoration in serializedNodeObj.Decorations)
             {
-                var decorationType = TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
+                var decorationType = graph.SelfClass.Project.TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
 
                 var method = decorationType.GetMethod(nameof(INodeDecoration.Deserialize), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 

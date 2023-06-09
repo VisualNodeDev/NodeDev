@@ -11,7 +11,7 @@ namespace NodeDev.Core.Types
 	{
 		private readonly NodeClass NodeClass;
 
-		public NodeClassType(NodeClass nodeClass)
+		public NodeClassType(NodeClass nodeClass) : base(nodeClass.Project.TypeFactory)
 		{
 			NodeClass = nodeClass;
 		}

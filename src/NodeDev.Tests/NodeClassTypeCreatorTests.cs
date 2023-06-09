@@ -15,7 +15,7 @@ public class NodeClassTypeCreatorTests
 		var myClass = new NodeClass("TestClass", "MyProject", project);
 		project.Classes.Add(myClass);
 
-		myClass.Properties.Add(new(myClass, "MyProp", TypeFactory.Get<float>()));
+		myClass.Properties.Add(new(myClass, "MyProp", project.TypeFactory.Get<float>()));
 
 		var creator = new NodeClassTypeCreator();
 

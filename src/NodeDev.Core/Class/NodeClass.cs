@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NodeDev.Core.Types;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,6 +13,8 @@ namespace NodeDev.Core.Class
 		public record class SerializedNodeClass(string Name, string Namespace, List<string> Methods, List<string> Properties);
 
 		public readonly Project Project;
+
+		public TypeFactory TypeFactory => Project.TypeFactory;
 
 		public string Name { get; set; }
 
@@ -38,7 +41,7 @@ namespace NodeDev.Core.Class
 			foreach (var method in serializedNodeClass.Methods)
 				nodeClass.Methods.Add(NodeClassMethod.Deserialize(nodeClass, method));
 
-			foreach (var property in serializedNodeClass.Properties)
+			foreach (var property in serializedNodeClass.Properties ?? new())
 				nodeClass.Properties.Add(NodeClassProperty.Deserialize(nodeClass, property));
 
 			return nodeClass;

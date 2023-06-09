@@ -26,10 +26,10 @@ namespace NodeDev.Core.Class
 			return System.Text.Json.JsonSerializer.Serialize(new SerializedNodeClassMethodParameter(Name, ParameterType.GetType().FullName!, ParameterType.Serialize()));
 		}
 
-		public static NodeClassMethodParameter Deserialize(string serialized)
+		public static NodeClassMethodParameter Deserialize(TypeFactory typeFactory, string serialized)
 		{
 			var serializedNodeClassMethodParameter = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethodParameter>(serialized) ?? throw new Exception("Unable to deserialize node class method parameter");
-			return new NodeClassMethodParameter(serializedNodeClassMethodParameter.Name, TypeBase.Deserialize(serializedNodeClassMethodParameter.ParameterTypeFullName, serializedNodeClassMethodParameter.ParameterType));
+			return new NodeClassMethodParameter(serializedNodeClassMethodParameter.Name, TypeBase.Deserialize(typeFactory, serializedNodeClassMethodParameter.ParameterTypeFullName, serializedNodeClassMethodParameter.ParameterType));
 		}
 	}
 }

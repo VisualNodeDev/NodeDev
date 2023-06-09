@@ -12,17 +12,17 @@ public class GraphExecutorTests
 		var graph = new Graph(nodeClass);
 
 		entryNode = new Core.Nodes.Flow.EntryNode(graph);
-		entryNode.Outputs.Add(new("A", entryNode, Core.Types.TypeFactory.Get<TIn>()));
-		entryNode.Outputs.Add(new("B", entryNode, Core.Types.TypeFactory.Get<TIn>()));
+		entryNode.Outputs.Add(new("A", entryNode, nodeClass.TypeFactory.Get<TIn>()));
+		entryNode.Outputs.Add(new("B", entryNode, nodeClass.TypeFactory.Get<TIn>()));
 
 		returnNode = new Core.Nodes.Flow.ReturnNode(graph);
-		returnNode.Inputs.Add(new("Result", entryNode, Core.Types.TypeFactory.Get<TOut>()));
+		returnNode.Inputs.Add(new("Result", entryNode, nodeClass.TypeFactory.Get<TOut>()));
 
 		addNode = new Core.Nodes.Math.Add(graph);
 
-		addNode.Inputs[0].UpdateType(Core.Types.TypeFactory.Get<TIn>());
-		addNode.Inputs[1].UpdateType(Core.Types.TypeFactory.Get<TIn>());
-		addNode.Outputs[0].UpdateType(Core.Types.TypeFactory.Get<TOut>());
+		addNode.Inputs[0].UpdateType(nodeClass.TypeFactory.Get<TIn>());
+		addNode.Inputs[1].UpdateType(nodeClass.TypeFactory.Get<TIn>());
+		addNode.Outputs[0].UpdateType(nodeClass.TypeFactory.Get<TOut>());
 
 		graph.AddNode(entryNode);
 		graph.AddNode(addNode);
@@ -72,13 +72,13 @@ public class GraphExecutorTests
 		returnNode1.Inputs[1].UpdateTextboxText("1");
 
 		var smallerThan = new Core.Nodes.Math.SmallerThan(graph);
-		smallerThan.Inputs[0].UpdateType(Core.Types.TypeFactory.Get<int>());
-		smallerThan.Inputs[1].UpdateType(Core.Types.TypeFactory.Get<int>());
+		smallerThan.Inputs[0].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
+		smallerThan.Inputs[1].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateTextboxText("0");
 		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0]);
 
 		var returnNode2 = new Core.Nodes.Flow.ReturnNode(graph);
-		returnNode2.Inputs.Add(new("Result", entryNode, Core.Types.TypeFactory.Get<int>()));
+		returnNode2.Inputs.Add(new("Result", entryNode, graph.SelfClass.TypeFactory.Get<int>()));
 		returnNode2.Inputs[1].UpdateTextboxText("0");
 
 		var branchNode = new Core.Nodes.Flow.Branch(graph);
