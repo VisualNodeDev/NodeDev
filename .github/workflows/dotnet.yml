@@ -21,11 +21,11 @@ jobs:
       with:
         dotnet-version: 7.0.x
     - name: Restore dependencies
-      working-directory: /app/src/NodeDev.Blazor.Server
+      working-directory: ./src/NodeDev.Blazor.Server
       run: dotnet restore
     - name: Build
-      working-directory: /app/src/NodeDev.Blazor.Server
+      working-directory: ./src/NodeDev.Blazor.Server
       run: dotnet build --no-restore
     - name: Test
-      working-directory: /app/src/NodeDev.Tests
+      working-directory: ./src/NodeDev.Tests
       run: dotnet test --no-build --verbosity normal
