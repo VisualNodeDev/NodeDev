@@ -54,7 +54,7 @@ namespace NodeDev.Core.Nodes
 		}
 
 
-		protected override void ExecuteInternal(object? self, object?[] inputs, object?[] outputs)
+		protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
 		{
 			if(self == null)
 				throw new ArgumentNullException(nameof(self));

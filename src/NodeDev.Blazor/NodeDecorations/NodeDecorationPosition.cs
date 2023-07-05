@@ -1,4 +1,5 @@
 ﻿using NodeDev.Core.NodeDecorations;
+using NodeDev.Core.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +30,7 @@ namespace NodeDev.Blazor.NodeAttributes
 			return JsonSerializer.Serialize(new SerializedNodeDecoration(X, Y));
 		}
 
-		public static INodeDecoration Deserialize(string Json)
+		public static INodeDecoration Deserialize(TypeFactory typeFactory, string Json)
 		{
 			var serializedNodeDecoration = JsonSerializer.Deserialize<SerializedNodeDecoration>(Json) ?? throw new Exception("Unable to deserialize node decoration");
 

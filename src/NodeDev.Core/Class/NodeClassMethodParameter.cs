@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Class
 {
-	public class NodeClassMethodParameter
+	public class NodeClassMethodParameter: IMethodParameterInfo
 	{
 		private record class SerializedNodeClassMethodParameter(string Name, string ParameterTypeFullName, string ParameterType);
 

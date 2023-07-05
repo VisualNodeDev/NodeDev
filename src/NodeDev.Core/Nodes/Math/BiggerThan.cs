@@ -21,8 +21,8 @@ namespace NodeDev.Core.Nodes.Math
 			Outputs.Add(new("c", this, TypeFactory.Get<bool>()));
 		}
 
-        protected override void ExecuteInternal(object? self, object?[] inputs, object?[] outputs)
-        {
+        protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)
+		{
 			dynamic? a = inputs[0];
 			dynamic? b = inputs[1];
 

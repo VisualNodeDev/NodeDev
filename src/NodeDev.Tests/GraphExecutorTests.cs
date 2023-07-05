@@ -6,10 +6,19 @@ namespace NodeDev.Tests;
 
 public class GraphExecutorTests
 {
-	private Graph CreateSimpleAddGraph<TIn, TOut>(out Core.Nodes.Flow.EntryNode entryNode, out Core.Nodes.Flow.ReturnNode returnNode, out Core.Nodes.Math.Add addNode)
+	public static Graph CreateSimpleAddGraph<TIn, TOut>(out Core.Nodes.Flow.EntryNode entryNode, out Core.Nodes.Flow.ReturnNode returnNode, out Core.Nodes.Math.Add addNode)
 	{
-		var nodeClass = new NodeClass("Test", "Test", new Project(Guid.NewGuid()));
-		var graph = new Graph(nodeClass);
+		var project = new Project(Guid.NewGuid());
+		var nodeClass = new NodeClass("Test", "Test", project);
+		project.Classes.Add(nodeClass);
+
+		var graph = new Graph();
+		var method = new NodeClassMethod(nodeClass, "TestMethod", nodeClass.TypeFactory.Get<TOut>(), graph);
+		nodeClass.Methods.Add(method);
+		graph.SelfMethod = nodeClass.Methods.First();
+
+		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<TIn>()));
+		method.Parameters.Add(new("B", nodeClass.TypeFactory.Get<TIn>()));
 
 		entryNode = new Core.Nodes.Flow.EntryNode(graph);
 		entryNode.Outputs.Add(new("A", entryNode, nodeClass.TypeFactory.Get<TIn>()));
@@ -42,7 +51,7 @@ public class GraphExecutorTests
 	{
 		var graph = CreateSimpleAddGraph<int, int>(out _, out _, out _);
 
-		var executor = new Core.GraphExecutor(graph);
+		var executor = new Core.GraphExecutor(graph, null);
 
 		var outputs = new object?[2];
 		executor.Execute(null, new object?[] { null, 1, 2 }, outputs);
@@ -55,7 +64,7 @@ public class GraphExecutorTests
 	{
 		var graph = CreateSimpleAddGraph<float, float>(out _, out _, out _);
 
-		var executor = new Core.GraphExecutor(graph);
+		var executor = new Core.GraphExecutor(graph, null);
 
 		var outputs = new object?[2];
 		executor.Execute(null, new object?[] { null, 1.5f, 2f }, outputs);
@@ -88,7 +97,7 @@ public class GraphExecutorTests
 		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0]);
 		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0]);
 
-		var executor = new Core.GraphExecutor(graph);
+		var executor = new Core.GraphExecutor(graph, null);
 
 		var outputs = new object?[2];
 		executor.Execute(null, new object?[] { null, 1.5f, 2f }, outputs);

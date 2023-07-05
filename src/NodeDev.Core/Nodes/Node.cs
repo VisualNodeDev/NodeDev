@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Class;
+using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
 using System;
@@ -38,7 +39,7 @@ namespace NodeDev.Core.Nodes
 
         public TypeFactory TypeFactory => Graph.SelfClass.Project.TypeFactory;
 
-        public record class AlternateOverload(TypeBase ReturnType, List<(string Name, TypeBase Type)> Parameters);
+        public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
         public virtual IEnumerable<AlternateOverload> AlternatesOverloads => Enumerable.Empty<AlternateOverload>();
 
         /// <summary>
@@ -53,7 +54,7 @@ namespace NodeDev.Core.Nodes
         /// <summary>
         /// Returns the next node to execute. The connection is on the current node, must look at what it's connected to
         /// </summary>
-        public abstract Connection? Execute(object? self, Connection? connectionBeingExecuted, object?[] inputs, object?[] nodeOutputs);
+        public abstract Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs);
 
         public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
         {
@@ -93,19 +94,19 @@ namespace NodeDev.Core.Nodes
         {
             var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
 
-            var type = graph.SelfClass.Project.TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
+            var type = graph.SelfClass.TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
             var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
 
             foreach (var decoration in serializedNodeObj.Decorations)
             {
-                var decorationType = graph.SelfClass.Project.TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
+                var decorationType = graph.SelfClass.TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
 
                 var method = decorationType.GetMethod(nameof(INodeDecoration.Deserialize), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
                 if (method == null)
                     throw new Exception($"Unable to find Deserialize method on type: {decoration.Key}");
 
-                var decorationObj = method.Invoke(null, new object[] { decoration.Value }) as INodeDecoration;
+                var decorationObj = method.Invoke(null, new object[] { graph.SelfClass.TypeFactory, decoration.Value }) as INodeDecoration;
 
                 if (decorationObj == null)
                     throw new Exception($"Unable to deserialize decoration: {decoration.Key}");

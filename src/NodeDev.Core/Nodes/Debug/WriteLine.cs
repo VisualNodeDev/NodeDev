@@ -16,8 +16,8 @@ namespace NodeDev.Core.Nodes.Debug
             Inputs.Add(new("Line", this, TypeFactory.CreateUndefinedGenericType("T")));
         }
 
-        protected override void ExecuteInternal(object? self, object?[] inputs, object?[] outputs)
-        {
+        protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
+		{
             Console.WriteLine(inputs[1]);
         }
     }

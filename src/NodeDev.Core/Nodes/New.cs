@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Class;
+using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
 using System;
 using System.Collections.Generic;
@@ -29,7 +30,7 @@ namespace NodeDev.Core.Nodes
 				if (Outputs[1].Type is RealType realType)
 				{
 					var constructors = realType.BackendType.GetConstructors();
-					return constructors.Select(x => new AlternateOverload(Outputs[1].Type, x.GetParameters().Select(y => (y.Name ?? "??", (TypeBase)TypeFactory.Get(y.ParameterType))).ToList()));
+					return constructors.Select(x => new AlternateOverload(Outputs[1].Type, x.GetParameters().Select(y => new NodeClassMethod.RealMethodInfo.RealMethodParameterInfo(y, TypeFactory)).OfType<IMethodParameterInfo>().ToList())).ToList();
 				}
 				else if (Outputs[1].Type is NodeClassType nodeClassType)
 					return new AlternateOverload[] { new(Outputs[1].Type, new()) }; // for now, we don't handle custom constructors
@@ -42,7 +43,7 @@ namespace NodeDev.Core.Nodes
 		{
 			var constructor = AlternatesOverloads.First();
 
-			Inputs.AddRange(constructor.Parameters.Select(x => new Connection(x.Name ?? "??", this, x.Type)));
+			Inputs.AddRange(constructor.Parameters.Select(x => new Connection(x.Name ?? "??", this, x.ParameterType)));
 
 			Name = $"New {Outputs[1].Type.FriendlyName}";
 			return new();
@@ -53,19 +54,19 @@ namespace NodeDev.Core.Nodes
 			removedConnections = Inputs.Skip(1).ToList();
 			Inputs.RemoveRange(1, Inputs.Count - 1);
 
-			newConnections = overload.Parameters.Select(x => new Connection(x.Name, this, x.Type)).ToList();
+			newConnections = overload.Parameters.Select(x => new Connection(x.Name, this, x.ParameterType)).ToList();
 			Inputs.AddRange(newConnections);
 		}
 
-		protected override void ExecuteInternal(object? self, object?[] inputs, object?[] outputs)
+        protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
 		{
 			if (Outputs[1].Type is UndefinedGenericType)
 				throw new InvalidOperationException("Output type is not defined");
 
 			if (Outputs[1].Type is RealType realType)
-				outputs[1] = Activator.CreateInstance(realType.BackendType, inputs);
+				outputs[1] = Activator.CreateInstance(realType.BackendType, inputs.ToArray());
 			else if (Outputs[1].Type is NodeClassType nodeClassType)
-				outputs[1] = Activator.CreateInstance(Graph.SelfClass.Project.GetCreatedClassType(nodeClassType.NodeClass), inputs);
+				outputs[1] = Activator.CreateInstance(Graph.SelfClass.Project.GetCreatedClassType(nodeClassType.NodeClass), inputs.ToArray());
 			else
 				throw new Exception("Unknown type:" + Outputs[1].Name);
 		}

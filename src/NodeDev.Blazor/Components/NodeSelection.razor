@@ -13,7 +13,7 @@
 				{
 					@if (type is NodeDev.Core.NodeProvider.MethodCallNode methodCallNode)
 					{
-						<MudListItem Text="@($"{TypeFactory.Get(methodCallNode.MethodInfo.DeclaringType!).FriendlyName}.{methodCallNode.MethodInfo.Name}")" Value="type" />
+						<MudListItem Text="@($"{methodCallNode.MethodInfo.DeclaringType.FriendlyName}.{methodCallNode.MethodInfo.Name}")" Value="type" />
 					}
 					else if (type is NodeDev.Core.NodeProvider.GetPropertyOrFieldNode getPropertyOrFieldNode)
 					{

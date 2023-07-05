@@ -43,11 +43,17 @@ namespace NodeDev.Core.Class
 
 		public void Deserialize_Step2(SerializedNodeClass serializedNodeClass)
 		{
-			foreach (var method in serializedNodeClass.Methods)
-				Methods.Add(NodeClassMethod.Deserialize(this, method));
-
 			foreach (var property in serializedNodeClass.Properties ?? new())
 				Properties.Add(NodeClassProperty.Deserialize(this, property));
+
+			foreach (var method in serializedNodeClass.Methods)
+				Methods.Add(NodeClassMethod.Deserialize(this, method));
+		}
+
+		public void Deserialize_Step3()
+		{
+			foreach (var method in Methods)
+				method.Deserialize_Step3();
 		}
 
 		public string Serialize()

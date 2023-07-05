@@ -19,13 +19,13 @@ namespace NodeDev.Core.Nodes
 
         public override bool IsFlowNode => false;
 
-        public override Connection? Execute(object? self, Connection? inputExec, object?[] inputs, object?[] outputs)
-        {
-            ExecuteInternal(self, inputs, outputs);
+        public override Connection? Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs)
+		{
+            ExecuteInternal(executor, self, inputs, outputs);
 
             return null;
         }
 
-        protected abstract void ExecuteInternal(object? self, object?[] inputs, object?[] outputs);
+        protected abstract void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs);
     }
 }

@@ -11,17 +11,14 @@ public class Graph
 {
 	public IReadOnlyDictionary<string, Node> Nodes { get; } = new Dictionary<string, Node>();
 
-	public NodeClass SelfClass { get; set; }
+	public NodeClass SelfClass => SelfMethod.Class;
+	public NodeClassMethod SelfMethod { get; set; }
 
 	static Graph()
 	{
 		NodeProvider.Initialize();
 	}
 
-	public Graph(NodeClass selfClass)
-	{
-		SelfClass = selfClass;
-	}
 
 	#region Invoke
 
@@ -45,9 +42,9 @@ public class Graph
 
 	public void Connect(Connection connection1, Connection connection2)
 	{
-		if(!connection1.Connections.Contains(connection2))
+		if (!connection1.Connections.Contains(connection2))
 			connection1.Connections.Add(connection2);
-		if(!connection2.Connections.Contains(connection1))
+		if (!connection2.Connections.Contains(connection1))
 			connection2.Connections.Add(connection1);
 	}
 
@@ -106,16 +103,14 @@ public class Graph
 		return JsonSerializer.Serialize(serializedGraph);
 	}
 
-	public static Graph Deserialize(string serializedGraph, NodeClass ownerClass)
+	public static void Deserialize(string serializedGraph, Graph graph)
 	{
-		var graph = new Graph(ownerClass);
 		var serializedGraphObj = JsonSerializer.Deserialize<SerializedGraph>(serializedGraph) ?? throw new Exception("Unable to deserialize graph");
 		foreach (var serializedNode in serializedGraphObj.Nodes)
 		{
 			var node = Node.Deserialize(graph, serializedNode);
 			graph.AddNode(node);
 		}
-		return graph;
 	}
 
 	#endregion

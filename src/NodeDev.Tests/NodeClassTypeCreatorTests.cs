@@ -29,4 +29,13 @@ public class NodeClassTypeCreatorTests
 		Assert.IsType(creator.GeneratedTypes[project.GetNodeClassType(myClass)], instance);
 	}
 
+	[Fact]
+	public void TestClassProjectOwnership()
+	{
+		var graph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
+
+		Assert.Equal(graph.SelfClass, graph.SelfClass.Project.Classes.First());
+
+	}
+
 }

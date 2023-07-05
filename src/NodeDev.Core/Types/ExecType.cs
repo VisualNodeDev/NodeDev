@@ -33,5 +33,10 @@ namespace NodeDev.Core.Types
 		{
 			return typeFactory.ExecType;
 		}
+
+		public override bool IsAssignableTo(TypeBase other)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

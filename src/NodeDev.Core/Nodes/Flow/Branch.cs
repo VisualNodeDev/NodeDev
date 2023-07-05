@@ -26,7 +26,7 @@ namespace NodeDev.Core.Nodes.Flow
 			Outputs.Add(new("IfFalse", this, TypeFactory.ExecType));
 		}
 
-		public override Connection? Execute(object? self, Connection? connectionBeingExecuted, object?[] inputs, object?[] nodeOutputs)
+		public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs)
 		{
 			if (inputs[1] is bool b && b == true)
 				return Outputs[0];

@@ -26,5 +26,10 @@ namespace NodeDev.Core.Types
 		internal override string Serialize() => Name;
 
 		public static UndefinedGenericType Deserialize(TypeFactory typeFactory, string name) => new(typeFactory, name);
+
+		public override bool IsAssignableTo(TypeBase other)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

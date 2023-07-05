@@ -12,7 +12,7 @@
                     <MudText Inline="true">( </MudText>
                     @foreach (var parameter in overload.Parameters)
                     {
-                        <MudText Inline="true" Class="pr-1">@parameter.Type.FriendlyName</MudText>
+                        <MudText Inline="true" Class="pr-1">@parameter.ParameterType.FriendlyName</MudText>
                         <MudText Inline="true">@parameter.Name</MudText>
                         if (parameter != overload.Parameters.Last())
                         {

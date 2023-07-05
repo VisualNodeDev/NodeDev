@@ -1,6 +1,8 @@
-﻿using System;
+﻿using NodeDev.Core.Class;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -29,6 +31,10 @@ namespace NodeDev.Core.Types
         internal abstract string Serialize();
 
 		public virtual object? ParseTextboxEdit(string text) => throw new NotImplementedException();
+
+		public abstract bool IsAssignableTo(TypeBase other);
+
+		public virtual IEnumerable<IMethodInfo> GetMethods() => Enumerable.Empty<IMethodInfo>();
 
 		public readonly TypeFactory TypeFactory;
 

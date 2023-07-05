@@ -39,7 +39,7 @@ namespace NodeDev.Core.Types
 
 		private ExecType ExecType_;
 
-		private readonly Project Project;
+		public readonly Project Project;
 
 		public TypeFactory(Project project)
 		{

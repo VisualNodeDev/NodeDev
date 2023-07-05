@@ -1,4 +1,6 @@
-﻿using System;
+﻿using NodeDev.Core.Class;
+using NodeDev.Core.Nodes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -81,7 +83,12 @@ public class RealType : TypeBase
 
     public override TypeBase[]? Generics => BackendType.GetGenericArguments().Select(TypeFactory.Get).ToArray();
 
-    internal RealType(TypeFactory typeFactory, Type backendType) : base(typeFactory)
+	public override IEnumerable<IMethodInfo> GetMethods()
+	{
+        return BackendType.GetMethods().Select(x => new NodeClassMethod.RealMethodInfo(TypeFactory, x));
+	}
+
+	internal RealType(TypeFactory typeFactory, Type backendType) : base(typeFactory)
     {
         BackendType = backendType;
     }
@@ -102,5 +109,13 @@ public class RealType : TypeBase
     {
         return Convert.ChangeType(text, BackendType);
     }
+
+	public override bool IsAssignableTo(TypeBase other)
+	{
+        if (other is RealType realType)
+            return BackendType.IsAssignableTo(realType.BackendType);
+
+        return false;
+	}
 
 }

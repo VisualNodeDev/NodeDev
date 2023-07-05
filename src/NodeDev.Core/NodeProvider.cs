@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Class;
+using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
 using System;
@@ -11,6 +12,8 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core
 {
+	// this whole way of searching nodes is disgusting.
+	// you're welcome
 	public static class NodeProvider
 	{
 		private static List<Type> NodeTypes = new();
@@ -29,7 +32,7 @@ namespace NodeDev.Core
 		}
 
 		public record class NodeSearchResult(Type Type);
-		public record class MethodCallNode(Type Type, MethodInfo MethodInfo) : NodeSearchResult(Type);
+		public record class MethodCallNode(Type Type, Class.IMethodInfo MethodInfo) : NodeSearchResult(Type);
 		public record class GetPropertyOrFieldNode(Type Type, Class.IMemberInfo MemberInfo) : NodeSearchResult(Type);
 		public record class SetPropertyOrFieldNode(Type Type, Class.IMemberInfo MemberInfo) : NodeSearchResult(Type);
 		public static IEnumerable<NodeSearchResult> Search(Project project, string text, Connection? startConnection)
@@ -62,7 +65,7 @@ namespace NodeDev.Core
 					// find if the method exists
 					var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy | BindingFlags.Static).Where(x => x.Name.Contains(methodCallSplit[1], StringComparison.OrdinalIgnoreCase));
 
-					results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
+					results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), new NodeClassMethod.RealMethodInfo(project.TypeFactory, x))));
 
 					results = results.Concat(GetPropertiesAndFields(type, methodCallSplit[1]));
 				}
@@ -73,23 +76,38 @@ namespace NodeDev.Core
 				IEnumerable<MethodInfo> methods = realType.BackendType.GetMethods(BindingFlags.Public | BindingFlags.FlattenHierarchy | BindingFlags.Instance);
 				// get extensions methods for the realType.BackendType
 
-				methods = methods.Concat(GetExtensionMethods(realType.BackendType)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
+				methods = methods.Concat(GetExtensionMethods(realType)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 
-				results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
+				results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), new NodeClassMethod.RealMethodInfo(project.TypeFactory, x))));
 
 				results = results.Concat(GetPropertiesAndFields(realType.BackendType, text));
 			}
+			else if(startConnection?.Type is NodeClassType nodeClassType) 
+			{
+				// get the properties in that object
+				results = results.Concat(nodeClassType.NodeClass.Properties.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), new NodeClassPropertyMemberInfo(x))));
+
+				results = results.Concat(nodeClassType.NodeClass.Methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
+			}
+
+			results = results.Concat(project.Classes.SelectMany( nodeClass => nodeClass.Methods.Where( x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase)).Select(x => new MethodCallNode(typeof(MethodCall), x)))).DistinctBy(result =>
+			{
+				if (result is MethodCallNode methodCallNode)
+					return (object)methodCallNode.MethodInfo;
+				return (object)result;
+			});
+
 
 			return results;
 		}
 
-		private static IEnumerable<MethodInfo> GetExtensionMethods(Type t)
+		private static IEnumerable<MethodInfo> GetExtensionMethods(TypeBase t)
 		{
 			var query = AppDomain.CurrentDomain.GetAssemblies()
 				.SelectMany(x => x.GetTypes())
 				.Where(type => !type.IsGenericType)
 				.SelectMany(type => type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
-				.Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && method.GetParameters()[0].ParameterType.IsAssignableFrom(t));
+				.Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && t.IsAssignableTo(t.TypeFactory.Get(method.GetParameters()[0].ParameterType)));
 
 			return query;
 		}

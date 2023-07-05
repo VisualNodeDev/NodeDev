@@ -23,8 +23,8 @@ namespace NodeDev.Core.Nodes.Flow
 
         public override bool IsFlowNode => true;
 
-        public override Connection? Execute(object? self, Connection? inputExec, object?[] inputs, object?[] outputs)
-        {
+        public override Connection? Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs)
+		{
             return Outputs[0];
         }
     }

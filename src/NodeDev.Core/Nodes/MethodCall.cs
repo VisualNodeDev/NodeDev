@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Class;
+using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
 using System;
@@ -9,129 +10,145 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace NodeDev.Core.Nodes
+namespace NodeDev.Core.Nodes;
+
+public class MethodCall : NormalFlowNode
 {
-	public class MethodCall : NormalFlowNode
+	public class TargetMethodDecoration : INodeDecoration
 	{
-		public class TargetMethodDecoration : INodeDecoration
+		private record class SavedMethodInfoParameter(string Type, string SerializedType);
+		private record class SavedMethodInfo(string Type, string SerializedType, string Name, SavedMethodInfoParameter[] ParamTypes);
+		internal IMethodInfo TargetMethod { get; set; }
+
+		public TargetMethodDecoration(IMethodInfo targetMethod)
 		{
-			private record class SavedMethodInfo(string Type, string Name, string[] ParamTypes);
-			internal MethodInfo TargetMethod { get; set; }
-
-			public TargetMethodDecoration(MethodInfo targetMethod)
-			{
-				TargetMethod = targetMethod;
-			}
-
-			public string Serialize()
-			{
-				return JsonSerializer.Serialize(new SavedMethodInfo(TargetMethod.DeclaringType!.FullName!, TargetMethod.Name, TargetMethod.GetParameters().Select(p => p.ParameterType.FullName!).ToArray()));
-			}
-
-			public static INodeDecoration Deserialize(string Json)
-			{
-				var info = JsonSerializer.Deserialize<SavedMethodInfo>(Json) ?? throw new Exception("Unable to deserialize method info");
-				var type = Type.GetType(info.Type) ?? throw new Exception("Unable to find type: " + info.Type);
-				var method = type.GetMethod(info.Name, info.ParamTypes.Select(p => Type.GetType(p)!).ToArray()) ?? throw new Exception("Unable to find method: " + info.Name);
-
-				return new TargetMethodDecoration(method);
-			}
+			TargetMethod = targetMethod;
 		}
 
-		public override string TitleColor => "lightblue";
-
-
-		internal MethodInfo? TargetMethod;
-
-		public override IEnumerable<AlternateOverload> AlternatesOverloads
+		public string Serialize()
 		{
-			get
-			{
-				var parentType = TargetMethod?.DeclaringType;
-				if (TargetMethod == null || parentType == null)
-					return Enumerable.Empty<AlternateOverload>();
-
-				var methods = parentType.GetMethods().Where(x => x.Name == TargetMethod.Name);
-
-				return methods.Select(x => new AlternateOverload(TypeFactory.Get(x.ReturnType), x.GetParameters().Select(y => (y.Name ?? "??", (TypeBase)TypeFactory.Get(y.ParameterType))).ToList()));
-			}
+			return JsonSerializer.Serialize(new SavedMethodInfo(TargetMethod.DeclaringType.GetType().FullName!, TargetMethod.DeclaringType!.FullName!, TargetMethod.Name, TargetMethod.GetParameters().Select(p => new SavedMethodInfoParameter(p.ParameterType.GetType().FullName!, p.ParameterType.FullName!)).ToArray()));
 		}
 
-		public MethodCall(Graph graph, string? id = null) : base(graph, id)
+		public static INodeDecoration Deserialize(TypeFactory typeFactory, string Json)
 		{
+			var info = JsonSerializer.Deserialize<SavedMethodInfo>(Json) ?? throw new Exception("Unable to deserialize method info");
+
+			var type = TypeBase.Deserialize(typeFactory, info.Type, info.SerializedType);
+			var parameterTypes = info.ParamTypes.Select(x => TypeBase.Deserialize(typeFactory, x.Type, x.SerializedType));
+			var method = type.GetMethods().FirstOrDefault(x => x.Name == info.Name && parameterTypes.SequenceEqual(x.GetParameters().Select(x => x.ParameterType)));
+
+			if(method == null)
+				throw new Exception("Unable to find method:" +  info.Name);
+
+			return new TargetMethodDecoration(method);
 		}
+	}
 
-		protected override void Deserialize(SerializedNode serializedNodeObj)
+	public override string TitleColor => "lightblue";
+
+
+	internal IMethodInfo? TargetMethod;
+
+	public override IEnumerable<AlternateOverload> AlternatesOverloads
+	{
+		get
 		{
-			base.Deserialize(serializedNodeObj);
-
-			if (Decorations.TryGetValue(typeof(TargetMethodDecoration), out var targetMethod))
-			{
-				TargetMethod = ((TargetMethodDecoration)targetMethod).TargetMethod;
-				Name = TypeFactory.Get(TargetMethod.DeclaringType!).FriendlyName + "." + TargetMethod.Name;
-			}
-		}
-
-		public override void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
-		{
-			// find the MethodInfo for the overload
 			var parentType = TargetMethod?.DeclaringType;
 			if (TargetMethod == null || parentType == null)
-			{
-				newConnections = new List<Connection>();
-				removedConnections = new List<Connection>();
-				return;
-			}
+				return Enumerable.Empty<AlternateOverload>();
 
-			// assumes that every parameters is a real type
-			var method = parentType.GetMethod(TargetMethod.Name, overload.Parameters.Select(x => ((RealType)x.Type).BackendType).ToArray());
-			if (method == null)
-				throw new Exception("Unable to find method overload");
+			var methods = parentType.GetMethods().Where(x => x.Name == TargetMethod.Name);
 
-			if (TypeFactory.Get(method.ReturnType) != overload.ReturnType)
-				throw new Exception("Return type mismatch");
+			return methods.Select(x => new AlternateOverload(x.ReturnType, x.GetParameters().ToList())).ToList();
+		}
+	}
 
-			// remove the old connections, except the Exec inputs and outputs
-			removedConnections = Inputs.Skip(1).Concat(Outputs.Skip(1)).ToList();
-			Inputs.RemoveRange(1, Inputs.Count - 1);
-			Outputs.RemoveRange(1, Outputs.Count - 1);
+	public MethodCall(Graph graph, string? id = null) : base(graph, id)
+	{
+	}
 
-			// Set the new method, this will add all the required inputs and outputs
-			SetMethodTarget(method);
+	protected override void Deserialize(SerializedNode serializedNodeObj)
+	{
+		base.Deserialize(serializedNodeObj);
 
-			// return the new connections
-			newConnections = Inputs.Skip(1).Concat(Outputs.Skip(1)).ToList();
+		if (Decorations.TryGetValue(typeof(TargetMethodDecoration), out var targetMethod))
+		{
+			TargetMethod = ((TargetMethodDecoration)targetMethod).TargetMethod;
+			Name = TargetMethod.DeclaringType.FriendlyName + "." + TargetMethod.Name;
+		}
+	}
+
+	public override void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
+	{
+		// find the MethodInfo for the overload
+		var parentType = TargetMethod?.DeclaringType;
+		if (TargetMethod == null || parentType == null)
+		{
+			newConnections = new List<Connection>();
+			removedConnections = new List<Connection>();
+			return;
 		}
 
-		internal void SetMethodTarget(MethodInfo methodInfo)
+		// assumes that every parameters is a real type
+		var method = parentType.GetMethods().FirstOrDefault(x => x.Name == TargetMethod.Name && overload.Parameters.Select(x => x.ParameterType).SequenceEqual(overload.Parameters.Select(x => x.ParameterType))); ;
+		if (method == null)
+			throw new Exception("Unable to find method overload");
+
+		if (method.ReturnType != overload.ReturnType)
+			throw new Exception("Return type mismatch");
+
+		// remove the old connections, except the Exec inputs and outputs
+		removedConnections = Inputs.Skip(1).Concat(Outputs.Skip(1)).ToList();
+		Inputs.RemoveRange(1, Inputs.Count - 1);
+		Outputs.RemoveRange(1, Outputs.Count - 1);
+
+		// Set the new method, this will add all the required inputs and outputs
+		SetMethodTarget(method);
+
+		// return the new connections
+		newConnections = Inputs.Skip(1).Concat(Outputs.Skip(1)).ToList();
+	}
+
+	public void SetMethodTarget(IMethodInfo methodInfo)
+	{
+		TargetMethod = methodInfo;
+		Decorations[typeof(TargetMethodDecoration)] = new TargetMethodDecoration(methodInfo);
+
+		Name = TargetMethod.DeclaringType.FriendlyName + "." + TargetMethod.Name;
+
+		if (!TargetMethod.IsStatic)
+			Inputs.Insert(0, new("Target", this, TargetMethod.DeclaringType)); // the target is put first for later optimisation as it's not really an input to the method
+
+		// update the inputs
+		Inputs.AddRange(TargetMethod.GetParameters().Select(x => new Connection(x.Name!, this, x.ParameterType)));
+
+		if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void)))
+			Outputs.Add(new Connection("Result", this, TargetMethod.ReturnType));
+	}
+
+
+	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
+	{
+		if (TargetMethod == null)
+			throw new Exception("Target method is not set");
+
+		if (TargetMethod is NodeClassMethod nodeClassMethod)
 		{
-			TargetMethod = methodInfo;
-			Decorations[typeof(TargetMethodDecoration)] = new TargetMethodDecoration(methodInfo);
-
-			Name = TypeFactory.Get(TargetMethod.DeclaringType!).FriendlyName + "." + TargetMethod.Name;
-
-			if (!TargetMethod.IsStatic)
-				Inputs.Add(new("Target", this, TypeFactory.Get(TargetMethod.DeclaringType!)));
-
-			// update the inputs
-			Inputs.AddRange(TargetMethod.GetParameters().Select(x => new Connection(x.Name!, this, TypeFactory.Get(x.ParameterType))));
-
-			if (TargetMethod.ReturnType != typeof(void))
-				Outputs.Add(new Connection("Result", this, TypeFactory.Get(TargetMethod.ReturnType)));
+			using var childExecutor = new GraphExecutor(nodeClassMethod.Graph, executor);
+			childExecutor.Execute(self, inputs[1..], outputs);
 		}
-
-
-		protected override void ExecuteInternal(object? self, object?[] inputs, object?[] outputs)
+		else
 		{
-			if (TargetMethod == null)
-				throw new Exception("Target method is not set");
+			var realMethod = (NodeClassMethod.RealMethodInfo)TargetMethod;
 
 			var target = TargetMethod.IsStatic ? null : inputs[0];
-			var result = TargetMethod.Invoke(target, inputs[(TargetMethod.IsStatic ? 1 : 2)..]);
 
-			if (TargetMethod.ReturnType != typeof(void))
+			var result = realMethod.Method.Invoke(target, inputs[(TargetMethod.IsStatic ? 1 : 2)..].ToArray());
+
+			if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void)))
 				outputs[^1] = result;
 		}
-
 	}
+
 }

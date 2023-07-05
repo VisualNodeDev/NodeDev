@@ -16,9 +16,17 @@ namespace NodeDev.Core
 
 		private readonly Dictionary<Connection, object?> Connections = new();
 
-        public GraphExecutor(Graph graph)
+        private GraphExecutor? Child;
+
+        private readonly GraphExecutor? Parent;
+
+		public GraphExecutor(Graph graph, GraphExecutor? parent)
         {
             Graph = graph;
+            Parent = parent;
+
+            if(Parent != null)
+                Parent.Child = this;
         }
 
         private Node FindEntryNode()
@@ -26,11 +34,11 @@ namespace NodeDev.Core
             return Graph.Nodes.First(n => n.Value is EntryNode).Value;
         }
 
-        public void Execute(object? self, object?[] inputs, object?[] outputs)
+        public void Execute(object? self, Span<object?> inputs, Span<object?> outputs)
         {
             var node = FindEntryNode();
 
-            var execConnection = node.Execute(self, null, inputs, inputs);
+            var execConnection = node.Execute(this, self, null, inputs, inputs);
             if (execConnection == null)
                 throw new Exception("Entry node should have an output connection");
             if (inputs.Length != node.Outputs.Count)
@@ -69,7 +77,7 @@ namespace NodeDev.Core
                 var nodeInputs = GetNodeInputs(self, nodeToExecute);
                 var nodeOutputs = new object?[nodeToExecute.Outputs.Count];
 
-                execConnection = nodeToExecute.Execute(self, connectionToExecute, nodeInputs, nodeOutputs);
+                execConnection = nodeToExecute.Execute(this, self, connectionToExecute, nodeInputs, nodeOutputs);
                 for(int i = 0; i < nodeOutputs.Length; i++)
                 {
                     var output = nodeToExecute.Outputs[i];
@@ -111,7 +119,7 @@ namespace NodeDev.Core
             var outputs = new object?[other.Parent.Outputs.Count];
 
             object? myOutput = null;
-            other.Parent.Execute(self, null, inputs, outputs);
+            other.Parent.Execute(this, self, null, inputs, outputs);
             for (int i = 0; i < outputs.Length; i++)
             {
                 var output = other.Parent.Outputs[i];
@@ -132,6 +140,9 @@ namespace NodeDev.Core
 					disposable.Dispose();
             }
             Connections.Clear();
+
+            if (Parent != null)
+                Parent.Child = null;
 		}
 	}
 }

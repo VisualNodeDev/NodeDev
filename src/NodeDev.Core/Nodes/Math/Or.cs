@@ -19,8 +19,8 @@ namespace NodeDev.Core.Nodes.Math
 			Outputs.Add(new("c", this, TypeFactory.Get(typeof(bool))));
 		}
 
-        protected override void ExecuteInternal(object? self, object?[] inputs, object?[] outputs)
-        {
+        protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)
+		{
 			if (inputs[0] == null || inputs[1] == null)
 			{
 				outputs[0] = null;

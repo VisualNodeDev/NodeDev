@@ -30,7 +30,9 @@ public class Project
 
 		var programClass = new Class.NodeClass("Program", "NewProject", project);
 
-		var main = new Class.NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void)), new Graph(programClass));
+		var main = new Class.NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void)), new Graph());
+		main.Graph.SelfMethod = main; // yup, ugl af
+
 		main.Graph.AddNode(new EntryNode(main.Graph));
 		main.Graph.AddNode(new ReturnNode(main.Graph));
 		programClass.Methods.Add(main);
@@ -48,7 +50,7 @@ public class Project
 		var program = Classes.Single(x => x.Name == "Program");
 
 		var main = program.Methods.Single(x => x.Name == "Main");
-		var executor = new GraphExecutor(main.Graph);
+		var executor = new GraphExecutor(main.Graph, null);
 
 		var outputs = new object[main.ReturnType == TypeFactory.Get(typeof(void)) ? 0 : 1];
 		executor.Execute(null, inputs, outputs);
@@ -92,8 +94,13 @@ public class Project
 			nodeClasses[nodeClass] = serializedNodeClass;
 		}
 
-		foreach(var nodeClass in nodeClasses)
+		// will deserialize methods and properties but not any graphs
+		foreach (var nodeClass in nodeClasses)
 			nodeClass.Key.Deserialize_Step2(nodeClass.Value);
+
+		// deserialize graphs
+		foreach (var nodeClass in nodeClasses)
+			nodeClass.Key.Deserialize_Step3();
 
 
 		return project;
