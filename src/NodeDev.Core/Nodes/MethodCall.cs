@@ -135,7 +135,7 @@ public class MethodCall : NormalFlowNode
 
 		if (TargetMethod is NodeClassMethod nodeClassMethod)
 		{
-			using var childExecutor = new GraphExecutor(nodeClassMethod.Graph, executor);
+			using var childExecutor = new GraphExecutor(nodeClassMethod.Graph, executor.Root);
 			childExecutor.Execute(self, inputs[1..], outputs);
 		}
 		else
