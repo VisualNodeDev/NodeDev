@@ -76,19 +76,6 @@
 
 	public void Run()
 	{
-		foreach(var nodeClass in Project.Classes)
-		{
-			foreach(var method in nodeClass.Methods)
-			{
-				if(method.Name == "Main")
-				{
-					using var executor = new NodeDev.Core.GraphExecutor(method.Graph, null);
-
-					executor.Execute(null, new object[1], new object[1]);
-
-					return;
-				}
-			}
-		}
+		Project.Run(new object?[1]);
 	}
 }
