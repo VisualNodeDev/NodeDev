@@ -24,6 +24,17 @@ public class NodeClassTypeCreator
 			else
 				GeneratedTypes[project.GetNodeClassType(nodeClass)] = typeBuilder = mb.DefineType(nodeClass.Name, TypeAttributes.Public);
 
+			// Define a default constructor that supplies a default value
+			// for the private field. For parameter types, pass the empty
+			// array of types or pass null.
+			ConstructorBuilder ctor0 = typeBuilder.DefineConstructor(
+				MethodAttributes.Public,
+				CallingConventions.Standard,
+				Type.EmptyTypes);
+
+			ILGenerator ctor0IL = ctor0.GetILGenerator();
+			ctor0IL.Emit(OpCodes.Ret);
+
 			foreach (var property in nodeClass.Properties)
 			{
 

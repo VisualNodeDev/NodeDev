@@ -85,7 +85,7 @@ namespace NodeDev.Core
 			else if(startConnection?.Type is NodeClassType nodeClassType) 
 			{
 				// get the properties in that object
-				results = results.Concat(nodeClassType.NodeClass.Properties.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), new NodeClassPropertyMemberInfo(x))));
+				results = results.Concat(nodeClassType.NodeClass.Properties.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x)));
 
 				results = results.Concat(nodeClassType.NodeClass.Methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
 			}

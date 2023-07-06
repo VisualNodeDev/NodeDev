@@ -64,9 +64,9 @@ namespace NodeDev.Core.Nodes
 				throw new InvalidOperationException("Output type is not defined");
 
 			if (Outputs[1].Type is RealType realType)
-				outputs[1] = Activator.CreateInstance(realType.BackendType, inputs.ToArray());
+				outputs[1] = Activator.CreateInstance(realType.BackendType, inputs[1..].ToArray());
 			else if (Outputs[1].Type is NodeClassType nodeClassType)
-				outputs[1] = Activator.CreateInstance(Graph.SelfClass.Project.GetCreatedClassType(nodeClassType.NodeClass), inputs.ToArray());
+				outputs[1] = Activator.CreateInstance(Graph.SelfClass.Project.GetCreatedClassType(nodeClassType.NodeClass), inputs[1..].ToArray());
 			else
 				throw new Exception("Unknown type:" + Outputs[1].Name);
 		}

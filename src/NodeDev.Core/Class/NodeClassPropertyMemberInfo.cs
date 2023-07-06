@@ -12,21 +12,3 @@ public interface IMemberInfo
 
 	public bool IsStatic { get; }
 }
-
-internal class NodeClassPropertyMemberInfo : IMemberInfo
-{
-	private NodeClassProperty Property;
-
-	public NodeClassPropertyMemberInfo(NodeClassProperty property)
-	{
-		Property = property;
-	}
-
-	public TypeBase DeclaringType => Property.Class.TypeFactory.Get(Property.Class);
-
-	public string Name => Property.Name;
-
-	public TypeBase MemberType => Property.PropertyType;
-
-	public bool IsStatic => false;
-}

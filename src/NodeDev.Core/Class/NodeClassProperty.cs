@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Class
 {
-	public class NodeClassProperty
+	public class NodeClassProperty: IMemberInfo
 	{
 		private record class SerializedNodeClassProperty(string Name, string TypeFullName, string Type);
 		public NodeClassProperty(NodeClass ownerClass, string name, TypeBase propertyType)
@@ -25,6 +25,12 @@ namespace NodeDev.Core.Class
 		public TypeBase PropertyType { get; }
 
 		public List<NodeClassMethodParameter> Parameters { get; } = new();
+
+		public TypeBase DeclaringType => Class.ClassTypeBase;
+
+		public TypeBase MemberType => PropertyType;
+
+		public bool IsStatic => false;
 
 		public void Rename(string newName)
 		{

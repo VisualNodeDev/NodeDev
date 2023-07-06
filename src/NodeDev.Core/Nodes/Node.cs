@@ -37,7 +37,9 @@ namespace NodeDev.Core.Nodes
 
         public abstract bool IsFlowNode { get; }
 
-        public TypeFactory TypeFactory => Graph.SelfClass.Project.TypeFactory;
+        public TypeFactory TypeFactory => Project.TypeFactory;
+
+        public Project Project => Graph.SelfClass.Project;
 
         public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
         public virtual IEnumerable<AlternateOverload> AlternatesOverloads => Enumerable.Empty<AlternateOverload>();

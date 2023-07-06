@@ -16,6 +16,8 @@ namespace NodeDev.Core.Class
 
 		public TypeFactory TypeFactory => Project.TypeFactory;
 
+		public TypeBase ClassTypeBase => TypeFactory.Get(this);
+
 		public string Name { get; set; }
 
 		public string Namespace { get; set; }

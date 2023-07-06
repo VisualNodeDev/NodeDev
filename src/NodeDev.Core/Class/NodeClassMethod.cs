@@ -62,6 +62,8 @@ namespace NodeDev.Core.Class
 			Name = name;
 			ReturnType = returnType;
 			Graph = graph;
+
+			Graph.SelfMethod = this;
 		}
 
 

@@ -37,7 +37,7 @@ namespace NodeDev.Core.Nodes
 			}
 		}
 
-		internal void SetMemberTarget(Class.IMemberInfo memberInfo)
+		public void SetMemberTarget(IMemberInfo memberInfo)
 		{
 			TargetMember = memberInfo;
 			Decorations[typeof(GetPropertyOrFieldDecoration)] = new GetPropertyOrFieldDecoration(TargetMember);
@@ -47,7 +47,7 @@ namespace NodeDev.Core.Nodes
 			bool isStatic = TargetMember.IsStatic;
 
 			if (!isStatic)
-				Inputs.Add(new("Target", this, TargetMember.DeclaringType));
+				Inputs.Insert(0, new("Target", this, TargetMember.DeclaringType));
 
 			Inputs.Add(new Connection("Value", this, TargetMember.MemberType));
 			Outputs.Add(new Connection("Value", this, TargetMember.MemberType));
@@ -56,9 +56,6 @@ namespace NodeDev.Core.Nodes
 
 		protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
 		{
-			if(self == null)
-				throw new ArgumentNullException(nameof(self));
-
 			if (TargetMember == null)
 				throw new Exception("Target method is not set");
 
@@ -71,7 +68,7 @@ namespace NodeDev.Core.Nodes
 					if (field.IsStatic)
 						field.SetValue(null, value = inputs[1]);
 					else
-						field.SetValue(inputs[1], value = inputs[2]);
+						field.SetValue(inputs[0] ?? self, value = inputs[2]);
 
 					outputs[1] = value;
 
@@ -81,19 +78,29 @@ namespace NodeDev.Core.Nodes
 				{
 					var property = (PropertyInfo)TargetMember;
 					object? value;
-					if (property.GetMethod!.IsStatic)
+					if (property.SetMethod!.IsStatic)
 						property.SetValue(null, value = inputs[1]);
 					else
-						property.SetValue(inputs[1], value = inputs[2]);
+						property.SetValue(inputs[0] ?? self, value = inputs[2]);
 					outputs[1] = value;
 					return;
 				}
 			}
-			else if(TargetMember is NodeClassPropertyMemberInfo)
+			else if(TargetMember is NodeClassProperty)
 			{
-				var property = self.GetType().GetProperty(TargetMember.Name, BindingFlags.Public | BindingFlags.Instance) ?? throw new Exception("unable to get property: " + TargetMember.Name);
-				property.SetValue(self, inputs[1]);
-				outputs[1] = inputs[1];
+				Type t;
+				if (Inputs[0].Type is RealType r)
+					t = r.BackendType;
+				else
+					t = Project.GetCreatedClassType(((NodeClassType)Inputs[0].Type).NodeClass);
+
+				var property = t.GetProperty(TargetMember.Name, BindingFlags.Public | BindingFlags.Instance) ?? throw new Exception("unable to get property: " + TargetMember.Name);
+				object? value;
+				if (property.SetMethod!.IsStatic)
+					property.SetValue(null, value = inputs[1]);
+				else
+					property.SetValue(inputs[0] ?? self, value = inputs[2]);
+				outputs[1] = value;
 			}
 		}
 

@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Class;
+using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
 using System;
@@ -73,7 +74,7 @@ namespace NodeDev.Core.Nodes
 				else if (type is NodeClassType nodeClassType)
 				{
 					var property = nodeClassType.NodeClass.Properties.FirstOrDefault(x => x.Name == info.Name) ?? throw new Exception("Unable to find property: " + info.Name);
-					return new GetPropertyOrFieldDecoration(new Class.NodeClassPropertyMemberInfo(property));
+					return new GetPropertyOrFieldDecoration(property);
 				}
 				else
 					throw new Exception("Unknown type in GetPropertyOrFieldDecoration: " + type.Name);
@@ -102,7 +103,7 @@ namespace NodeDev.Core.Nodes
 			}
 		}
 
-		internal void SetMemberTarget(Class.IMemberInfo memberInfo)
+		public void SetMemberTarget(Class.IMemberInfo memberInfo)
 		{
 			TargetMember = memberInfo;
 			Decorations[typeof(GetPropertyOrFieldDecoration)] = new GetPropertyOrFieldDecoration(TargetMember);
@@ -120,9 +121,6 @@ namespace NodeDev.Core.Nodes
 
 		protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)
 		{
-			if (self == null)
-				throw new ArgumentNullException(nameof(self));
-
 			if (TargetMember == null)
 				throw new Exception("Target method is not set");
 
@@ -133,7 +131,7 @@ namespace NodeDev.Core.Nodes
 					var field = (FieldInfo)realMemberInfo.MemberInfo;
 					object? target = field.IsStatic ? null : inputs[0];
 					var result = field.GetValue(target);
-					outputs[1] = result;
+					outputs[0] = result;
 					return;
 				}
 				else if (realMemberInfo.MemberInfo.MemberType == MemberTypes.Property)
@@ -141,15 +139,21 @@ namespace NodeDev.Core.Nodes
 					var property = (PropertyInfo)realMemberInfo.MemberInfo;
 					object? target = property.GetMethod!.IsStatic ? null : inputs[0];
 					var result = property.GetValue(target);
-					outputs[1] = result;
+					outputs[0] = result;
 					return;
 				}
 			}
 			else
 			{
-				var property = self.GetType().GetProperty(TargetMember.Name, BindingFlags.Public | BindingFlags.Instance) ?? throw new Exception("unable to get property: " + TargetMember.Name);
-				var result = property.GetValue(self);
-				outputs[1] = result;
+				Type t;
+				if (Inputs[0].Type is RealType r)
+					t = r.BackendType;
+				else
+					t = Project.GetCreatedClassType(((NodeClassType)Inputs[0].Type).NodeClass);
+
+				var property = t.GetProperty(TargetMember.Name, BindingFlags.Public | BindingFlags.Instance) ?? throw new Exception("unable to get property: " + TargetMember.Name);
+				var result = property.GetValue(inputs[0] ?? self);
+				outputs[0] = result;
 			}
 		}
 	}

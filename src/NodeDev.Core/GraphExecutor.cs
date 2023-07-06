@@ -30,7 +30,7 @@ namespace NodeDev.Core
 				Root = this;
 			}
 			else
-				Root = root;
+				Root = root; 
 
 			if (Root.ExecutorStack == null)
 				throw new Exception("Root should have an executor stack");
