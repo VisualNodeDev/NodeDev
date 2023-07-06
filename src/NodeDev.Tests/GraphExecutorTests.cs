@@ -134,9 +134,9 @@ public class GraphExecutorTests
 
 		var outputs = graph.SelfClass.Project.Run(new object?[] { null, 1.5f, 2f });
 
-		Assert.Equal(0, outputs[1]);
+		Assert.Equal(0, outputs);
 
 		outputs = graph.SelfClass.Project.Run(new object?[] { null, -1.5f, -2f });
-		Assert.Equal(1, outputs[1]);
+		Assert.Equal(1, outputs);
 	}
 }
