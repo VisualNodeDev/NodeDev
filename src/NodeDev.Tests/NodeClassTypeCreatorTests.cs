@@ -35,7 +35,6 @@ public class NodeClassTypeCreatorTests
 		var graph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
 
 		Assert.Equal(graph.SelfClass, graph.SelfClass.Project.Classes.First());
-
 	}
 
 }

@@ -42,7 +42,7 @@ public class Project
 		return project;
 	}
 
-	public object?[] Run(object?[] inputs)
+	public object? Run(object?[] inputs)
 	{
 		NodeClassTypeCreator = new();
 		NodeClassTypeCreator.CreateProjectClassesAndAssembly(this);
@@ -52,13 +52,13 @@ public class Project
 		var main = program.Methods.Single(x => x.Name == "Main");
 		var executor = new GraphExecutor(main.Graph, null);
 
-		var outputs = new object[main.ReturnType == TypeFactory.Get(typeof(void)) ? 0 : 1];
+		var outputs = new object[main.ReturnType == TypeFactory.Get(typeof(void)) ? 1 : 2]; // 1 for the exec, 2 for exec + the actual return value
 		executor.Execute(null, inputs, outputs);
 
 		NodeClassTypeCreator = null;
 		GC.Collect();
 
-		return outputs;
+		return outputs[^1];
 	}
 
 	public Type GetCreatedClassType(NodeClass nodeClass)
