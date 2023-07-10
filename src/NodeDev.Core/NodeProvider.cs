@@ -82,7 +82,7 @@ namespace NodeDev.Core
 
 				results = results.Concat(GetPropertiesAndFields(realType.BackendType, text));
 			}
-			else if(startConnection?.Type is NodeClassType nodeClassType) 
+			else if (startConnection?.Type is NodeClassType nodeClassType)
 			{
 				// get the properties in that object
 				results = results.Concat(nodeClassType.NodeClass.Properties.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x)));
@@ -90,10 +90,20 @@ namespace NodeDev.Core
 				results = results.Concat(nodeClassType.NodeClass.Methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
 			}
 
-			results = results.Concat(project.Classes.SelectMany( nodeClass => nodeClass.Methods.Where( x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase)).Select(x => new MethodCallNode(typeof(MethodCall), x)))).DistinctBy(result =>
+			// add methods, get properties and set properties
+			results = results.Concat(project.Classes.SelectMany(nodeClass => nodeClass.Methods.Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase)).Select(x => new MethodCallNode(typeof(MethodCall), x))));
+			results = results.Concat(project.Classes.SelectMany(nodeClass => nodeClass.Properties.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x))));
+			results = results.Concat(project.Classes.SelectMany(nodeClass => nodeClass.Properties.Select(x => new SetPropertyOrFieldNode(typeof(SetPropertyOrField), x))));
+
+			// remove any duplicates that may have introduced itself
+			results = results.DistinctBy(result =>
 			{
 				if (result is MethodCallNode methodCallNode)
 					return (object)methodCallNode.MethodInfo;
+				//if (result is GetPropertyOrFieldNode propertyOrFieldNode)
+				//	return (object)propertyOrFieldNode.MemberInfo;
+				//if (result is SetPropertyOrFieldNode getPropertyOrFieldNode)
+				//	return (object)getPropertyOrFieldNode.MemberInfo;
 				return (object)result;
 			});
 
