@@ -21,7 +21,7 @@ namespace NodeDev.Core.Nodes
 
         public string Id { get; }
 
-        public string Name { get; set; } = "";
+        public virtual string Name { get; set; } = "";
 
         public Graph Graph { get; }
 
