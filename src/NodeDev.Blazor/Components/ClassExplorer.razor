@@ -1,47 +1,58 @@
 ﻿<MudStack Row="false" Class="wh100">
 	<MudText>@Class.Name</MudText>
 
-	<MudMenu ActivationEvent="@MouseEvent.RightClick" PositionAtCursor="true" Class="flex-1 w100" AnchorOrigin="Origin.CenterRight" TransformOrigin="Origin.TopLeft" Dense="true">
-		<ActivatorContent>
-			<MudTreeView T="TreeItem" Items="Items" SelectedValueChanged="OnSelectedItemChanged" Dense="true">
-				<ItemTemplate>
-					@if (context == CurrentlyEditingItem)
-					{
-						<MudTextField T="string" @bind-Value="Text" Variant="Variant.Text" OnKeyUp="OnEditTextKeyUp" AutoFocus="true"></MudTextField>
-					}
-					else if (context.Type == TreeItemType.MethodsFolder || context.Type == TreeItemType.PropertiesFolder)
-					{
-						<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
-					}
-					else if (context.Type == TreeItemType.Method || context.Type == TreeItemType.Property)
-					{
-						<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption" />
-					}
-				</ItemTemplate>
-			</MudTreeView>
-		</ActivatorContent>
-		<ChildContent>
-			@if (SelectedTreeItem != null)
+	<MudTreeView T="TreeItem" Items="Items" SelectedValueChanged="OnSelectedItemChanged" Dense="true" Class="w100">
+		<ItemTemplate>
+			@if (context == CurrentlyEditingItem)
 			{
-				if (SelectedTreeItem.Type == TreeItemType.MethodsFolder)
-				{
-					<MudMenuItem OnClick="ShowAddMethodMenu">Create new method</MudMenuItem>
-				}
-				else if (SelectedTreeItem.Type == TreeItemType.Method)
-				{
-					<MudMenuItem OnClick="ShowRenameMenu">Rename method</MudMenuItem>
-				}
-				else if (SelectedTreeItem.Type == TreeItemType.PropertiesFolder)
-				{
-					<MudMenuItem OnClick="ShowNewProperty">Create new property</MudMenuItem>
-				}
-				else
-				{
-					<MudMenuItem>Edit method (TODO)</MudMenuItem>
-				}
+				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption">
+					<BodyContent Context="Item">
+						<MudTextField T="string" @bind-Value="Text" Variant="Variant.Text" OnKeyUp="OnEditTextKeyUp" AutoFocus="true"></MudTextField>
+					</BodyContent>
+				</MudTreeViewItem>
 			}
-		</ChildContent>
-	</MudMenu>
+			else if (context.Type == TreeItemType.MethodsFolder || context.Type == TreeItemType.PropertiesFolder)
+			{
+				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption">
+					<BodyContent Context="Item">
+						<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item" @onmouseout="() => Hovered = null">
+							<MudText Style="justify-self: start;">@Item.Text</MudText>
+							<div style="@($"justify-self: end; visibility: {(Hovered == Item ? "visible" : "hidden")}")">
+								<MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="context.Type == TreeItemType.MethodsFolder ? ShowAddMethodMenu : ShowNewProperty" />
+							</div>
+						</div>
+					</BodyContent>
+				</MudTreeViewItem>
+			}
+			else if (context.Type == TreeItemType.Method)
+			{
+				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption">
+					<BodyContent Context="Item">
+						<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item" @onmouseout="() => Hovered = null">
+							<MudText Style="justify-self: start;">@Item.Text</MudText>
+							<div style="@($"justify-self: end; visibility: {(Hovered == Item ? "visible" : "hidden")}")">
+								<MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value)" />
+							</div>
+						</div>
+					</BodyContent>
+				</MudTreeViewItem>
+			}
+			else if (context.Type == TreeItemType.Property && context.Property != null)
+			{
+				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption">
+					<BodyContent Context="Item">
+						<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item" @onmouseout="() => Hovered = null">
+							<MudText Style="justify-self: start;">@Item.Value.Property!.PropertyType.FriendlyName @Item.Text</MudText>
+							<div style="@($"justify-self: end; visibility: {(Hovered == Item ? "visible" : "hidden")}")">
+								<MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value)" />
+								<MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" Color="Color.Inherit" />
+							</div>
+						</div>
+					</BodyContent>
+				</MudTreeViewItem>
+			}
+		</ItemTemplate>
+	</MudTreeView>
 </MudStack>
 
 @code {
@@ -71,6 +82,8 @@
 	private TreeItem? SelectedTreeItem;
 
 	private HashSet<TreeItem> Items { get; } = new();
+
+	private MudTreeViewItem<TreeItem>? Hovered = null;
 
 	private TreeItem? CurrentlyEditingItem = null;
 	private string? Text = null;
@@ -131,12 +144,12 @@
 		Items.First(x => x.Type == TreeItemType.PropertiesFolder).Children.Add(CurrentlyEditingItem);
 	}
 
-	private void ShowRenameMenu()
+	private void ShowRenameMenu(TreeItem item)
 	{
-		if (SelectedTreeItem == null)
+		if (item == null)
 			return;
 
-		CurrentlyEditingItem = SelectedTreeItem;
+		CurrentlyEditingItem = item;
 		IsNew = false;
 		Text = CurrentlyEditingItem.Name;
 	}
@@ -178,7 +191,11 @@
 			CurrentlyEditingItem.Method.Rename(Text);
 			CurrentlyEditingItem.Name = Text;
 		}
-
+		else if(CurrentlyEditingItem.Property != null)
+		{
+			CurrentlyEditingItem.Property.Rename(Text);
+			CurrentlyEditingItem.Name = Text;
+		}
 
 		CurrentlyEditingItem = null;
 		Text = null;
