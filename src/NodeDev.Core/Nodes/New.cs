@@ -12,10 +12,14 @@ namespace NodeDev.Core.Nodes
 {
 	public class New : NormalFlowNode
 	{
+		public override string Name
+		{
+			get => Outputs[1].Type.HasUndefinedGenerics ? "New ?" : $"New {Outputs[1].Type.FriendlyName}";
+			set { }
+		}
+
 		public New(Graph graph, string? id = null) : base(graph, id)
 		{
-			Name = "New";
-
 			var t1 = TypeFactory.CreateUndefinedGenericType("T1");
 			Outputs.Add(new("Obj", this, t1));
 		}
@@ -45,7 +49,6 @@ namespace NodeDev.Core.Nodes
 
 			Inputs.AddRange(constructor.Parameters.Select(x => new Connection(x.Name ?? "??", this, x.ParameterType)));
 
-			Name = $"New {Outputs[1].Type.FriendlyName}";
 			return new();
 		}
 

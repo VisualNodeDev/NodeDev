@@ -50,6 +50,12 @@ public class MethodCall : NormalFlowNode
 
 	internal IMethodInfo? TargetMethod;
 
+	public override string Name
+	{
+		get => TargetMethod == null ? "Get" : TargetMethod.DeclaringType.FriendlyName + "." + TargetMethod.Name;
+		set { }
+	}
+
 	public override IEnumerable<AlternateOverload> AlternatesOverloads
 	{
 		get
@@ -73,10 +79,7 @@ public class MethodCall : NormalFlowNode
 		base.Deserialize(serializedNodeObj);
 
 		if (Decorations.TryGetValue(typeof(TargetMethodDecoration), out var targetMethod))
-		{
 			TargetMethod = ((TargetMethodDecoration)targetMethod).TargetMethod;
-			Name = TargetMethod.DeclaringType.FriendlyName + "." + TargetMethod.Name;
-		}
 	}
 
 	public override void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
@@ -114,8 +117,6 @@ public class MethodCall : NormalFlowNode
 	{
 		TargetMethod = methodInfo;
 		Decorations[typeof(TargetMethodDecoration)] = new TargetMethodDecoration(methodInfo);
-
-		Name = TargetMethod.DeclaringType.FriendlyName + "." + TargetMethod.Name;
 
 		if (!TargetMethod.IsStatic)
 			Inputs.Insert(0, new("Target", this, TargetMethod.DeclaringType)); // the target is put first for later optimisation as it's not really an input to the method

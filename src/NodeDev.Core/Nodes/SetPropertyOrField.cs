@@ -20,10 +20,14 @@ namespace NodeDev.Core.Nodes
 
 		internal Class.IMemberInfo? TargetMember;
 
+		public override string Name
+		{
+			get => TargetMember == null ? "Get" : TargetMember.DeclaringType.FriendlyName + "." + TargetMember.Name;
+			set { }
+		}
 
 		public SetPropertyOrField(Graph graph, string? id = null) : base(graph, id)
 		{
-			Name = "Get";
 		}
 
 		protected override void Deserialize(SerializedNode serializedNodeObj)
@@ -33,7 +37,6 @@ namespace NodeDev.Core.Nodes
 			if (Decorations.TryGetValue(typeof(GetPropertyOrFieldDecoration), out var decoration))
 			{
 				TargetMember = ((GetPropertyOrFieldDecoration)decoration).TargetPropertyOrField;
-				Name = TargetMember.DeclaringType.FriendlyName + "." + TargetMember.Name;
 			}
 		}
 
@@ -41,8 +44,6 @@ namespace NodeDev.Core.Nodes
 		{
 			TargetMember = memberInfo;
 			Decorations[typeof(GetPropertyOrFieldDecoration)] = new GetPropertyOrFieldDecoration(TargetMember);
-
-			Name = TargetMember.DeclaringType.FriendlyName + "." + TargetMember.Name;
 
 			bool isStatic = TargetMember.IsStatic;
 
