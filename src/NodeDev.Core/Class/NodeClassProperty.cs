@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Class
 {
-	public class NodeClassProperty: IMemberInfo
+	public class NodeClassProperty : IMemberInfo
 	{
 		private record class SerializedNodeClassProperty(string Name, string TypeFullName, string Type);
 		public NodeClassProperty(NodeClass ownerClass, string name, TypeBase propertyType)
@@ -17,12 +17,11 @@ namespace NodeDev.Core.Class
 			PropertyType = propertyType;
 		}
 
-
 		public NodeClass Class { get; }
 
 		public string Name { get; private set; }
 
-		public TypeBase PropertyType { get; }
+		public TypeBase PropertyType { get; private set; }
 
 		public List<NodeClassMethodParameter> Parameters { get; } = new();
 
@@ -38,6 +37,29 @@ namespace NodeDev.Core.Class
 				return;
 
 			Name = newName;
+			UpdateGraphUsingProperty();
+		}
+
+		public void ChangeType(TypeBase type)
+		{
+			PropertyType = type;
+
+			UpdateGraphUsingProperty();
+		}
+
+		private void UpdateGraphUsingProperty()
+		{
+			foreach (var nodeClass in Class.Project.Classes)
+			{
+				foreach (var method in nodeClass.Methods)
+				{
+					var hasAnyGetProperty = method.Graph.Nodes.Values.OfType<Nodes.GetPropertyOrField>().Any();
+					var hasAnySetProperty = method.Graph.Nodes.Values.OfType<Nodes.SetPropertyOrField>().Any();
+
+					if (hasAnySetProperty || hasAnyGetProperty)
+						Class.Project.GraphChangedSubject.OnNext(method.Graph);
+				}
+			}
 		}
 
 		#region Serialization

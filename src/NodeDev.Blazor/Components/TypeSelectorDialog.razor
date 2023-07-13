@@ -1,0 +1,17 @@
+﻿<MudDialog>
+    <DialogContent>
+        <TypeSelector TypeFactory="TypeFactory" OnTypeSelected="MudDialog.Close<Type>" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] 
+    public MudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public NodeDev.Core.Types.TypeFactory TypeFactory { get; set; } = null!;
+
+    void Cancel() => MudDialog.Cancel();
+}

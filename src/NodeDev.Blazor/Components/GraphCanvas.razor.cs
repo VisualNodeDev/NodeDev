@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Reactive.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -55,7 +56,23 @@ namespace NodeDev.Blazor.Components
 
 				await Task.Delay(100);
 				await Graph.Invoke(InitializeCanvasWithGraphNodes);
+
+				GraphChangedSubscription = Graph.SelfClass.Project.GraphChanged.Where(x => x == Graph).AcceptThenSample(TimeSpan.FromMilliseconds(250)).Subscribe(OnGraphChangedFromCore);
 			}
+		}
+
+		#endregion
+
+		#region OnGraphChangedFromCore
+
+		private void OnGraphChangedFromCore(Graph _)
+		{
+			InvokeAsync(() =>
+			{
+				UpdateNodes(Graph.Nodes.Values); // update all the nodes
+
+				StateHasChanged();
+			});
 		}
 
 		#endregion
@@ -489,10 +506,14 @@ namespace NodeDev.Blazor.Components
 
 		#region Dispose
 
+		private IDisposable? GraphChangedSubscription;
 		public void Dispose()
 		{
 			Ref?.Dispose();
 			Ref = null!;
+
+			GraphChangedSubscription?.Dispose();
+			GraphChangedSubscription = null;
 		}
 
 		#endregion

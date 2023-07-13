@@ -10,7 +10,7 @@
 	@if (IsShowingGenericTypeSelection)
 	{
 		<div @onclick="CancelPopup" style="background-color: var(--mud-palette-overlay-dark); width: 100%; height: 100%; position: absolute; z-index: 1">
-			<NodeDev.Blazor.Components.TypeSelector PositionX="PopupX" PositionY="PopupY" GraphCanvas="this" OnTypeSelected="OnGenericTypeSelected" />
+			<NodeDev.Blazor.Components.TypeSelector PositionX="PopupX" PositionY="PopupY" TypeFactory="Graph.SelfClass.TypeFactory" OnTypeSelected="OnGenericTypeSelected" />
 		</div>
 	}
 	@if (IsShowingOverloadSelection && PopupNode != null)
