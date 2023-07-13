@@ -88,6 +88,8 @@ namespace NodeDev.Core.Class
 				return;
 
 			Name = newName;
+
+			Class.Project.GraphChangedSubject.OnNext(Graph);
 		}
 
 		public IEnumerable<IMethodParameterInfo> GetParameters()
