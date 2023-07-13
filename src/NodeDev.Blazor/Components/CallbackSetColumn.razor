@@ -1,0 +1,14 @@
+﻿@typeparam T
+@typeparam TProperty
+@inherits PropertyColumn<T, TProperty>
+
+@code {
+
+    [Parameter] 
+    public Action<T, TProperty> SetCallback { get; set; }
+
+    protected override void SetProperty(object item, object value)
+    {
+        SetCallback((T)item, (TProperty)Convert.ChangeType(value, typeof(TProperty)));
+    }
+}

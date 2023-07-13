@@ -1,4 +1,5 @@
 ﻿using NodeDev.Core.Class;
+using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using NodeDev.Core.Types;
 using System.Reactive;
@@ -31,6 +32,11 @@ public class Project
 	{
 		Id = id;
 		TypeFactory = new TypeFactory(this);
+	}
+
+	public IEnumerable<T> GetNodes<T>() where T : Node
+	{
+		return Classes.SelectMany(x => x.Methods).SelectMany(x => x.Graph.Nodes.Values).OfType<T>();
 	}
 
 	public static Project CreateNewDefaultProject()

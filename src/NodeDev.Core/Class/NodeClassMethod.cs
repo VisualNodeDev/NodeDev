@@ -1,4 +1,6 @@
-﻿using NodeDev.Core.Types;
+﻿using NodeDev.Core.Nodes;
+using NodeDev.Core.Nodes.Flow;
+using NodeDev.Core.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,8 +10,8 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Class
 {
-    public class NodeClassMethod: IMethodInfo
-    {
+	public class NodeClassMethod : IMethodInfo
+	{
 
 		public class RealMethodInfo : IMethodInfo
 		{
@@ -67,15 +69,15 @@ namespace NodeDev.Core.Class
 		}
 
 
-        public NodeClass Class { get; }
+		public NodeClass Class { get; }
 
-        public string Name { get; private set; }
+		public string Name { get; private set; }
 
-        public TypeBase ReturnType { get; }
+		public TypeBase ReturnType { get; }
 
-        public List<NodeClassMethodParameter> Parameters { get; } = new();
+		public List<NodeClassMethodParameter> Parameters { get; } = new();
 
-        public Graph Graph { get; }
+		public Graph Graph { get; }
 
 		public bool IsStatic => false;
 
@@ -84,12 +86,34 @@ namespace NodeDev.Core.Class
 
 		public void Rename(string newName)
 		{
-			if(string.IsNullOrWhiteSpace(newName)) 
+			if (string.IsNullOrWhiteSpace(newName))
 				return;
 
 			Name = newName;
 
 			Class.Project.GraphChangedSubject.OnNext(Graph);
+		}
+
+		public void AddDefaultParameter()
+		{
+			var newParameter = new NodeClassMethodParameter("NewParameter", Class.TypeFactory.Get<int>(), this);
+			Parameters.Add(newParameter);
+
+			foreach (var methodCall in Class.Project.GetNodes<MethodCall>())
+			{
+				if (methodCall.TargetMethod == this)
+				{
+					methodCall.OnNewMethodParameter(newParameter);
+					Class.Project.GraphChangedSubject.OnNext(methodCall.Graph);
+				}
+			}
+
+			var entry = Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
+			if(entry != null)
+			{
+				entry.AddNewParameter(newParameter);
+				Class.Project.GraphChangedSubject.OnNext(Graph);
+			}
 		}
 
 		public IEnumerable<IMethodParameterInfo> GetParameters()
@@ -101,21 +125,21 @@ namespace NodeDev.Core.Class
 
 		private SerializedNodeClassMethod? SavedDataDuringDeserializationStep1 { get; set; }
 		public static NodeClassMethod Deserialize(NodeClass owner, string serialized)
-        {
-            var serializedNodeClassMethod = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethod>(serialized) ?? throw new Exception("Unable to deserialize node class method");
+		{
+			var serializedNodeClassMethod = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethod>(serialized) ?? throw new Exception("Unable to deserialize node class method");
 
-            var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassMethod.ReturnTypeFullName, serializedNodeClassMethod.ReturnType);
+			var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassMethod.ReturnTypeFullName, serializedNodeClassMethod.ReturnType);
 			var graph = new Graph();
 			var nodeClassMethod = new NodeClassMethod(owner, serializedNodeClassMethod.Name, returnType, graph);
 			graph.SelfMethod = nodeClassMethod; // a bit / really ugly
 
 			foreach (var parameter in serializedNodeClassMethod.Parameters)
-				nodeClassMethod.Parameters.Add(NodeClassMethodParameter.Deserialize(owner.Project.TypeFactory, parameter));
+				nodeClassMethod.Parameters.Add(NodeClassMethodParameter.Deserialize(owner.Project.TypeFactory, parameter, nodeClassMethod));
 
 			nodeClassMethod.SavedDataDuringDeserializationStep1 = serializedNodeClassMethod;
 
 			return nodeClassMethod;
-        }
+		}
 
 		public void Deserialize_Step3()
 		{
@@ -128,7 +152,7 @@ namespace NodeDev.Core.Class
 		}
 
 		public string Serialize()
-        {
+		{
 			var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.GetType().FullName!, ReturnType.FullName, Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize());
 			return System.Text.Json.JsonSerializer.Serialize(serializedNodeClassMethod);
 		}

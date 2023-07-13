@@ -1,0 +1,79 @@
+﻿@inject IDialogService DialogService
+
+<MudDialog>
+	<DialogContent>
+		<div style="height: 50vh; width: 100%; display: flex; flex-direction: column">
+			<MudText Typo="Typo.h2">@Method.Name</MudText>
+			<MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Method.AddDefaultParameter" Class="px-8">Add parameter</MudButton>
+
+			<MudDataGrid Items="Method.Parameters" EditMode="DataGridEditMode.Cell" ReadOnly="false" Class="w100 flex-1">
+				<Columns>
+					<TemplateColumn Title="Type" IsEditable="false">
+						<CellTemplate>
+							<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%">
+								<MudText>@context.Item.ParameterType.FriendlyName</MudText>
+								<div style="justify-self: end;">
+									<MudIconButton Icon="@Icons.Material.Filled.Edit" OnClick="() => ShowParameterTypeEdit(context.Item)"></MudIconButton>
+								</div>
+							</div>
+						</CellTemplate>
+					</TemplateColumn>
+
+					<CallbackSetColumn Property="x => x.Name" SetCallback="(x, name) => x.Rename(name)" IsEditable="true" />
+
+					<TemplateColumn IsEditable="false">
+
+						<CellTemplate>
+
+							<div style="display: flex; flex-direction: row">
+								<MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" OnClick="context.Item.MoveUp" Disabled="Method.Parameters.FirstOrDefault() == context.Item"></MudIconButton>
+								<MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" OnClick="context.Item.MoveDown" Disabled="Method.Parameters.LastOrDefault() == context.Item"></MudIconButton>
+								<MudIconButton Icon="@Icons.Material.Filled.Delete" OnClick="context.Item.Remove"></MudIconButton>
+							</div>
+
+						</CellTemplate>
+
+					</TemplateColumn>
+				</Columns>
+			</MudDataGrid>
+		</div>
+
+	</DialogContent>
+	<DialogActions>
+		<MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Close</MudButton>
+	</DialogActions>
+</MudDialog>
+
+
+@code {
+	[CascadingParameter]
+	MudDialogInstance MudDialog { get; set; } = null!;
+
+	[Parameter]
+	public NodeDev.Core.Class.NodeClassMethod Method { get; set; } = null!;
+
+	void Submit() => MudDialog.Close(DialogResult.Ok(true));
+
+
+	private async Task ShowParameterTypeEdit(NodeDev.Core.Class.NodeClassMethodParameter parameter)
+	{
+		var result = await DialogService.Show<TypeSelectorDialog>("", new()
+			{
+				[nameof(TypeSelectorDialog.TypeFactory)] = Method.Class.TypeFactory
+			}, new DialogOptions()
+			{
+				FullScreen = true,
+				FullWidth = true
+			}).Result;
+
+		NodeDev.Core.Types.TypeBase typeBase;
+		if (result.Data is Type type)
+			typeBase = Method.Class.TypeFactory.Get(type);
+		else if (result.Data is NodeDev.Core.Types.TypeBase t)
+			typeBase = t;
+		else
+			return;
+
+		parameter.ChangeType(typeBase);
+	}
+}

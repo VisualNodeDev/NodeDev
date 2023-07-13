@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -38,8 +39,8 @@ public class MethodCall : NormalFlowNode
 			var parameterTypes = info.ParamTypes.Select(x => TypeBase.Deserialize(typeFactory, x.Type, x.SerializedType));
 			var method = type.GetMethods().FirstOrDefault(x => x.Name == info.Name && parameterTypes.SequenceEqual(x.GetParameters().Select(x => x.ParameterType)));
 
-			if(method == null)
-				throw new Exception("Unable to find method:" +  info.Name);
+			if (method == null)
+				throw new Exception("Unable to find method:" + info.Name);
 
 			return new TargetMethodDecoration(method);
 		}
@@ -122,12 +123,77 @@ public class MethodCall : NormalFlowNode
 			Inputs.Insert(0, new("Target", this, TargetMethod.DeclaringType)); // the target is put first for later optimisation as it's not really an input to the method
 
 		// update the inputs
-		Inputs.AddRange(TargetMethod.GetParameters().Select(x => new Connection(x.Name!, this, x.ParameterType)));
+		Inputs.AddRange(TargetMethod.GetParameters().Select(x => new Connection(x.Name, this, x.ParameterType)));
 
 		if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void)))
 			Outputs.Add(new Connection("Result", this, TargetMethod.ReturnType));
 	}
 
+	#region Method parameter changes from UI
+
+	internal void RemoveParameterAt(int index)
+	{
+		if (TargetMethod == null)
+			throw new Exception("TargetMethod cannot be null here");
+
+		var inputsStart = !TargetMethod.IsStatic ? 2 : 1; // exec + target : exec
+
+		var connection = Inputs[inputsStart + index];
+		foreach (var other in connection.Connections)
+			Graph.Disconnect(connection, other);
+
+		Inputs.RemoveAt(inputsStart + index);
+	}
+
+	internal void SwapParameter(int index1, int index2)
+	{
+		if (TargetMethod == null)
+			throw new Exception("TargetMethod cannot be null here");
+
+		var inputsStart = !TargetMethod.IsStatic ? 2 : 1; // exec + target : exec
+
+		var a = Inputs[index1 + inputsStart];
+		Inputs[index1 + inputsStart] = Inputs[index2 + inputsStart];
+		Inputs[index2 + inputsStart] = a;
+	}
+
+	internal void OnMethodParameterRenamed(NodeClassMethodParameter parameter)
+	{
+		if (TargetMethod == null)
+			throw new Exception("TargetMethod cannot be null here");
+
+		var inputsStart = !TargetMethod.IsStatic ? 2 : 1; // exec + target : exec
+
+		var index = TargetMethod.GetParameters().ToList().IndexOf(parameter);
+		if (index == -1)
+			throw new Exception("Unable to find parameter: " + parameter.Name);
+
+		Inputs[index + inputsStart].Name = parameter.Name;
+	}
+
+	internal void OnNewMethodParameter(NodeClassMethodParameter newParameter)
+	{
+		Inputs.Add(new Connection(newParameter.Name, this, newParameter.ParameterType));
+	}
+
+	internal Connection OnMethodParameterTypeChanged(NodeClassMethodParameter parameter)
+	{
+		if (TargetMethod == null)
+			throw new Exception("TargetMethod cannot be null here");
+
+		var inputsStart = !TargetMethod.IsStatic ? 2 : 1; // exec + target : exec
+
+		var index = TargetMethod.GetParameters().ToList().IndexOf(parameter);
+		if (index == -1)
+			throw new Exception("Unable to find parameter: " + parameter.Name);
+
+		var connection = Inputs[index + inputsStart];
+		connection.UpdateType(parameter.ParameterType);
+
+		return connection;
+	}
+
+	#endregion
 
 	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
 	{

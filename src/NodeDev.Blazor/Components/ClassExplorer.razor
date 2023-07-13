@@ -33,6 +33,7 @@
 						<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item" @onmouseout="() => Hovered = null">
 							<MudText Style="justify-self: start;">@Item.Text</MudText>
 							<div style="@($"justify-self: end; visibility: {(Hovered == Item ? "visible" : "hidden")}")">
+								<MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowMethodEdit(Item.Value)" />
 								<MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value)" />
 							</div>
 						</div>
@@ -178,6 +179,19 @@
 			return;
 
 		item.Property!.ChangeType(typeBase);
+	}
+
+	private async Task ShowMethodEdit(TreeItem item)
+	{
+		var result = await DialogService.Show<EditMethodMenu>("", new()
+			{
+				[nameof(EditMethodMenu.Method)] = item.Method
+			}, new DialogOptions()
+			{
+				FullScreen = false,
+				FullWidth = true,
+				MaxWidth = MaxWidth.Large
+			}).Result;
 	}
 
 	private void OnEditTextKeyUp(KeyboardEventArgs args)
