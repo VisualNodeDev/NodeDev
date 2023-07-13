@@ -1,6 +1,11 @@
 ﻿using NodeDev.Core.Class;
 using NodeDev.Core.Nodes.Flow;
 using NodeDev.Core.Types;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("NodeDev.Tests")]
 
 namespace NodeDev.Core;
 
@@ -18,6 +23,10 @@ public class Project
 
 	public NodeClassTypeCreator? NodeClassTypeCreator { get; private set; }
 
+	internal Subject<Graph> GraphChangedSubject { get; } = new();
+
+	public IObservable<Graph> GraphChanged => GraphChangedSubject.AsObservable();
+
 	public Project(Guid id)
 	{
 		Id = id;
@@ -31,7 +40,6 @@ public class Project
 		var programClass = new Class.NodeClass("Program", "NewProject", project);
 
 		var main = new Class.NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void)), new Graph());
-		main.Graph.SelfMethod = main; // yup, ugl af
 
 		main.Graph.AddNode(new EntryNode(main.Graph));
 		main.Graph.AddNode(new ReturnNode(main.Graph));

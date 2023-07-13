@@ -12,7 +12,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.Core", "NodeDev.Cor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.Blazor", "NodeDev.Blazor\NodeDev.Blazor.csproj", "{63052EF0-3793-445A-B75F-A10ED55E2D36}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeDev.Tests", "NodeDev.Tests\NodeDev.Tests.csproj", "{4C775E47-79BC-4F2D-93FF-440A151B2757}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.Tests", "NodeDev.Tests\NodeDev.Tests.csproj", "{4C775E47-79BC-4F2D-93FF-440A151B2757}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
