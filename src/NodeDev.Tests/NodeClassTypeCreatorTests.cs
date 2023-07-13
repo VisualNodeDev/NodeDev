@@ -52,10 +52,9 @@ public class NodeClassTypeCreatorTests
 		var graph = new Graph();
 		var method = new NodeClassMethod(myClass, "Main", myClass.TypeFactory.Get<int>(), graph);
 		myClass.Methods.Add(method);
-		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>()));
+		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method));
 
 		var entryNode = new Core.Nodes.Flow.EntryNode(graph);
-		entryNode.Outputs.Add(new("A", entryNode, myClass.TypeFactory.Get<int>()));
 
 		var returnNode = new Core.Nodes.Flow.ReturnNode(graph);
 		returnNode.Inputs.Add(new("Result", entryNode, myClass.TypeFactory.Get<int>()));

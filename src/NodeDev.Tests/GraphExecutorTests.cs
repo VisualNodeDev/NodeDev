@@ -17,12 +17,10 @@ public class GraphExecutorTests
 		nodeClass.Methods.Add(method);
 		graph.SelfMethod = nodeClass.Methods.First();
 
-		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<TIn>()));
-		method.Parameters.Add(new("B", nodeClass.TypeFactory.Get<TIn>()));
+		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<TIn>(), method));
+		method.Parameters.Add(new("B", nodeClass.TypeFactory.Get<TIn>(), method));
 
 		entryNode = new Core.Nodes.Flow.EntryNode(graph);
-		entryNode.Outputs.Add(new("A", entryNode, nodeClass.TypeFactory.Get<TIn>()));
-		entryNode.Outputs.Add(new("B", entryNode, nodeClass.TypeFactory.Get<TIn>()));
 
 		returnNode = new Core.Nodes.Flow.ReturnNode(graph);
 		returnNode.Inputs.Add(new("Result", entryNode, nodeClass.TypeFactory.Get<TOut>()));

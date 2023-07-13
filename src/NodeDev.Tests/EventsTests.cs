@@ -22,7 +22,7 @@ public class EventsTests
 		var graph = new Graph();
 		var method = new NodeClassMethod(myClass, "Main", myClass.TypeFactory.Get<int>(), graph);
 		myClass.Methods.Add(method);
-		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>()));
+		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method));
 
 		var entryNode = new Core.Nodes.Flow.EntryNode(graph);
 		entryNode.Outputs.Add(new("A", entryNode, myClass.TypeFactory.Get<int>()));
