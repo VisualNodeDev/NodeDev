@@ -16,8 +16,6 @@ namespace NodeDev.Core.Nodes
     {
 		public override string TitleColor => "lightblue";
 
-		public override bool AlterExecutionStackOnPop => false;
-
         public override bool IsFlowNode => true;
 
         protected NormalFlowNode(Graph graph, string? id = null) : base(graph, id)
@@ -26,9 +24,11 @@ namespace NodeDev.Core.Nodes
             Outputs.Add(new("Exec", this, TypeFactory.ExecType));
         }
 
-        public override Connection Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs)
+        public override Connection Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs, out bool alterExecutionStackOnPop)
 		{
-            ExecuteInternal(executor, self, inputs, outputs);
+            alterExecutionStackOnPop = false;
+
+			ExecuteInternal(executor, self, inputs, outputs);
 
             return Outputs[0];
         }

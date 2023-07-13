@@ -33,8 +33,6 @@ namespace NodeDev.Core.Nodes
 
         public IEnumerable<Connection> InputsAndOutputs => Inputs.Concat(Outputs);
 
-        public abstract bool AlterExecutionStackOnPop { get; }
-
         public abstract bool IsFlowNode { get; }
 
         public TypeFactory TypeFactory => Project.TypeFactory;
@@ -56,7 +54,7 @@ namespace NodeDev.Core.Nodes
         /// <summary>
         /// Returns the next node to execute. The connection is on the current node, must look at what it's connected to
         /// </summary>
-        public abstract Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs);
+        public abstract Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, out bool alterExecutionStackOnPop);
 
         public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
         {

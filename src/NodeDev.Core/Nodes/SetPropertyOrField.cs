@@ -22,7 +22,7 @@ namespace NodeDev.Core.Nodes
 
 		public override string Name
 		{
-			get => TargetMember == null ? "Get" : TargetMember.DeclaringType.FriendlyName + "." + TargetMember.Name;
+			get => TargetMember == null ? "Set" : "Set " + TargetMember.DeclaringType.FriendlyName + "." + TargetMember.Name;
 			set { }
 		}
 

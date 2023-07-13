@@ -47,7 +47,7 @@ namespace NodeDev.Core
 		{
 			var node = FindEntryNode();
 
-			var execConnection = node.Execute(this, self, null, inputs, inputs);
+			var execConnection = node.Execute(this, self, null, inputs, inputs, out var _);
 			if (execConnection == null)
 				throw new Exception("Entry node should have an output connection");
 			if (inputs.Length != node.Outputs.Count)
@@ -86,14 +86,14 @@ namespace NodeDev.Core
 				var nodeInputs = GetNodeInputs(self, nodeToExecute);
 				var nodeOutputs = new object?[nodeToExecute.Outputs.Count];
 
-				execConnection = nodeToExecute.Execute(this, self, connectionToExecute, nodeInputs, nodeOutputs);
+				execConnection = nodeToExecute.Execute(this, self, connectionToExecute, nodeInputs, nodeOutputs, out var alterExecutionStackOnPop);
 				for (int i = 0; i < nodeOutputs.Length; i++)
 				{
 					var output = nodeToExecute.Outputs[i];
 					Connections[output] = nodeOutputs[i];
 				}
 
-				if (execConnection != null && nodeToExecute.AlterExecutionStackOnPop)
+				if (execConnection != null && alterExecutionStackOnPop)
 					stack.Push(connectionToExecute);
 			}
 		}
@@ -128,7 +128,7 @@ namespace NodeDev.Core
 			var outputs = new object?[other.Parent.Outputs.Count];
 
 			object? myOutput = null;
-			other.Parent.Execute(this, self, null, inputs, outputs);
+			other.Parent.Execute(this, self, null, inputs, outputs, out var _);
 			for (int i = 0; i < outputs.Length; i++)
 			{
 				var output = other.Parent.Outputs[i];

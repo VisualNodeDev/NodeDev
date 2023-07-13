@@ -19,14 +19,13 @@ namespace NodeDev.Core.Nodes.Flow
 			Inputs.Add(new("Exec", this, TypeFactory.ExecType));
 		}
 
-        public override bool AlterExecutionStackOnPop => false;
-
         public override bool IsFlowNode => throw new NotImplementedException();
 
-        public override Connection? Execute(GraphExecutor executor, object? self, Connection? execInput, Span<object?> inputs, Span<object?> outputs)
+        public override Connection? Execute(GraphExecutor executor, object? self, Connection? execInput, Span<object?> inputs, Span<object?> outputs, out bool alterExecutionStackOnPop)
 		{
-            return null;
-        }
+			alterExecutionStackOnPop = false;
+			return null;
+		}
 
     }
 }

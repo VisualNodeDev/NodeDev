@@ -23,12 +23,11 @@ namespace NodeDev.Core.Nodes.Flow
 			Outputs.AddRange(graph.SelfMethod.Parameters.Select(x => new Connection(x.Name, this, x.ParameterType)));
 		}
 
-        public override bool AlterExecutionStackOnPop => false;
-
         public override bool IsFlowNode => true;
 
-        public override Connection? Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs)
+        public override Connection? Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs, out bool alterExecutionStackOnPop)
 		{
+			alterExecutionStackOnPop = false;
             return Outputs[0];
         }
 
