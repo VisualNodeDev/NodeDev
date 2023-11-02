@@ -56,25 +56,25 @@ public class TypeFactory
 			return null;
 
 		var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-		return assemblies.Select(ass => ass.GetType(name, false, true)).FirstOrDefault( x=> x != null);
+		return assemblies.Select(ass => ass.GetType(name, false, true)).FirstOrDefault(x => x != null);
 	}
 
-        #region CreateBaseFromUserInput
+	#region CreateBaseFromUserInput
 
-        public string? CreateBaseFromUserInput(string typeName, out Type? type)
+	public string? CreateBaseFromUserInput(string typeName, out Type? type)
 	{
 		typeName = typeName.Replace(" ", "");
-		if( typeName.Count(c => c == '<') != typeName.Count(c => c == '>') )
+		if (typeName.Count(c => c == '<') != typeName.Count(c => c == '>'))
 		{
 			type = null;
 			return "Bracket opened but never closed";
 		}
 
-		if(!typeName.Any(c => c == '<'))
+		if (!typeName.Any(c => c == '<'))
 		{
 			// easy, just find the type, it's either a full name or a name we can find in the included namespaces
 			var correspondance = TypeCorrespondances.FirstOrDefault(x => x.Value.Contains(typeName));
-			if(correspondance.Key != null)
+			if (correspondance.Key != null)
 				typeName = correspondance.Key;
 			type = GetTypeFromAllAssemblies(typeName) ?? IncludedNamespaces.Select(ns => GetTypeFromAllAssemblies($"{ns}.{typeName}")).FirstOrDefault(t => t != null);
 
@@ -96,7 +96,7 @@ public class TypeFactory
 			name = correspondance2.Key;
 
 		var baseType = GetTypeFromAllAssemblies(name + "`" + genericArgs.Length) ?? IncludedNamespaces.Select(ns => GetTypeFromAllAssemblies($"{ns}.{name}`{genericArgs.Length}")).FirstOrDefault(t => t != null);
-		if(baseType == null)
+		if (baseType == null)
 		{
 			type = null;
 			return $"Type {name} not found";
@@ -104,10 +104,10 @@ public class TypeFactory
 
 		// find the generic arguments
 		var genericArgsTypes = new Type[genericArgs.Length];
-		for(int i = 0; i < genericArgs.Length; i++)
+		for (int i = 0; i < genericArgs.Length; i++)
 		{
 			var error = CreateBaseFromUserInput(genericArgs[i], out var genericArgType);
-			if(error != null)
+			if (error != null)
 			{
 				type = null;
 				return error;
@@ -118,7 +118,7 @@ public class TypeFactory
 		// create the generic type
 		type = baseType.MakeGenericType(genericArgsTypes);
 
-		if(type.ContainsGenericParameters)
+		if (type.ContainsGenericParameters)
 		{
 			type = null;
 			return "Not all generics are provided for type:" + name;
