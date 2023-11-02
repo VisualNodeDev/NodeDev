@@ -154,7 +154,7 @@ public class RealType : TypeBase
 			var ourGeneric = ourGenerics.FindIndex(x => x.Name == theirGeneric.Name);
 			// if it is not found, it means the type is just specified directly 
 			// Ex, in the case of Dictionary<int, T>, the 'int' will be specified directly, and 'T' will be found in ourGenerics
-			if(ourGeneric == -1)
+			if (ourGeneric == -1)
 				generics[i] = TypeFactory.Get(theirGeneric, null);
 			else
 				generics[i] = Generics[ourGeneric];
@@ -166,14 +166,18 @@ public class RealType : TypeBase
 	private record class SerializedType(string TypeFullName, string[] SerializedGenerics);
 	internal protected override string Serialize()
 	{
-		return FullName;
+		return System.Text.Json.JsonSerializer.Serialize(new SerializedType(BackendType.FullName!, Generics.Select(x => x.SerializeWithFullTypeName()).ToArray()));
 	}
 
-	public new static RealType Deserialize(TypeFactory typeFactory, string fullName)
+	public new static RealType Deserialize(TypeFactory typeFactory, string serializedString)
 	{
-		var type = Type.GetType(fullName) ?? throw new Exception($"Type not found {fullName}"); ;
+		var serializedType = System.Text.Json.JsonSerializer.Deserialize<SerializedType>(serializedString) ?? throw new Exception("Unable to deserialize type");
 
-		return new(typeFactory, type, null);
+		var type = typeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
+
+		var generics = serializedType.SerializedGenerics.Select(x => TypeBase.Deserialize(typeFactory, x)).ToArray();
+
+		return typeFactory.Get(type, generics);
 	}
 
 	//public override object? ParseTextboxEdit(string text)

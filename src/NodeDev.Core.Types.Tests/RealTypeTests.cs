@@ -40,7 +40,6 @@ public class RealTypeTests
 		Assert.Same(type.Generics[0], ((RealType)type.BaseType!).Generics[1]);
 	}
 
-
 	[Fact]
 	public void Constructor_InterfaceGeneric()
 	{
@@ -70,5 +69,29 @@ public class RealTypeTests
 		Assert.NotNull(type.BaseType);
 		Assert.Same(typeof(ValueType), ((RealType)type.BaseType!).BackendType);
 	}
+
+	[Fact]
+	public void Serialize_Tests()
+	{
+		var typeFactory = new TypeFactory();
+
+		var type = typeFactory.Get(typeof(Dictionary<,>), new TypeBase[]
+		{
+			typeFactory.Get(typeof(string), null),
+			new UndefinedGenericType("T"),
+		});
+
+		var serialized = type.SerializeWithFullTypeName();
+
+		var newTypeFactory = new TypeFactory();
+		var deserialized = (RealType)TypeBase.Deserialize(newTypeFactory, serialized);
+
+		Assert.Same(typeof(Dictionary<,>), deserialized.BackendType);
+		Assert.Same(newTypeFactory.Get(typeof(string), null), deserialized.Generics[0]);
+		Assert.IsType<UndefinedGenericType>(deserialized.Generics[1]);
+		Assert.Equal("T", deserialized.Generics[1].Name);
+
+	}
+
 
 }
