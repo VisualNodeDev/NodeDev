@@ -20,9 +20,9 @@ public abstract class TypeBase
 
 	public abstract TypeBase? BaseType { get; }
 
-	public abstract IEnumerable<TypeBase> Interfaces { get; }
+	public abstract TypeBase[] Interfaces { get; }
 
-	public bool HasUndefinedGenerics => Generics.Any(x => x.HasUndefinedGenerics || x is UndefinedGenericType);
+	public bool HasUndefinedGenerics => Generics.Any(x => x is UndefinedGenericType || x.HasUndefinedGenerics);
 
 	public virtual bool IsExec => false;
 
@@ -33,6 +33,8 @@ public abstract class TypeBase
 	public abstract string FriendlyName { get; }
 
 	internal protected abstract string Serialize();
+
+	public abstract Type MakeRealType();
 
 	private record class SerializedType(string TypeFullName, string SerializedTypeCustom);
 	public string SerializeWithFullTypeName()

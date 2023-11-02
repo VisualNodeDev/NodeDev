@@ -22,7 +22,7 @@ namespace NodeDev.Core.Types
 
 		public override TypeBase? BaseType => throw new NotImplementedException();
 
-		public override IEnumerable<TypeBase> Interfaces => throw new NotImplementedException();
+		public override TypeBase[] Interfaces => throw new NotImplementedException();
 
 		internal protected override string Serialize()
 		{
@@ -32,6 +32,11 @@ namespace NodeDev.Core.Types
 		public new static ExecType Deserialize(TypeFactory typeFactory, string serialized)
 		{
 			return typeFactory.ExecType;
+		}
+
+		public override Type MakeRealType()
+		{
+			throw new Exception("Unable to make real type with ExecType");
 		}
 
 		//public override bool IsAssignableTo(TypeBase other)

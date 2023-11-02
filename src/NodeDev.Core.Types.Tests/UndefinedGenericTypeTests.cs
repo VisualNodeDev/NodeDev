@@ -8,10 +8,10 @@ public class UndefinedGenericTypeTests
 	public void SerializeUndefinedGenericType_ReturnsExpectedJson()
 	{
 		var typeFactory = new TypeFactory();
-		var undefinedGenericType = typeFactory.CreateUndefinedGenericType("T");
+		var undefinedGenericType = new UndefinedGenericType("T");
 
 		var serialized = undefinedGenericType.Serialize();
-		var expectedJson = JsonSerializer.Serialize(new { Name = "T", Id = undefinedGenericType.Id });
+		var expectedJson = JsonSerializer.Serialize(new { Name = "T" });
 
 		Assert.Equal(expectedJson, serialized);
 	}
@@ -20,7 +20,7 @@ public class UndefinedGenericTypeTests
 	public void SerializeUndefinedGenericType_Deserialize()
 	{
 		var typeFactory = new TypeFactory();
-		var undefinedGenericType = typeFactory.CreateUndefinedGenericType("T");
+		var undefinedGenericType = new UndefinedGenericType("T");
 
 		var serialized = undefinedGenericType.SerializeWithFullTypeName();
 
@@ -28,7 +28,6 @@ public class UndefinedGenericTypeTests
 		var deserialized = TypeBase.Deserialize(typeFactory, serialized);
 
 		Assert.IsType<UndefinedGenericType>(deserialized);
-		Assert.Equal(undefinedGenericType.Id, ((UndefinedGenericType)deserialized).Id);
 		Assert.Equal(undefinedGenericType.Name, ((UndefinedGenericType)deserialized).Name);
 	}
 

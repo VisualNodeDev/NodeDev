@@ -8,126 +8,187 @@ namespace NodeDev.Core.Types;
 
 public class RealType : TypeBase
 {
-    internal readonly Type BackendType;
+	internal readonly Type BackendType;
 
-    public override string Name => BackendType.Name;
+	public override string Name => BackendType.Name;
 
-    public override string FullName => BackendType.FullName!;
+	public override string FullName => BackendType.FullName!;
 
-    public override bool IsClass => BackendType.IsClass;
+	public override bool IsClass => BackendType.IsClass;
 
-	public override TypeBase? BaseType => BackendType.BaseType == null ? null : TypeFactory.Get(BackendType.BaseType);
+	public override TypeBase? BaseType { get; }
 
 	public override TypeBase[] Generics { get; }
 
-    public override IEnumerable<TypeBase> Interfaces => BackendType.GetInterfaces().Select(x => TypeFactory.Get(x));
+	private TypeBase[]? _Interfaces;
+	public override TypeBase[] Interfaces => _Interfaces ?? InitializeInterfaces();
 
 	/// <summary>
 	/// Types that the UI will show a textbox for editing
 	/// </summary>
 	private static readonly List<Type> AllowedEditTypes = new()
-    {
-        typeof(int),
-        typeof(string),
-        typeof(bool),
-        typeof(float),
-        typeof(double),
-        typeof(decimal),
-        typeof(long),
-        typeof(short),
-        typeof(byte),
-        typeof(uint),
-        typeof(ulong),
-        typeof(ushort),
-        typeof(sbyte),
-        typeof(char),
-        typeof(int?),
-        typeof(bool?),
-        typeof(float?),
-        typeof(double?),
-        typeof(decimal?),
-        typeof(long?),
-        typeof(short?),
-        typeof(byte?),
-        typeof(uint?),
-        typeof(ulong?),
-        typeof(ushort?),
-        typeof(sbyte?),
-        typeof(char?),
-    };
-    public override bool AllowTextboxEdit => AllowedEditTypes.Contains(BackendType);
-    public override string? DefaultTextboxValue
-    {
-        get
-        {
-            if (BackendType == typeof(string))
-                return null;
+	{
+		typeof(int),
+		typeof(string),
+		typeof(bool),
+		typeof(float),
+		typeof(double),
+		typeof(decimal),
+		typeof(long),
+		typeof(short),
+		typeof(byte),
+		typeof(uint),
+		typeof(ulong),
+		typeof(ushort),
+		typeof(sbyte),
+		typeof(char),
+		typeof(int?),
+		typeof(bool?),
+		typeof(float?),
+		typeof(double?),
+		typeof(decimal?),
+		typeof(long?),
+		typeof(short?),
+		typeof(byte?),
+		typeof(uint?),
+		typeof(ulong?),
+		typeof(ushort?),
+		typeof(sbyte?),
+		typeof(char?),
+	};
+	public override bool AllowTextboxEdit => AllowedEditTypes.Contains(BackendType);
+	public override string? DefaultTextboxValue
+	{
+		get
+		{
+			if (BackendType == typeof(string))
+				return null;
 
-            // check if BackendType is Nullable<T>, if so return null. If not, return "0"
-            if (BackendType.IsGenericType && BackendType.GetGenericTypeDefinition() == typeof(Nullable<>))
-                return null;
+			// check if BackendType is Nullable<T>, if so return null. If not, return "0"
+			if (BackendType.IsGenericType && BackendType.GetGenericTypeDefinition() == typeof(Nullable<>))
+				return null;
 
-            return "0";
-        }
-    }
+			return "0";
+		}
+	}
 
+	public override Type MakeRealType()
+	{
+		if (Generics.Length == 0)
+			return BackendType;
 
-    private string GetFriendlyName(Type t)
-    {
-        // if the type has generics, replace the `1 with the generic type names
-        var generics = t.GetGenericArguments();
-        if(generics.Length == 0)
-            return t.Name;
+		if (HasUndefinedGenerics)
+			throw new Exception("Unable to make real type with undefined generics");
 
-        // return the name of 't' without the ` and the number, replaced with the actual generic type names
-        var name = t.Name[..t.Name.IndexOf('`')];
-        return $"{name}<{string.Join(", ", generics.Select(GetFriendlyName))}>";
-    }
-    public override string FriendlyName => GetFriendlyName(BackendType);
+		return BackendType.MakeGenericType(Generics.Select(x => x.MakeRealType()).ToArray());
+	}
+
+	private string GetFriendlyName(Type t)
+	{
+		// if the type has generics, replace the `1 with the generic type names
+		var generics = t.GetGenericArguments();
+		if (generics.Length == 0)
+			return t.Name;
+
+		// return the name of 't' without the ` and the number, replaced with the actual generic type names
+		var name = t.Name[..t.Name.IndexOf('`')];
+		return $"{name}<{string.Join(", ", generics.Select(GetFriendlyName))}>";
+	}
+	public override string FriendlyName => GetFriendlyName(BackendType);
 
 	public override IEnumerable<IMethodInfo> GetMethods()
 	{
-        return BackendType.GetMethods().Select(x => new RealMethodInfo(TypeFactory, x));
+		return BackendType.GetMethods().Select(x => new RealMethodInfo(TypeFactory, x, this));
 	}
 
-    private readonly TypeFactory TypeFactory;
+	private readonly TypeFactory TypeFactory;
 
 	internal RealType(TypeFactory typeFactory, Type backendType, TypeBase[]? generics)
-    {
+	{
 		TypeFactory = typeFactory;
-		BackendType = backendType;
 
-        if (generics == null)
-            Generics = backendType.GetGenericArguments().Select(x => TypeFactory.Get(x)).ToArray();
-        else
-            Generics = generics;
+		if (generics == null)
+		{
+			if (backendType.IsGenericType && !backendType.IsConstructedGenericType)
+				throw new Exception("Unable to create real type with undefined generics. To do so you must manually specify the generics through the 'generics' parameter in the RealType constructor");
+			Generics = backendType.GetGenericArguments().Select(x => TypeFactory.Get(x, null)).ToArray();
+		}
+		else
+			Generics = generics;
+
+		BackendType = backendType;
+		// make sure we always store the generic type, so List<> instead of List<int>
+		if (BackendType.IsGenericType)
+		{
+			BackendType = BackendType.GetGenericTypeDefinition();
+
+			BaseType = BackendType.BaseType == null || BackendType.BaseType == typeof(object) ? null : MatchGenericTypes(BackendType.BaseType);
+		}
+		else
+			BaseType = BackendType.BaseType == null || BackendType.BaseType == typeof(object) ? null : TypeFactory.Get(BackendType.BaseType, null);
 	}
 
-    internal protected override string Serialize()
-    {
-        return FullName;
-    }
+	private TypeBase[] InitializeInterfaces()
+	{
+		if (BackendType.IsGenericType)
+			_Interfaces = BackendType.GetInterfaces().Select(MatchGenericTypes).ToArray();
+		else
+			_Interfaces = BackendType.GetInterfaces().Select(x => TypeFactory.Get(x, null)).ToArray();
 
-    public new static RealType Deserialize(TypeFactory typeFactory, string fullName)
-    {
-        var type = Type.GetType(fullName) ?? throw new Exception($"Type not found {fullName}"); ;
+		return _Interfaces;
+	}
 
-        return typeFactory.Get(type);
-    }
+	/// match the generics to the interfaces
+	/// Example, if we have List<T>: IList<T>, we must make sure the Generics[0] is the same as the T in the IList<T> generic
+	/// To do that, we can match the name 'T' between List and IList, and the index of 'T' in List<T> to the index on the Generics array
+	private TypeBase MatchGenericTypes(Type typeUsingOurGenerics)
+	{
+		var ourGenerics = BackendType.GetGenericArguments().ToList();
+		var theirGenerics = typeUsingOurGenerics.GetGenericArguments();
 
-    //public override object? ParseTextboxEdit(string text)
-    //{
-    //    return Convert.ChangeType(text, BackendType);
-    //}
-    //
+		var generics = new TypeBase[theirGenerics.Length];
+
+		for (int i = 0; i < theirGenerics.Length; i++)
+		{
+			var theirGeneric = theirGenerics[i];
+			var ourGeneric = ourGenerics.FindIndex(x => x.Name == theirGeneric.Name);
+			// if it is not found, it means the type is just specified directly 
+			// Ex, in the case of Dictionary<int, T>, the 'int' will be specified directly, and 'T' will be found in ourGenerics
+			if(ourGeneric == -1)
+				generics[i] = TypeFactory.Get(theirGeneric, null);
+			else
+				generics[i] = Generics[ourGeneric];
+		}
+
+		return new RealType(TypeFactory, typeUsingOurGenerics, generics);
+	}
+
+	private record class SerializedType(string TypeFullName, string[] SerializedGenerics);
+	internal protected override string Serialize()
+	{
+		return FullName;
+	}
+
+	public new static RealType Deserialize(TypeFactory typeFactory, string fullName)
+	{
+		var type = Type.GetType(fullName) ?? throw new Exception($"Type not found {fullName}"); ;
+
+		return new(typeFactory, type, null);
+	}
+
+	//public override object? ParseTextboxEdit(string text)
+	//{
+	//    return Convert.ChangeType(text, BackendType);
+	//}
+	//
 	//public override bool IsAssignableTo(TypeBase other)
 	//{
-    //    if (other is RealType realType)
-    //        return BackendType.IsAssignableTo(realType.BackendType);
-    //
-    //    return false; // a real type cannot inherit from a nodeClass, therefor it can never be assigned to one
+	//    if (other is RealType realType)
+	//        return BackendType.IsAssignableTo(realType.BackendType);
+	//
+	//    return false; // a real type cannot inherit from a nodeClass, therefor it can never be assigned to one
 	//}
-    //
+	//
 	//public override bool IsSame(TypeBase other, bool ignoreGenerics)
 	//{
 	//	if (other is RealType realType)
@@ -140,18 +201,18 @@ public class RealType : TypeBase
 	//			{
 	//				if (Generics.Length != realType.Generics.Length)
 	//					return false;
-    //
+	//
 	//				for (int i = 0; i < Generics.Length; i++)
 	//				{
 	//					if (!Generics[i].IsSame(realType.Generics[i], ignoreGenerics))
 	//						return false;
 	//				}
-    //
+	//
 	//				return true;
 	//			}
 	//		}
 	//	}
-    //
+	//
 	//	return false;
 	//}
 

@@ -1,10 +1,10 @@
 ﻿
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("NodeDev.Core.Types.Tests")]
+
 namespace NodeDev.Core.Types;
 
 public class TypeFactory
 {
-	private static readonly Dictionary<Type, RealType> RealTypes = new();
-
 	public List<string> IncludedNamespaces = new()
 	{
 		"System",
@@ -24,11 +24,9 @@ public class TypeFactory
 		["System.Void"] = new() { "void" },
 	};
 
-	public RealType Get(Type type, TypeBase[]? generics = null) => RealTypes.TryGetValue(type, out var realType) ? realType : RealTypes[type] = new(this, type, generics);
-
-	public RealType Get<T>(TypeBase[]? generics = null) => Get(typeof(T), generics);
-
 	private ExecType ExecType_;
+
+	private Dictionary<Type, TypeBase> FullyConstructedRealTypes = new();
 
 	public TypeFactory()
 	{
@@ -37,12 +35,18 @@ public class TypeFactory
 
 	public ExecType ExecType => ExecType_;
 
-	internal Dictionary<Guid, UndefinedGenericType> ExistingUndefinedGenericTypes = new();
-	public UndefinedGenericType CreateUndefinedGenericType(string name)
+	public RealType Get(Type type, TypeBase[]? generics)
 	{
-		var undefinedGenericType = new UndefinedGenericType(name, Guid.NewGuid());
-		ExistingUndefinedGenericTypes[undefinedGenericType.Id] = undefinedGenericType;
-		return undefinedGenericType;
+		if (generics == null || generics.Length == 0)
+		{
+			if (!FullyConstructedRealTypes.TryGetValue(type, out var realType))
+				realType = new RealType(this, type, null);
+
+			FullyConstructedRealTypes[type] = realType;
+			return (RealType)realType;
+		}
+		else
+			return new RealType(this, type, generics);
 	}
 
 	public Type? GetTypeByFullName(string name)

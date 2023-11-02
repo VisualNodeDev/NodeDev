@@ -30,19 +30,20 @@ public class RealMethodInfo : IMethodInfo
 
 	public readonly MethodInfo Method;
 
-	public RealMethodInfo(TypeFactory typeFactory, MethodInfo method)
+	public RealMethodInfo(TypeFactory typeFactory, MethodInfo method, TypeBase declaringType)
 	{
 		TypeFactory = typeFactory;
 		Method = method;
+		DeclaringType = declaringType;
 	}
 
 	public string Name => Method.Name;
 
 	public bool IsStatic => Method.IsStatic;
 
-	public TypeBase DeclaringType => TypeFactory.Get(Method.DeclaringType!);
+	public TypeBase DeclaringType { get; }
 
-	public TypeBase ReturnType => TypeFactory.Get(Method.ReturnType);
+	public TypeBase ReturnType => throw new NotImplementedException(); // TypeFactory.Get(Method.ReturnType);
 
 	public IEnumerable<IMethodParameterInfo> GetParameters()
 	{
@@ -63,6 +64,6 @@ public class RealMethodInfo : IMethodInfo
 
 		public string Name => ParameterInfo.Name ?? "";
 
-		public TypeBase ParameterType => TypeFactory.Get(ParameterInfo.ParameterType);
+		public TypeBase ParameterType => throw new NotImplementedException(); // TypeFactory.Get(ParameterInfo.ParameterType);
 	}
 }

@@ -1,44 +1,44 @@
 ﻿using System.Text.Json;
 
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("NodeDev.Core.Types.Tests")]
 
 namespace NodeDev.Core.Types;
 
 
 public class UndefinedGenericType : TypeBase
 {
-	private record class SerializedUndefinedGenericType(string Name, Guid Id);
+	private record class SerializedUndefinedGenericType(string Name);
 
-	public readonly Guid Id;
 
 	public override string Name { get; }
 
 	public override string FullName { get; }
 
-        public override TypeBase[] Generics => Array.Empty<TypeBase>();
+	public override TypeBase[] Generics => Array.Empty<TypeBase>();
 
 	public override string FriendlyName => Name;
 
 	public override TypeBase? BaseType => throw new NotImplementedException();
 
-	public override IEnumerable<TypeBase> Interfaces => throw new NotImplementedException();
+	public override TypeBase[] Interfaces => throw new NotImplementedException();
 
 
-	internal UndefinedGenericType(string name, Guid id) : base()
+	internal UndefinedGenericType(string name) : base()
 	{
 		FullName = Name = name;
-		Id = id;
 	}
 
-	internal protected override string Serialize() => JsonSerializer.Serialize(new SerializedUndefinedGenericType(Name, Id));
+	internal protected override string Serialize() => JsonSerializer.Serialize(new SerializedUndefinedGenericType(Name));
 
 	public new static UndefinedGenericType Deserialize(TypeFactory typeFactory, string serialized)
 	{
 		var deserialized = JsonSerializer.Deserialize<SerializedUndefinedGenericType>(serialized) ?? throw new Exception("Unable to deserialize UndefinedGenericType");
-		if(typeFactory.ExistingUndefinedGenericTypes.TryGetValue(deserialized.Id, out var existing))
-			return existing;
+		
+		return new(deserialized.Name);
+	}
 
-		return typeFactory.CreateUndefinedGenericType(deserialized.Name);
+	public override Type MakeRealType()
+	{
+		throw new Exception("Unable to make real type with undefined generics");
 	}
 
 	//public override bool IsAssignableTo(TypeBase other)
