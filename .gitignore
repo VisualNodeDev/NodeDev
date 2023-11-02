@@ -19,6 +19,9 @@
 /src/NodeDev.Blazor/js/NodeWithMultipleHandles.js
 /src/NodeDev.Blazor/js/NodeWithMultipleHandles.js.map
 /src/NodeDev.Blazor.Server/project.json
-/src/NodeDev.Tests/bin/Debug/net7.0
+/src/NodeDev.Tests/bin
 /src/NodeDev.Tests/obj
-/src/NodeDev.Tests/obj/Debug/net7.0/ref/NodeDev.Tests.dll
+/src/NodeDev.Core.Types/obj
+/src/NodeDev.Core.Types.Tests/bin
+/src/NodeDev.Core.Types.Tests/obj
+/src/NodeDev.Core.Types/bin

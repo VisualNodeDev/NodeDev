@@ -23,7 +23,7 @@ namespace NodeDev.Core.Nodes.Math
 			Outputs.Add(new("c", this, t3));
 		}
 
-		public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType)
+		public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
 		{
 			if (Inputs.Count(x => x.Type is RealType t && (t.BackendType.IsPrimitive || t.BackendType == typeof(string))) == 2)
 			{

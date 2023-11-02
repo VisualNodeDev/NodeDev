@@ -173,8 +173,12 @@ namespace NodeDev.Blazor.Components
 						source.Connections.Add(destination);
 						destination.Connections.Add(source);
 
-						if (source.Type is UndefinedGenericType type && destination.Type is not UndefinedGenericType)
-							PropagateNewGeneric(nodeSource, type, destination.Type);
+						// we're plugging something something with a generic into something without a generic
+						if (source.Type.HasUndefinedGenerics && !destination.Type.HasUndefinedGenerics)
+						{
+							if(source.Type.CanResolveGenerics(destination.Type, out Dictionary<UndefinedGenericType, TypeBase> newTypes))
+								PropagateNewGeneric(nodeSource, newTypes, destination.Type);
+						}
 						else if (destination.Type is UndefinedGenericType destinationType && source.Type is not UndefinedGenericType)
 							PropagateNewGeneric(nodeDestination, destinationType, source.Type);
 
@@ -400,7 +404,7 @@ namespace NodeDev.Blazor.Components
 							PropagateNewGeneric(other.Parent, generic2, newType);
 					}
 
-					var updated = node.GenericConnectionTypeDefined(generic);
+					var updated = node.GenericConnectionTypeDefined(generic, connection, newType);
 					UpdateNodeBaseInfo(node);
 
 					foreach (var other in updated)
@@ -476,13 +480,13 @@ namespace NodeDev.Blazor.Components
 		{
 			if (type.HasUndefinedGenerics)
 				return "yellow";
-			else if (type == type.TypeFactory.Get<string>())
+			else if (type == Graph.SelfMethod.Class.TypeFactory.Get<string>())
 				return "purple";
 			else if (type.IsClass)
 				return "green";
 			else if (type.IsExec)
 				return "gray";
-			else if (type == type.TypeFactory.Get<bool>())
+			else if (type == Graph.SelfMethod.Class.TypeFactory.Get<bool>())
 				return "red";
 			else
 				return "blue";

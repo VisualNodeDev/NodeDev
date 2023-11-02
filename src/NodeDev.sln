@@ -14,6 +14,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.Blazor", "NodeDev.B
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.Tests", "NodeDev.Tests\NodeDev.Tests.csproj", "{4C775E47-79BC-4F2D-93FF-440A151B2757}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeDev.Core.Types", "NodeDev.Core.Types\NodeDev.Core.Types.csproj", "{06E6C110-D3CA-4E11-9FBB-33F2C6CE95B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeDev.Core.Types.Tests", "NodeDev.Core.Types.Tests\NodeDev.Core.Types.Tests.csproj", "{BC1DA9CB-D359-4667-AB82-93EC1B44D46A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,6 +40,14 @@ Global
 		{4C775E47-79BC-4F2D-93FF-440A151B2757}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C775E47-79BC-4F2D-93FF-440A151B2757}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C775E47-79BC-4F2D-93FF-440A151B2757}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06E6C110-D3CA-4E11-9FBB-33F2C6CE95B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06E6C110-D3CA-4E11-9FBB-33F2C6CE95B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06E6C110-D3CA-4E11-9FBB-33F2C6CE95B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06E6C110-D3CA-4E11-9FBB-33F2C6CE95B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC1DA9CB-D359-4667-AB82-93EC1B44D46A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC1DA9CB-D359-4667-AB82-93EC1B44D46A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC1DA9CB-D359-4667-AB82-93EC1B44D46A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC1DA9CB-D359-4667-AB82-93EC1B44D46A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

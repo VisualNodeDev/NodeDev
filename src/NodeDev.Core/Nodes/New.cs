@@ -43,7 +43,7 @@ namespace NodeDev.Core.Nodes
 					throw new Exception("Unknowned type in New node: " + Outputs[1].Type.Name);
 			}
 		}
-		public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType)
+		public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
 		{
 			var constructor = AlternatesOverloads.First();
 

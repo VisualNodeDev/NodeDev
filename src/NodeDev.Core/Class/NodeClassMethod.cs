@@ -13,48 +13,6 @@ namespace NodeDev.Core.Class
 	public class NodeClassMethod : IMethodInfo
 	{
 
-		public class RealMethodInfo : IMethodInfo
-		{
-			private readonly TypeFactory TypeFactory;
-
-			public readonly MethodInfo Method;
-
-			public RealMethodInfo(TypeFactory typeFactory, MethodInfo method)
-			{
-				TypeFactory = typeFactory;
-				Method = method;
-			}
-
-			public string Name => Method.Name;
-
-			public bool IsStatic => Method.IsStatic;
-
-			public TypeBase DeclaringType => TypeFactory.Get(Method.DeclaringType!);
-
-			public TypeBase ReturnType => TypeFactory.Get(Method.ReturnType);
-
-			public IEnumerable<IMethodParameterInfo> GetParameters()
-			{
-				return Method.GetParameters().Select(x => new RealMethodParameterInfo(x, TypeFactory));
-			}
-
-			public class RealMethodParameterInfo : IMethodParameterInfo
-			{
-				public readonly ParameterInfo ParameterInfo;
-
-				public readonly TypeFactory TypeFactory;
-
-				public RealMethodParameterInfo(ParameterInfo parameterInfo, TypeFactory typeFactory)
-				{
-					ParameterInfo = parameterInfo;
-					TypeFactory = typeFactory;
-				}
-
-				public string Name => ParameterInfo.Name ?? "";
-
-				public TypeBase ParameterType => TypeFactory.Get(ParameterInfo.ParameterType);
-			}
-		}
 
 
 		public record class SerializedNodeClassMethod(string Name, string ReturnTypeFullName, string ReturnType, List<string> Parameters, string Graph);

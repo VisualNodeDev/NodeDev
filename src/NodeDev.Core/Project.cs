@@ -120,10 +120,10 @@ public class Project
 		return project;
 	}
 
-	public NodeClassType GetNodeClassType(NodeClass nodeClass)
+	public NodeClassType GetNodeClassType(NodeClass nodeClass, TypeBase[]? generics = null)
 	{
 		if (!NodeClassTypes.ContainsKey(nodeClass))
-			return NodeClassTypes[nodeClass] = new(nodeClass);
+			return NodeClassTypes[nodeClass] = new(nodeClass, generics ?? Array.Empty<TypeBase>());
 		return NodeClassTypes[nodeClass];
 	}
 }

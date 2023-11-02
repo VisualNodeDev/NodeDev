@@ -1,6 +1,4 @@
-﻿using NodeDev.Core.Class;
-using NodeDev.Core.Nodes;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,10 +16,16 @@ public class RealType : TypeBase
 
     public override bool IsClass => BackendType.IsClass;
 
-    /// <summary>
-    /// Types that the UI will show a textbox for editing
-    /// </summary>
-    private static List<Type> AllowedEditTypes = new List<Type>()
+	public override TypeBase? BaseType => BackendType.BaseType == null ? null : TypeFactory.Get(BackendType.BaseType);
+
+	public override TypeBase[] Generics { get; }
+
+    public override IEnumerable<TypeBase> Interfaces => BackendType.GetInterfaces().Select(x => TypeFactory.Get(x));
+
+	/// <summary>
+	/// Types that the UI will show a textbox for editing
+	/// </summary>
+	private static readonly List<Type> AllowedEditTypes = new()
     {
         typeof(int),
         typeof(string),
@@ -81,41 +85,74 @@ public class RealType : TypeBase
     }
     public override string FriendlyName => GetFriendlyName(BackendType);
 
-    public override TypeBase[]? Generics => BackendType.GetGenericArguments().Select(TypeFactory.Get).ToArray();
-
 	public override IEnumerable<IMethodInfo> GetMethods()
 	{
-        return BackendType.GetMethods().Select(x => new NodeClassMethod.RealMethodInfo(TypeFactory, x));
+        return BackendType.GetMethods().Select(x => new RealMethodInfo(TypeFactory, x));
 	}
 
-	internal RealType(TypeFactory typeFactory, Type backendType) : base(typeFactory)
-    {
-        BackendType = backendType;
-    }
+    private readonly TypeFactory TypeFactory;
 
-    internal override string Serialize()
+	internal RealType(TypeFactory typeFactory, Type backendType, TypeBase[]? generics)
+    {
+		TypeFactory = typeFactory;
+		BackendType = backendType;
+
+        if (generics == null)
+            Generics = backendType.GetGenericArguments().Select(x => TypeFactory.Get(x)).ToArray();
+        else
+            Generics = generics;
+	}
+
+    internal protected override string Serialize()
     {
         return FullName;
     }
 
-    public static RealType Deserialize(TypeFactory typeFactory, string fullName)
+    public new static RealType Deserialize(TypeFactory typeFactory, string fullName)
     {
         var type = Type.GetType(fullName) ?? throw new Exception($"Type not found {fullName}"); ;
 
         return typeFactory.Get(type);
     }
 
-    public override object? ParseTextboxEdit(string text)
-    {
-        return Convert.ChangeType(text, BackendType);
-    }
-
-	public override bool IsAssignableTo(TypeBase other)
-	{
-        if (other is RealType realType)
-            return BackendType.IsAssignableTo(realType.BackendType);
-
-        return false;
-	}
+    //public override object? ParseTextboxEdit(string text)
+    //{
+    //    return Convert.ChangeType(text, BackendType);
+    //}
+    //
+	//public override bool IsAssignableTo(TypeBase other)
+	//{
+    //    if (other is RealType realType)
+    //        return BackendType.IsAssignableTo(realType.BackendType);
+    //
+    //    return false; // a real type cannot inherit from a nodeClass, therefor it can never be assigned to one
+	//}
+    //
+	//public override bool IsSame(TypeBase other, bool ignoreGenerics)
+	//{
+	//	if (other is RealType realType)
+	//	{
+	//		if (realType.BackendType == BackendType)
+	//		{
+	//			if (ignoreGenerics)
+	//				return true;
+	//			else
+	//			{
+	//				if (Generics.Length != realType.Generics.Length)
+	//					return false;
+    //
+	//				for (int i = 0; i < Generics.Length; i++)
+	//				{
+	//					if (!Generics[i].IsSame(realType.Generics[i], ignoreGenerics))
+	//						return false;
+	//				}
+    //
+	//				return true;
+	//			}
+	//		}
+	//	}
+    //
+	//	return false;
+	//}
 
 }

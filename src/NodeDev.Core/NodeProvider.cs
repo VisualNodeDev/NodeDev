@@ -76,7 +76,7 @@ namespace NodeDev.Core
 				IEnumerable<MethodInfo> methods = realType.BackendType.GetMethods(BindingFlags.Public | BindingFlags.FlattenHierarchy | BindingFlags.Instance);
 				// get extensions methods for the realType.BackendType
 
-				methods = methods.Concat(GetExtensionMethods(realType)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
+				methods = methods.Concat(GetExtensionMethods(realType, project.TypeFactory)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 
 				results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), new NodeClassMethod.RealMethodInfo(project.TypeFactory, x))));
 
@@ -111,13 +111,13 @@ namespace NodeDev.Core
 			return results;
 		}
 
-		private static IEnumerable<MethodInfo> GetExtensionMethods(TypeBase t)
+		private static IEnumerable<MethodInfo> GetExtensionMethods(TypeBase t, TypeFactory typeFactory)
 		{
 			var query = AppDomain.CurrentDomain.GetAssemblies()
 				.SelectMany(x => x.GetTypes())
 				.Where(type => !type.IsGenericType)
 				.SelectMany(type => type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
-				.Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && t.IsAssignableTo(t.TypeFactory.Get(method.GetParameters()[0].ParameterType)));
+				.Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && t.IsAssignableTo(typeFactory.Get(method.GetParameters()[0].ParameterType)));
 
 			return query;
 		}
