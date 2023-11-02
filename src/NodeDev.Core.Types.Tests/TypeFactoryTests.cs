@@ -38,4 +38,18 @@ public class TypeFactoryTests
 		Assert.Null(err);
 		Assert.Equal(typeof(Dictionary<int, string>), type);
 	}
+
+	[Fact]
+	public void CreateBaseFromUserInputTest_Err()
+	{
+		var typeFactory = new TypeFactory();
+
+		var err = typeFactory.CreateBaseFromUserInput("asdfasdf", out var type);
+		Assert.NotNull(err);
+		Assert.Null(type);
+
+		err = typeFactory.CreateBaseFromUserInput("Dictionary", out type);
+		Assert.NotNull(err);
+		Assert.Null(type);
+	}
 }
