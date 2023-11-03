@@ -39,6 +39,11 @@ namespace NodeDev.Core.Types
 			throw new Exception("Unable to make real type with ExecType");
 		}
 
+		public override bool IsSameBackend(TypeBase typeBase)
+		{
+			return typeBase == this;
+		}
+
 		//public override bool IsAssignableTo(TypeBase other)
 		//{
 		//	throw new NotImplementedException();

@@ -35,6 +35,7 @@ public class TypeFactory
 
 	public ExecType ExecType => ExecType_;
 
+	public RealType Get<T>() => Get(typeof(T), null);
 	public RealType Get(Type type, TypeBase[]? generics)
 	{
 		if (generics == null || generics.Length == 0)

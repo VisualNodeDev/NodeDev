@@ -21,8 +21,7 @@ public class UndefinedGenericType : TypeBase
 
 	public override TypeBase[] Interfaces => throw new NotImplementedException();
 
-
-	internal UndefinedGenericType(string name) : base()
+	internal UndefinedGenericType(string name)
 	{
 		FullName = Name = name;
 	}
@@ -32,13 +31,18 @@ public class UndefinedGenericType : TypeBase
 	public new static UndefinedGenericType Deserialize(TypeFactory typeFactory, string serialized)
 	{
 		var deserialized = JsonSerializer.Deserialize<SerializedUndefinedGenericType>(serialized) ?? throw new Exception("Unable to deserialize UndefinedGenericType");
-		
+
 		return new(deserialized.Name);
 	}
 
 	public override Type MakeRealType()
 	{
 		throw new Exception("Unable to make real type with undefined generics");
+	}
+
+	public override bool IsSameBackend(TypeBase typeBase)
+	{
+		return Name == typeBase.Name;
 	}
 
 	//public override bool IsAssignableTo(TypeBase other)

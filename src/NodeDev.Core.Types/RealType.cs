@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace NodeDev.Core.Types;
 
+[DebuggerDisplay("RealType: {FriendlyName}")]
 public class RealType : TypeBase
 {
 	internal readonly Type BackendType;
+
+	private readonly TypeFactory TypeFactory;
 
 	public override string Name => BackendType.Name;
 
@@ -22,6 +26,10 @@ public class RealType : TypeBase
 
 	private TypeBase[]? _Interfaces;
 	public override TypeBase[] Interfaces => _Interfaces ?? InitializeInterfaces();
+
+	public override bool IsIn(int genericIndex) => BackendType.GetGenericArguments()[genericIndex].IsGenericParameter && (BackendType.GetGenericArguments()[genericIndex].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Contravariant) !=  System.Reflection.GenericParameterAttributes.None;
+	
+	public override bool IsOut(int genericIndex) => BackendType.GetGenericArguments()[genericIndex].IsGenericParameter && (BackendType.GetGenericArguments()[genericIndex].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Covariant) !=  System.Reflection.GenericParameterAttributes.None;
 
 	/// <summary>
 	/// Types that the UI will show a textbox for editing
@@ -83,16 +91,21 @@ public class RealType : TypeBase
 		return BackendType.MakeGenericType(Generics.Select(x => x.MakeRealType()).ToArray());
 	}
 
+	private string GetFriendlyName(TypeBase t)
+	{
+		if(t is RealType realType)
+			return realType.FriendlyName;
+		return t.Name;
+	}
+
 	private string GetFriendlyName(Type t)
 	{
-		// if the type has generics, replace the `1 with the generic type names
-		var generics = t.GetGenericArguments();
-		if (generics.Length == 0)
+		if (Generics.Length == 0)
 			return t.Name;
 
 		// return the name of 't' without the ` and the number, replaced with the actual generic type names
 		var name = t.Name[..t.Name.IndexOf('`')];
-		return $"{name}<{string.Join(", ", generics.Select(GetFriendlyName))}>";
+		return $"{name}<{string.Join(", ", Generics.Select(GetFriendlyName))}>";
 	}
 	public override string FriendlyName => GetFriendlyName(BackendType);
 
@@ -101,7 +114,6 @@ public class RealType : TypeBase
 		return BackendType.GetMethods().Select(x => new RealMethodInfo(TypeFactory, x, this));
 	}
 
-	private readonly TypeFactory TypeFactory;
 
 	internal RealType(TypeFactory typeFactory, Type backendType, TypeBase[]? generics)
 	{
@@ -163,6 +175,11 @@ public class RealType : TypeBase
 		return new RealType(TypeFactory, typeUsingOurGenerics, generics);
 	}
 
+	private interface Yo<in T>
+	{
+	}
+
+
 	private record class SerializedType(string TypeFullName, string[] SerializedGenerics);
 	internal protected override string Serialize()
 	{
@@ -184,40 +201,10 @@ public class RealType : TypeBase
 	//{
 	//    return Convert.ChangeType(text, BackendType);
 	//}
-	//
-	//public override bool IsAssignableTo(TypeBase other)
-	//{
-	//    if (other is RealType realType)
-	//        return BackendType.IsAssignableTo(realType.BackendType);
-	//
-	//    return false; // a real type cannot inherit from a nodeClass, therefor it can never be assigned to one
-	//}
-	//
-	//public override bool IsSame(TypeBase other, bool ignoreGenerics)
-	//{
-	//	if (other is RealType realType)
-	//	{
-	//		if (realType.BackendType == BackendType)
-	//		{
-	//			if (ignoreGenerics)
-	//				return true;
-	//			else
-	//			{
-	//				if (Generics.Length != realType.Generics.Length)
-	//					return false;
-	//
-	//				for (int i = 0; i < Generics.Length; i++)
-	//				{
-	//					if (!Generics[i].IsSame(realType.Generics[i], ignoreGenerics))
-	//						return false;
-	//				}
-	//
-	//				return true;
-	//			}
-	//		}
-	//	}
-	//
-	//	return false;
-	//}
+
+	public override bool IsSameBackend(TypeBase other)
+	{
+		return other is RealType realType && realType.BackendType == BackendType;
+	}
 
 }
