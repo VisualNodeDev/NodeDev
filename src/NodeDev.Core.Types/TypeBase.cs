@@ -45,6 +45,8 @@ public abstract class TypeBase
 		return System.Text.Json.JsonSerializer.Serialize(serializedType);
 	}
 
+	#region Assignation checks
+
 	/// <summary>
 	/// Returns in the backend type is the same, ignoring generics
 	/// For RealType, that means the actual 'Type' Backend 
@@ -128,9 +130,6 @@ public abstract class TypeBase
 		changedGenerics = null;
 		return false;
 	}
-
-	private class Parent { }
-	private class Child : Parent { }
 
 	public bool IsAssignableTo(TypeBase other, [MaybeNullWhen(false)] out Dictionary<UndefinedGenericType, TypeBase> changedGenerics)
 	{
@@ -241,6 +240,7 @@ public abstract class TypeBase
 		return false;
 	}
 
+	#endregion
 
 	/// <summary>
 	/// If true, We can plug any less derived type. Ex IComparer<Person> can be assigned to IComparer<Employee> even though a person is not necessarily an employee. This one is unusual

@@ -5,6 +5,25 @@ namespace NodeDev.Core.Types.Tests;
 public class RealTypeTests
 {
 	[Fact]
+	public void Methods_BasicTests()
+	{
+		var typeFactory = new TypeFactory();
+
+		var type = typeFactory.Get(typeof(Dictionary<,>), new TypeBase[]
+		{
+			typeFactory.Get(typeof(string), null),
+			new UndefinedGenericType("T"),
+		});
+
+		var addMethod = type.GetMethods().FirstOrDefault(x => x.Name == "Add");
+		Assert.NotNull(addMethod);
+		Assert.Equal(2, addMethod.GetParameters().Count());
+		Assert.Same(type.Generics[0], addMethod.GetParameters().First().ParameterType);
+		Assert.Same(type.Generics[1], addMethod.GetParameters().Last().ParameterType);
+		Assert.Same(typeFactory.Get(typeof(void), null), addMethod.ReturnType);
+	}
+
+	[Fact]
 	public void Constructor_BasicTypeParsing()
 	{
 		var typeFactory = new TypeFactory();

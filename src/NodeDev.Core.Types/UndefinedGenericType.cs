@@ -44,14 +44,4 @@ public class UndefinedGenericType : TypeBase
 	{
 		return Name == typeBase.Name;
 	}
-
-	//public override bool IsAssignableTo(TypeBase other)
-	//{
-	//	throw new NotImplementedException();
-	//}
-	//
-	//public override bool IsSame(TypeBase other, bool ignoreGenerics)
-	//{
-	//	throw new NotImplementedException();
-	//}
 }
