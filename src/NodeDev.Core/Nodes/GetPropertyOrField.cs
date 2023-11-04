@@ -15,61 +15,33 @@ namespace NodeDev.Core.Nodes
 {
 	public class GetPropertyOrField : NoFlowNode
 	{
-		public class RealMemberInfo : Class.IMemberInfo
-		{
-			internal readonly MemberInfo MemberInfo;
-			private readonly TypeFactory TypeFactory;
-
-			public RealMemberInfo(MemberInfo memberInfo, TypeFactory typeFactory)
-			{
-				MemberInfo = memberInfo;
-				TypeFactory = typeFactory;
-			}
-
-			public TypeBase DeclaringType => TypeFactory.Get(MemberInfo.DeclaringType!);
-
-			public string Name => MemberInfo.Name;
-
-			public TypeBase MemberType => MemberInfo switch
-			{
-				FieldInfo field => TypeFactory.Get(field.FieldType),
-				PropertyInfo property => TypeFactory.Get(property.PropertyType),
-				_ => throw new Exception("Invalid member type")
-			};
-
-			public bool IsStatic => MemberInfo switch
-			{
-				FieldInfo field => field.IsStatic,
-				PropertyInfo property => property.GetMethod?.IsStatic ?? false,
-				_ => throw new Exception("Invalid member type")
-			};
-		}
+		
 
 		public class GetPropertyOrFieldDecoration : INodeDecoration
 		{
-			private record class SavedGetPropertyOrField(string Type, string SerializedType, string Name);
-			internal Class.IMemberInfo TargetPropertyOrField { get; set; }
+			private record class SavedGetPropertyOrField(string Type, string Name);
+			internal IMemberInfo TargetPropertyOrField { get; set; }
 
-			internal GetPropertyOrFieldDecoration(Class.IMemberInfo targetPropertyOrField)
+			internal GetPropertyOrFieldDecoration(IMemberInfo targetPropertyOrField)
 			{
 				TargetPropertyOrField = targetPropertyOrField;
 			}
 
 			public string Serialize()
 			{
-				return JsonSerializer.Serialize(new SavedGetPropertyOrField(TargetPropertyOrField.DeclaringType.GetType().FullName!, TargetPropertyOrField.DeclaringType.FullName, TargetPropertyOrField.Name));
+				return JsonSerializer.Serialize(new SavedGetPropertyOrField(TargetPropertyOrField.DeclaringType.SerializeWithFullTypeName(), TargetPropertyOrField.Name));
 			}
 
 			public static INodeDecoration Deserialize(TypeFactory typeFactory, string Json)
 			{
 				var info = JsonSerializer.Deserialize<SavedGetPropertyOrField>(Json) ?? throw new Exception("Unable to deserialize property or field info");
 
-				var type = TypeBase.Deserialize(typeFactory, info.Type, info.SerializedType);
+				var type = TypeBase.Deserialize(typeFactory, info.Type);
 
 				if (type is RealType realType)
 				{
 					var member = realType.BackendType.GetMember(info.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.GetField | BindingFlags.GetProperty).FirstOrDefault() ?? throw new Exception("Unable to find member: " + info.Name);
-					return new GetPropertyOrFieldDecoration(new RealMemberInfo(member, typeFactory));
+					return new GetPropertyOrFieldDecoration(new RealMemberInfo(member, realType, typeFactory));
 				}
 				else if (type is NodeClassType nodeClassType)
 				{
@@ -84,7 +56,7 @@ namespace NodeDev.Core.Nodes
 		public override string TitleColor => "lightblue";
 
 
-		internal Class.IMemberInfo? TargetMember;
+		internal IMemberInfo? TargetMember;
 
 		public override string Name
 		{
@@ -104,7 +76,7 @@ namespace NodeDev.Core.Nodes
 				TargetMember = ((GetPropertyOrFieldDecoration)decoration).TargetPropertyOrField;
 		}
 
-		public void SetMemberTarget(Class.IMemberInfo memberInfo)
+		public void SetMemberTarget(IMemberInfo memberInfo)
 		{
 			TargetMember = memberInfo;
 			Decorations[typeof(GetPropertyOrFieldDecoration)] = new GetPropertyOrFieldDecoration(TargetMember);

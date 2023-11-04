@@ -11,7 +11,7 @@ namespace NodeDev.Core.Class
 {
 	public class NodeClassMethodParameter : IMethodParameterInfo
 	{
-		private record class SerializedNodeClassMethodParameter(string Name, string ParameterTypeFullName, string ParameterType);
+		private record class SerializedNodeClassMethodParameter(string Name, string ParameterType);
 
 		public string Name { get; private set; }
 
@@ -28,13 +28,13 @@ namespace NodeDev.Core.Class
 
 		public string Serialize()
 		{
-			return System.Text.Json.JsonSerializer.Serialize(new SerializedNodeClassMethodParameter(Name, ParameterType.GetType().FullName!, ParameterType.Serialize()));
+			return System.Text.Json.JsonSerializer.Serialize(new SerializedNodeClassMethodParameter(Name, ParameterType.SerializeWithFullTypeName()));
 		}
 
 		public static NodeClassMethodParameter Deserialize(TypeFactory typeFactory, string serialized, NodeClassMethod nodeClassMethod)
 		{
 			var serializedNodeClassMethodParameter = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethodParameter>(serialized) ?? throw new Exception("Unable to deserialize node class method parameter");
-			return new NodeClassMethodParameter(serializedNodeClassMethodParameter.Name, TypeBase.Deserialize(typeFactory, serializedNodeClassMethodParameter.ParameterTypeFullName, serializedNodeClassMethodParameter.ParameterType), nodeClassMethod);
+			return new NodeClassMethodParameter(serializedNodeClassMethodParameter.Name, TypeBase.Deserialize(typeFactory, serializedNodeClassMethodParameter.ParameterType), nodeClassMethod);
 		}
 
 		#region Actions from UI

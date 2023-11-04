@@ -1,13 +1,14 @@
+using NodeDev.Core.Types;
 using System.Text.Json;
 
-namespace NodeDev.Core.Types.Tests;
+namespace NodeDev.Tests;
 
 public class TypeFactoryTests
 {
 	[Fact]
 	public void GetType_NetType()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var type = typeFactory.GetTypeByFullName(typeof(string).FullName!);
 		Assert.Same(typeof(string), type);
@@ -23,7 +24,7 @@ public class TypeFactoryTests
 	[Fact]
 	public void CreateBaseFromUserInputTest()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var err = typeFactory.CreateBaseFromUserInput("int", out var type);
 		Assert.Null(err);
@@ -42,7 +43,7 @@ public class TypeFactoryTests
 	[Fact]
 	public void CreateBaseFromUserInputTest_Err()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var err = typeFactory.CreateBaseFromUserInput("asdfasdf", out var type);
 		Assert.NotNull(err);

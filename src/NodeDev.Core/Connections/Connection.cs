@@ -34,12 +34,12 @@ namespace NodeDev.Core.Connections
 
 		#region Serialization
 
-		public record SerializedConnection(string Id, string Name, string TypeInfo, string SerializedType, List<string> Connections, string? TextboxValue);
+		public record SerializedConnection(string Id, string Name, string SerializedType, List<string> Connections, string? TextboxValue);
 		internal string Serialize()
 		{
 			var connections = Connections.ToList();
 
-			var serializedConnection = new SerializedConnection(Id, Name, Type.GetType().FullName!, Type.Serialize(), Connections.Select(x => x.Id).ToList(), TextboxValue);
+			var serializedConnection = new SerializedConnection(Id, Name, Type.SerializeWithFullTypeName(), Connections.Select(x => x.Id).ToList(), TextboxValue);
 
 			return JsonSerializer.Serialize(serializedConnection);
 		}
@@ -47,7 +47,7 @@ namespace NodeDev.Core.Connections
 		internal static Connection Deserialize(Node parent, string serializedConnection)
 		{
 			var serializedConnectionObj = JsonSerializer.Deserialize<SerializedConnection>(serializedConnection) ?? throw new Exception($"Unable to deserialize connection");
-			var type = TypeBase.Deserialize(parent.TypeFactory, serializedConnectionObj.TypeInfo, serializedConnectionObj.SerializedType);
+			var type = TypeBase.Deserialize(parent.TypeFactory, serializedConnectionObj.SerializedType);
 			var connection = new Connection(serializedConnectionObj.Name, parent, type, serializedConnectionObj.Id);
 
 			connection.TextboxValue = serializedConnectionObj.TextboxValue;
@@ -69,6 +69,8 @@ namespace NodeDev.Core.Connections
 			return connection;
 		}
 
+		#endregion
+
         public void UpdateType(TypeBase newType)
         {
 			Type = newType;
@@ -79,7 +81,7 @@ namespace NodeDev.Core.Connections
 				TextboxValue = null;
         }
 
-        public void UpdateTextboxText(string? text)
+		public void UpdateTextboxText(string? text)
         {
 			if (Type.AllowTextboxEdit)
 			{
@@ -99,6 +101,5 @@ namespace NodeDev.Core.Connections
         }
 
 
-        #endregion
     }
 }

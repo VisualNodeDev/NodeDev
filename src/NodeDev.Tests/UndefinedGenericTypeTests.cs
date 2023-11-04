@@ -1,13 +1,14 @@
+using NodeDev.Core.Types;
 using System.Text.Json;
 
-namespace NodeDev.Core.Types.Tests;
+namespace NodeDev.Tests;
 
 public class UndefinedGenericTypeTests
 {
 	[Fact]
 	public void SerializeUndefinedGenericType_ReturnsExpectedJson()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 		var undefinedGenericType = new UndefinedGenericType("T");
 
 		var serialized = undefinedGenericType.Serialize();
@@ -19,7 +20,7 @@ public class UndefinedGenericTypeTests
 	[Fact]
 	public void SerializeUndefinedGenericType_Deserialize()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 		var undefinedGenericType = new UndefinedGenericType("T");
 
 		var serialized = undefinedGenericType.SerializeWithFullTypeName();

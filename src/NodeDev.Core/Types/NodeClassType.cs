@@ -13,6 +13,9 @@ namespace NodeDev.Core.Types
 
 		public NodeClassType(NodeClass nodeClass, TypeBase[] generics)
 		{
+			if (generics.Length != 0)
+				throw new NotImplementedException("Generics are not supported yet for NodeClass");
+
 			NodeClass = nodeClass;
 			Generics = generics;
 		}
@@ -27,57 +30,31 @@ namespace NodeDev.Core.Types
 
 		public override string FriendlyName => Name;
 
-		public override IEnumerable<TypeBase> Interfaces => Enumerable.Empty<TypeBase>();
+		public override TypeBase[] Interfaces => Array.Empty<TypeBase>();
 
-		internal override string Serialize()
+		internal protected override string Serialize()
 		{
 			return FullName;
 		}
 
-		public override bool IsSame(TypeBase other, bool ignoreGenerics)
+		public new static NodeClassType Deserialize(TypeFactory typeFactory, string typeName)
 		{
-			if (other is NodeClassType nodeClassType)
-			{
-				if (nodeClassType.NodeClass == NodeClass)
-				{
-					if (ignoreGenerics)
-						return true;
-					else
-					{
-						if (Generics.Length != nodeClassType.Generics.Length)
-							return false;
-
-						for (int i = 0; i < Generics.Length; i++)
-						{
-							if (!Generics[i].IsSame(nodeClassType.Generics[i], ignoreGenerics))
-								return false;
-						}
-
-						return true;
-					}
-				}
-			}
-
-			return false;
-		}
-
-		public override bool IsAssignableTo(TypeBase other)
-		{
-			if (other is RealType realType && realType.BackendType == typeof(object))
-				return true;
-
-			// we don't handle node class inheritance yet, therefor a node class can never be assigned to anything
-			return false;
-		}
-
-		public static NodeClassType Deserialize(TypeFactory typeFactory, string typeName)
-		{
-			return typeFactory.Get(typeFactory.Project.Classes.First(x => x.Namespace + "." + x.Name == typeName));
+			return typeFactory.Project.GetNodeClassType(typeFactory.Project.Classes.First(x => x.Namespace + "." + x.Name == typeName));
 		}
 
 		public override IEnumerable<IMethodInfo> GetMethods()
 		{
 			return NodeClass.Methods;
+		}
+
+		public override Type MakeRealType()
+		{
+			return NodeClass.Project.GetCreatedClassType(NodeClass);
+		}
+
+		public override bool IsSameBackend(TypeBase typeBase)
+		{
+			return typeBase is NodeClassType nodeClassType && nodeClassType.NodeClass == NodeClass;
 		}
 	}
 }

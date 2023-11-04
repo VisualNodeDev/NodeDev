@@ -16,7 +16,7 @@ namespace NodeDev.Core.Nodes.Flow
 		{
 			Name = "Foreach";
 
-			var t = TypeFactory.CreateUndefinedGenericType("T");
+			var t = new UndefinedGenericType("T");
 
 			Inputs.Add(new("Exec", this, TypeFactory.ExecType));
 			Inputs.Add(new("IEnumerable", this, TypeFactory.Get(typeof(IEnumerable<>), new[] {t})));

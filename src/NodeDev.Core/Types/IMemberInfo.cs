@@ -1,6 +1,4 @@
-﻿using NodeDev.Core.Types;
-
-namespace NodeDev.Core.Class;
+﻿namespace NodeDev.Core.Types;
 
 public interface IMemberInfo
 {

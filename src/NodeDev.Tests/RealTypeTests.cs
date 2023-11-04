@@ -1,13 +1,14 @@
+using NodeDev.Core.Types;
 using System.Text.Json;
 
-namespace NodeDev.Core.Types.Tests;
+namespace NodeDev.Tests;
 
 public class RealTypeTests
 {
 	[Fact]
 	public void Methods_BasicTests()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var type = typeFactory.Get(typeof(Dictionary<,>), new TypeBase[]
 		{
@@ -26,7 +27,7 @@ public class RealTypeTests
 	[Fact]
 	public void Constructor_BasicTypeParsing()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var type = typeFactory.Get(typeof(int), null);
 
@@ -45,7 +46,7 @@ public class RealTypeTests
 	[Fact]
 	public void Constructor_BaseClassGeneric()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var type = typeFactory.Get(typeof(TestBaseClass<,>), new TypeBase[]
 		{
@@ -62,7 +63,7 @@ public class RealTypeTests
 	[Fact]
 	public void Constructor_InterfaceGeneric()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var type = typeFactory.Get(typeof(Dictionary<,>), new TypeBase[]
 		{
@@ -81,7 +82,7 @@ public class RealTypeTests
 	[Fact]
 	public void Constructor_BaseClassNoGeneric()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var type = typeFactory.Get(typeof(int), null);
 
@@ -92,7 +93,7 @@ public class RealTypeTests
 	[Fact]
 	public void Serialize_Tests()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var type = typeFactory.Get(typeof(Dictionary<,>), new TypeBase[]
 		{
@@ -102,7 +103,7 @@ public class RealTypeTests
 
 		var serialized = type.SerializeWithFullTypeName();
 
-		var newTypeFactory = new TypeFactory();
+		var newTypeFactory = new TypeFactory(new(Guid.NewGuid()));
 		var deserialized = (RealType)TypeBase.Deserialize(newTypeFactory, serialized);
 
 		Assert.Same(typeof(Dictionary<,>), deserialized.BackendType);

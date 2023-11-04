@@ -13,10 +13,8 @@ namespace NodeDev.Core.Nodes.Math
 		{
 			Name = "SmallerThanOrEqual";
 
-			var t1 = TypeFactory.CreateUndefinedGenericType("T1");
-			var t2 = TypeFactory.CreateUndefinedGenericType("T2");
-			Inputs.Add(new("a", this, t1));
-			Inputs.Add(new("b", this, t2));
+			Inputs.Add(new("a", this, new UndefinedGenericType("T1")));
+			Inputs.Add(new("b", this, new UndefinedGenericType("T2")));
 
 			Outputs.Add(new("c", this, TypeFactory.Get<bool>()));
 		}

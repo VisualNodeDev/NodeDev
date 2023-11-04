@@ -45,7 +45,7 @@ public class Project
 
 		var programClass = new Class.NodeClass("Program", "NewProject", project);
 
-		var main = new Class.NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void)), new Graph());
+		var main = new Class.NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void), null), new Graph());
 
 		main.Graph.AddNode(new EntryNode(main.Graph));
 		main.Graph.AddNode(new ReturnNode(main.Graph));
@@ -66,7 +66,7 @@ public class Project
 		var main = program.Methods.Single(x => x.Name == "Main");
 		var executor = new GraphExecutor(main.Graph, null);
 
-		var outputs = new object[main.ReturnType == TypeFactory.Get(typeof(void)) ? 1 : 2]; // 1 for the exec, 2 for exec + the actual return value
+		var outputs = new object[main.ReturnType == TypeFactory.Get(typeof(void), null) ? 1 : 2]; // 1 for the exec, 2 for exec + the actual return value
 		executor.Execute(null, inputs, outputs);
 
 		NodeClassTypeCreator = null;

@@ -192,10 +192,10 @@ public class RealType : TypeBase
 		return typeFactory.Get(type, generics);
 	}
 
-	//public override object? ParseTextboxEdit(string text)
-	//{
-	//    return Convert.ChangeType(text, BackendType);
-	//}
+	public override object? ParseTextboxEdit(string text)
+	{
+	    return Convert.ChangeType(text, BackendType);
+	}
 
 	public override bool IsSameBackend(TypeBase other)
 	{

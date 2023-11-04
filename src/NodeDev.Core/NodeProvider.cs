@@ -32,9 +32,9 @@ namespace NodeDev.Core
 		}
 
 		public record class NodeSearchResult(Type Type);
-		public record class MethodCallNode(Type Type, Class.IMethodInfo MethodInfo) : NodeSearchResult(Type);
-		public record class GetPropertyOrFieldNode(Type Type, Class.IMemberInfo MemberInfo) : NodeSearchResult(Type);
-		public record class SetPropertyOrFieldNode(Type Type, Class.IMemberInfo MemberInfo) : NodeSearchResult(Type);
+		public record class MethodCallNode(Type Type, IMethodInfo MethodInfo) : NodeSearchResult(Type);
+		public record class GetPropertyOrFieldNode(Type Type, IMemberInfo MemberInfo) : NodeSearchResult(Type);
+		public record class SetPropertyOrFieldNode(Type Type, IMemberInfo MemberInfo) : NodeSearchResult(Type);
 		public static IEnumerable<NodeSearchResult> Search(Project project, string text, Connection? startConnection)
 		{
 			var nodes = NodeTypes.Where(x => x != typeof(MethodCall)).Where(p => p.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
@@ -46,12 +46,12 @@ namespace NodeDev.Core
 				IEnumerable<MemberInfo> members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanRead);
 				members = members.Concat(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
 				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
-				IEnumerable<NodeSearchResult> results = members.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), new GetPropertyOrField.RealMemberInfo(x, project.TypeFactory)));
+				IEnumerable<NodeSearchResult> results = members.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), new RealMemberInfo(x, project.TypeFactory.Get(type, null), project.TypeFactory)));
 
 				members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanWrite);
 				members = members.Concat(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
 				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
-				return results.Concat(members.Select(x => new SetPropertyOrFieldNode(typeof(GetPropertyOrField), new GetPropertyOrField.RealMemberInfo(x, project.TypeFactory))));
+				return results.Concat(members.Select(x => new SetPropertyOrFieldNode(typeof(GetPropertyOrField), new RealMemberInfo(x, project.TypeFactory.Get(type, null),project.TypeFactory))));
 			}
 
 			// check if the text is a method call like 'ClassName.MethodName'
@@ -65,7 +65,7 @@ namespace NodeDev.Core
 					// find if the method exists
 					var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy | BindingFlags.Static).Where(x => x.Name.Contains(methodCallSplit[1], StringComparison.OrdinalIgnoreCase));
 
-					results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), new NodeClassMethod.RealMethodInfo(project.TypeFactory, x))));
+					results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), new RealMethodInfo(project.TypeFactory, x, project.TypeFactory.Get(type, null)))));
 
 					results = results.Concat(GetPropertiesAndFields(type, methodCallSplit[1]));
 				}
@@ -78,7 +78,7 @@ namespace NodeDev.Core
 
 				methods = methods.Concat(GetExtensionMethods(realType, project.TypeFactory)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 
-				results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), new NodeClassMethod.RealMethodInfo(project.TypeFactory, x))));
+				results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), new RealMethodInfo(project.TypeFactory, x, realType))));
 
 				results = results.Concat(GetPropertiesAndFields(realType.BackendType, text));
 			}
@@ -117,7 +117,7 @@ namespace NodeDev.Core
 				.SelectMany(x => x.GetTypes())
 				.Where(type => !type.IsGenericType)
 				.SelectMany(type => type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
-				.Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && t.IsAssignableTo(typeFactory.Get(method.GetParameters()[0].ParameterType)));
+				.Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && t.IsAssignableTo(typeFactory.Get(method.GetParameters()[0].ParameterType, null), out _));
 
 			return query;
 		}

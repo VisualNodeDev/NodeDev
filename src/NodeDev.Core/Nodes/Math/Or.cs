@@ -13,10 +13,10 @@ namespace NodeDev.Core.Nodes.Math
 		{
 			Name = "Or";
 
-			Inputs.Add(new("a", this, TypeFactory.Get(typeof(bool))));
-			Inputs.Add(new("b", this, TypeFactory.Get(typeof(bool))));
+			Inputs.Add(new("a", this, TypeFactory.Get<bool>()));
+			Inputs.Add(new("b", this, TypeFactory.Get<bool>()));
 
-			Outputs.Add(new("c", this, TypeFactory.Get(typeof(bool))));
+			Outputs.Add(new("c", this, TypeFactory.Get<bool>()));
 		}
 
         protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)

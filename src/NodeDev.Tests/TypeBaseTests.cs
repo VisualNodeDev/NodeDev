@@ -1,13 +1,14 @@
+using NodeDev.Core.Types;
 using System.Text.Json;
 
-namespace NodeDev.Core.Types.Tests;
+namespace NodeDev.Tests;
 
 public class TypeBaseTests
 {
 	[Fact]
 	public void Assignations_GetAssignableTypes_Basic()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var type = typeFactory.Get(typeof(List<int>), null);
 
@@ -26,7 +27,7 @@ public class TypeBaseTests
 	[Fact]
 	public void Assignations_IsAssignableTo_Basic()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var child = typeFactory.Get<Child>();
 		var parent = typeFactory.Get<Parent>();
@@ -61,7 +62,7 @@ public class TypeBaseTests
 	[Fact]
 	public void Assignations_IsDirectlyAssignable_InOut()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var childEnumerable = typeFactory.Get(typeof(IEnumerable<>), new[] { typeFactory.Get<Child>() });
 		var parentEnumerable = typeFactory.Get(typeof(IEnumerable<>), new[] { typeFactory.Get<Parent>() });
@@ -75,7 +76,7 @@ public class TypeBaseTests
 	[Fact]
 	public void Assignations_IsDirectlyAssignable_Basic()
 	{
-		var typeFactory = new TypeFactory();
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
 		var type = typeFactory.Get(typeof(List<int>), null);
 

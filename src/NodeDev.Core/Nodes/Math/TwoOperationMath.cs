@@ -14,13 +14,10 @@ namespace NodeDev.Core.Nodes.Math
 
 		public TwoOperationMath(Graph graph, string? id = null) : base(graph, id)
 		{
-			var t1 = TypeFactory.CreateUndefinedGenericType("T1");
-			var t2 = TypeFactory.CreateUndefinedGenericType("T2");
-			var t3 = TypeFactory.CreateUndefinedGenericType("T3");
-			Inputs.Add(new("a", this, t1));
-			Inputs.Add(new("b", this, t2));
+			Inputs.Add(new("a", this, new UndefinedGenericType("T1")));
+			Inputs.Add(new("b", this, new UndefinedGenericType("T2")));
 
-			Outputs.Add(new("c", this, t3));
+			Outputs.Add(new("c", this, new UndefinedGenericType("T3")));
 		}
 
 		public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
@@ -53,7 +50,7 @@ namespace NodeDev.Core.Nodes.Math
 				else
 					resultingType = typeof(int);
 
-				Outputs[0].UpdateType(TypeFactory.Get(resultingType));
+				Outputs[0].UpdateType(TypeFactory.Get(resultingType, null));
 
 				return new() { Outputs[0] };
 			}
@@ -66,7 +63,7 @@ namespace NodeDev.Core.Nodes.Math
 
 				if(correctOne != null)
 				{
-					Outputs[0].UpdateType(TypeFactory.Get(correctOne.ReturnType));
+					Outputs[0].UpdateType(TypeFactory.Get(correctOne.ReturnType, null));
 					return new() { Outputs[0] };
 				}
 			}

@@ -1,6 +1,4 @@
 ﻿
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("NodeDev.Core.Types.Tests")]
-
 namespace NodeDev.Core.Types;
 
 public class TypeFactory
@@ -28,9 +26,12 @@ public class TypeFactory
 
 	private Dictionary<Type, TypeBase> FullyConstructedRealTypes = new();
 
-	public TypeFactory()
+	public readonly Project Project;
+
+	public TypeFactory(Project project)
 	{
 		ExecType_ = new();
+		Project = project;
 	}
 
 	public ExecType ExecType => ExecType_;

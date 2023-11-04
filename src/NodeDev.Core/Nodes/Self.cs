@@ -14,7 +14,7 @@ namespace NodeDev.Core.Nodes
         {
             Name = "Self";
 
-            Outputs.Add(new("self", this, TypeFactory.Get(graph.SelfClass)));
+            Outputs.Add(new("self", this, Project.GetNodeClassType(graph.SelfClass)));
         }
 
 		protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)

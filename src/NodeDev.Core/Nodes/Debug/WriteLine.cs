@@ -13,7 +13,7 @@ namespace NodeDev.Core.Nodes.Debug
         {
             Name = "WriteLine";
 
-            Inputs.Add(new("Line", this, TypeFactory.CreateUndefinedGenericType("T")));
+            Inputs.Add(new("Line", this, new UndefinedGenericType("T")));
         }
 
         protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)

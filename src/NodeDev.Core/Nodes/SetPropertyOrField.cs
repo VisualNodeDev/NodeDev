@@ -18,7 +18,7 @@ namespace NodeDev.Core.Nodes
 		public override string TitleColor => "lightblue";
 
 
-		internal Class.IMemberInfo? TargetMember;
+		internal IMemberInfo? TargetMember;
 
 		public override string Name
 		{

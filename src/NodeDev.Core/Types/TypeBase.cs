@@ -36,6 +36,7 @@ public abstract class TypeBase
 
 	public abstract Type MakeRealType();
 
+	public virtual object? ParseTextboxEdit(string text) => throw new NotImplementedException();
 
 	private record class SerializedType(string TypeFullName, string SerializedTypeCustom);
 	public string SerializeWithFullTypeName()

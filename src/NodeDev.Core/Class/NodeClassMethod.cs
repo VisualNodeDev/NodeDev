@@ -12,10 +12,7 @@ namespace NodeDev.Core.Class
 {
 	public class NodeClassMethod : IMethodInfo
 	{
-
-
-
-		public record class SerializedNodeClassMethod(string Name, string ReturnTypeFullName, string ReturnType, List<string> Parameters, string Graph);
+		public record class SerializedNodeClassMethod(string Name, string ReturnType, List<string> Parameters, string Graph);
 		public NodeClassMethod(NodeClass ownerClass, string name, TypeBase returnType, Graph graph)
 		{
 			Class = ownerClass;
@@ -25,7 +22,6 @@ namespace NodeDev.Core.Class
 
 			Graph.SelfMethod = this;
 		}
-
 
 		public NodeClass Class { get; }
 
@@ -37,10 +33,9 @@ namespace NodeDev.Core.Class
 
 		public Graph Graph { get; }
 
-		public bool IsStatic => false;
+		public bool IsStatic => false; // not supported yet
 
-		public TypeBase DeclaringType => Class.TypeFactory.Get(Class);
-
+		public TypeBase DeclaringType => Class.ClassTypeBase;
 
 		public void Rename(string newName)
 		{
@@ -86,7 +81,7 @@ namespace NodeDev.Core.Class
 		{
 			var serializedNodeClassMethod = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethod>(serialized) ?? throw new Exception("Unable to deserialize node class method");
 
-			var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassMethod.ReturnTypeFullName, serializedNodeClassMethod.ReturnType);
+			var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassMethod.ReturnType);
 			var graph = new Graph();
 			var nodeClassMethod = new NodeClassMethod(owner, serializedNodeClassMethod.Name, returnType, graph);
 			graph.SelfMethod = nodeClassMethod; // a bit / really ugly
@@ -111,7 +106,7 @@ namespace NodeDev.Core.Class
 
 		public string Serialize()
 		{
-			var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.GetType().FullName!, ReturnType.FullName, Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize());
+			var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.SerializeWithFullTypeName(), Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize());
 			return System.Text.Json.JsonSerializer.Serialize(serializedNodeClassMethod);
 		}
 

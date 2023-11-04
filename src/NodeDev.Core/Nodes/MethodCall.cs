@@ -17,8 +17,8 @@ public class MethodCall : NormalFlowNode
 {
 	public class TargetMethodDecoration : INodeDecoration
 	{
-		private record class SavedMethodInfoParameter(string Type, string SerializedType);
-		private record class SavedMethodInfo(string Type, string SerializedType, string Name, SavedMethodInfoParameter[] ParamTypes);
+		private record class SavedMethodInfoParameter(string Type);
+		private record class SavedMethodInfo(string Type, string Name, SavedMethodInfoParameter[] ParamTypes);
 		internal IMethodInfo TargetMethod { get; set; }
 
 		public TargetMethodDecoration(IMethodInfo targetMethod)
@@ -28,15 +28,15 @@ public class MethodCall : NormalFlowNode
 
 		public string Serialize()
 		{
-			return JsonSerializer.Serialize(new SavedMethodInfo(TargetMethod.DeclaringType.GetType().FullName!, TargetMethod.DeclaringType!.FullName!, TargetMethod.Name, TargetMethod.GetParameters().Select(p => new SavedMethodInfoParameter(p.ParameterType.GetType().FullName!, p.ParameterType.FullName!)).ToArray()));
+			return JsonSerializer.Serialize(new SavedMethodInfo(TargetMethod.DeclaringType.SerializeWithFullTypeName(), TargetMethod.Name, TargetMethod.GetParameters().Select(p => new SavedMethodInfoParameter(p.ParameterType.SerializeWithFullTypeName())).ToArray()));
 		}
 
 		public static INodeDecoration Deserialize(TypeFactory typeFactory, string Json)
 		{
 			var info = JsonSerializer.Deserialize<SavedMethodInfo>(Json) ?? throw new Exception("Unable to deserialize method info");
 
-			var type = TypeBase.Deserialize(typeFactory, info.Type, info.SerializedType);
-			var parameterTypes = info.ParamTypes.Select(x => TypeBase.Deserialize(typeFactory, x.Type, x.SerializedType));
+			var type = TypeBase.Deserialize(typeFactory, info.Type);
+			var parameterTypes = info.ParamTypes.Select(x => TypeBase.Deserialize(typeFactory, x.Type));
 			var method = type.GetMethods().FirstOrDefault(x => x.Name == info.Name && parameterTypes.SequenceEqual(x.GetParameters().Select(x => x.ParameterType)));
 
 			if (method == null)
@@ -125,7 +125,7 @@ public class MethodCall : NormalFlowNode
 		// update the inputs
 		Inputs.AddRange(TargetMethod.GetParameters().Select(x => new Connection(x.Name, this, x.ParameterType)));
 
-		if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void)))
+		if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void), null))
 			Outputs.Add(new Connection("Result", this, TargetMethod.ReturnType));
 	}
 
@@ -207,13 +207,13 @@ public class MethodCall : NormalFlowNode
 		}
 		else
 		{
-			var realMethod = (NodeClassMethod.RealMethodInfo)TargetMethod;
+			var realMethod = (RealMethodInfo)TargetMethod;
 
 			var target = TargetMethod.IsStatic ? null : inputs[0];
 
 			var result = realMethod.Method.Invoke(target, inputs[(TargetMethod.IsStatic ? 1 : 2)..].ToArray());
 
-			if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void)))
+			if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void), null))
 				outputs[^1] = result;
 		}
 	}

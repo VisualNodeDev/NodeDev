@@ -9,14 +9,11 @@ namespace NodeDev.Core.Class
 {
 	public class NodeClass
 	{
-
-		public record class SerializedNodeClass(string Name, string Namespace, List<string> Methods, List<string> Properties);
-
 		public readonly Project Project;
 
 		public TypeFactory TypeFactory => Project.TypeFactory;
 
-		public TypeBase ClassTypeBase => TypeFactory.Get(this);
+		public TypeBase ClassTypeBase => Project.GetNodeClassType(this);
 
 		public string Name { get; set; }
 
@@ -33,7 +30,9 @@ namespace NodeDev.Core.Class
 			Project = project;
 		}
 
+		#region Serialisation
 
+		public record class SerializedNodeClass(string Name, string Namespace, List<string> Methods, List<string> Properties);
 		public static NodeClass Deserialize(string serialized, Project project, out SerializedNodeClass serializedNodeClass)
 		{
 			serializedNodeClass = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClass>(serialized) ?? throw new Exception("Unable to deserialize node class");
@@ -64,5 +63,7 @@ namespace NodeDev.Core.Class
 
 			return System.Text.Json.JsonSerializer.Serialize(serializedNodeClass);
 		}
+
+		#endregion
 	}
 }

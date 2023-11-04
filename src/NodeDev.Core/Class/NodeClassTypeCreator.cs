@@ -40,7 +40,7 @@ public class NodeClassTypeCreator
 
 				Type propertyType;
 				if (property.PropertyType is RealType realType)
-					propertyType = realType.BackendType;
+					propertyType = realType.MakeRealType();
 				else if (property.PropertyType is NodeClassType nodeClassType) // check if the class was already built or create the empty class right now
 				{
 					if (GeneratedTypes.ContainsKey(nodeClassType))

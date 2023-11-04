@@ -20,8 +20,7 @@ namespace NodeDev.Core.Nodes
 
 		public New(Graph graph, string? id = null) : base(graph, id)
 		{
-			var t1 = TypeFactory.CreateUndefinedGenericType("T1");
-			Outputs.Add(new("Obj", this, t1));
+			Outputs.Add(new("Obj", this, new UndefinedGenericType("T")));
 		}
 
 		public override IEnumerable<AlternateOverload> AlternatesOverloads
@@ -34,7 +33,7 @@ namespace NodeDev.Core.Nodes
 				if (Outputs[1].Type is RealType realType)
 				{
 					var constructors = realType.BackendType.GetConstructors();
-					return constructors.Select(x => new AlternateOverload(Outputs[1].Type, x.GetParameters().Select(y => new NodeClassMethod.RealMethodInfo.RealMethodParameterInfo(y, TypeFactory)).OfType<IMethodParameterInfo>().ToList())).ToList();
+					return constructors.Select(x => new AlternateOverload(Outputs[1].Type, x.GetParameters().Select(y => new RealMethodParameterInfo(y, TypeFactory, realType)).OfType<IMethodParameterInfo>().ToList())).ToList();
 				}
 				else if (Outputs[1].Type is NodeClassType nodeClassType)
 					return new AlternateOverload[] { new(Outputs[1].Type, new()) }; // for now, we don't handle custom constructors
@@ -61,7 +60,7 @@ namespace NodeDev.Core.Nodes
 			Inputs.AddRange(newConnections);
 		}
 
-        protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
+		protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
 		{
 			if (Outputs[1].Type is UndefinedGenericType)
 				throw new InvalidOperationException("Output type is not defined");

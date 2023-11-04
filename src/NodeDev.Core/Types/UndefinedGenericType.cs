@@ -21,7 +21,7 @@ public class UndefinedGenericType : TypeBase
 
 	public override TypeBase[] Interfaces => throw new NotImplementedException();
 
-	internal UndefinedGenericType(string name)
+	public UndefinedGenericType(string name)
 	{
 		FullName = Name = name;
 	}
