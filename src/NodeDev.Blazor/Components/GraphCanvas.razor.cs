@@ -176,8 +176,11 @@ namespace NodeDev.Blazor.Components
 						// we're plugging something something with a generic into something without a generic
 						if (source.Type.HasUndefinedGenerics && !destination.Type.HasUndefinedGenerics)
 						{
-							if(source.Type.CanResolveGenerics(destination.Type, out Dictionary<UndefinedGenericType, TypeBase> newTypes))
-								PropagateNewGeneric(nodeSource, newTypes, destination.Type);
+							if (source.Type.IsAssignableTo(destination.Type, out var newTypes))
+							{
+								foreach(var newType in newTypes)
+									PropagateNewGeneric(nodeSource, newType.Key, newType.Value);
+							}
 						}
 						else if (destination.Type is UndefinedGenericType destinationType && source.Type is not UndefinedGenericType)
 							PropagateNewGeneric(nodeDestination, destinationType, source.Type);
@@ -379,7 +382,7 @@ namespace NodeDev.Blazor.Components
 			if (PopupNode == null || PopupNodeConnection?.Type is not UndefinedGenericType generic)
 				return;
 
-			PropagateNewGeneric(PopupNode, generic, Graph.SelfClass.TypeFactory.Get(type));
+			PropagateNewGeneric(PopupNode, generic, Graph.SelfClass.TypeFactory.Get(type, null));
 
 			CancelPopup();
 		}

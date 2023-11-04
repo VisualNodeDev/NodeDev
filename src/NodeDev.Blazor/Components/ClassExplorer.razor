@@ -172,7 +172,7 @@
 
 		NodeDev.Core.Types.TypeBase typeBase;
 		if (result.Data is Type type)
-			typeBase = Class.TypeFactory.Get(type);
+			typeBase = Class.TypeFactory.Get(type, null);
 		else if (result.Data is NodeDev.Core.Types.TypeBase t)
 			typeBase = t;
 		else
@@ -203,7 +203,7 @@
 		{
 			if (CurrentlyEditingItem.Type == TreeItemType.Method)
 			{
-				var method = new Core.Class.NodeClassMethod(Class, Text, Class.TypeFactory.Get(typeof(void)), new Core.Graph());
+				var method = new Core.Class.NodeClassMethod(Class, Text, Class.TypeFactory.Get(typeof(void), null), new Core.Graph());
 				method.Graph.AddNode(new Core.Nodes.Flow.EntryNode(method.Graph));
 				method.Graph.AddNode(new Core.Nodes.Flow.ReturnNode(method.Graph));
 				Class.Methods.Add(method);

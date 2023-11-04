@@ -68,7 +68,7 @@
 
 		NodeDev.Core.Types.TypeBase typeBase;
 		if (result.Data is Type type)
-			typeBase = Method.Class.TypeFactory.Get(type);
+			typeBase = Method.Class.TypeFactory.Get(type, null);
 		else if (result.Data is NodeDev.Core.Types.TypeBase t)
 			typeBase = t;
 		else
