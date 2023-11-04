@@ -14,9 +14,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.Blazor", "NodeDev.B
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.Tests", "NodeDev.Tests\NodeDev.Tests.csproj", "{4C775E47-79BC-4F2D-93FF-440A151B2757}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeDev.Core.Types", "NodeDev.Core.Types\NodeDev.Core.Types.csproj", "{06E6C110-D3CA-4E11-9FBB-33F2C6CE95B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.Core.Types", "NodeDev.Core.Types\NodeDev.Core.Types.csproj", "{06E6C110-D3CA-4E11-9FBB-33F2C6CE95B3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeDev.Core.Types.Tests", "NodeDev.Core.Types.Tests\NodeDev.Core.Types.Tests.csproj", "{BC1DA9CB-D359-4667-AB82-93EC1B44D46A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.Core.Types.Tests", "NodeDev.Core.Types.Tests\NodeDev.Core.Types.Tests.csproj", "{BC1DA9CB-D359-4667-AB82-93EC1B44D46A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{848A596C-D848-46EB-BA9B-8A6D313BA602}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

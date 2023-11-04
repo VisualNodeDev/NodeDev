@@ -175,11 +175,6 @@ public class RealType : TypeBase
 		return new RealType(TypeFactory, typeUsingOurGenerics, generics);
 	}
 
-	private interface Yo<in T>
-	{
-	}
-
-
 	private record class SerializedType(string TypeFullName, string[] SerializedGenerics);
 	internal protected override string Serialize()
 	{
