@@ -255,12 +255,12 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	#region Node Moved
 
-	public void OnNodeMoved(string nodeId, float x, float y)
+	public void OnNodeMoved(MovableModel movableModel)
 	{
-		if (!Graph.Nodes.TryGetValue(nodeId, out var node))
-			return;
+		var node = ((GraphNodeModel)movableModel).Node;
+
 		var decoration = node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero));
-		decoration.Position = new(x, y);
+		decoration.Position = new((float)movableModel.Position.X, (float)movableModel.Position.Y);
 	}
 
 	#endregion
@@ -504,6 +504,8 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		var nodeModel = Diagram.Nodes.Add(new GraphNodeModel(node));
 		foreach (var connection in node.InputsAndOutputs)
 			nodeModel.AddPort(new GraphPortModel(nodeModel, connection, node.Inputs.Contains(connection)));
+
+		nodeModel.Moved += OnNodeMoved;
 	}
 
 	#endregion
