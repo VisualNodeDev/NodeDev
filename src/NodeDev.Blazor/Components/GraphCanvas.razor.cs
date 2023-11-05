@@ -418,8 +418,6 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		CancelPopup();
 	}
 
-	private bool GetAllowTextboxEdit(Connection connection) => connection.Type.AllowTextboxEdit && connection.Connections.Count == 0 && connection.Parent.Inputs.Contains(connection);
-	private record class UpdateConnectionTypeParameters(string NodeId, string Id, string Type, bool IsGeneric, string Color, bool AllowTextboxEdit, string? TextboxValue);
 	private void PropagateNewGeneric(Node node, UndefinedGenericType generic, TypeBase newType)
 	{
 		var inputsOrOutputs = node.InputsAndOutputs.ToDictionary(x => x, x => x.Type);

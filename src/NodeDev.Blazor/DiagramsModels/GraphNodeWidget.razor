@@ -9,13 +9,17 @@
 	{
 		var isInput = port.Alignment == PortAlignment.Left;
 		<div class="@($"row relative w100 {(isInput ? "input" : "output")}")">
-			<span class="@(isInput ? "pl-3 pr-1" : "pr-3 pl-1")">@port.Connection.Name</span>
+			<div class="name">
+				<span class="@(isInput ? "pl-3 pr-1" : "pr-3 pl-1")">@port.Connection.Name</span>
+			</div>
 
-			<PortRenderer @key="port" Port="port" Class="rounded-full absolute" Style="@($"background-color: {port.PortColor};")" />
+			<MudTooltip Text="@port.Connection.Type.FriendlyName" Placement="Placement.Top">
+				<PortRenderer @key="port" Port="port" Class="rounded-full absolute" Style="@("background-color:" + port.PortColor)" />
+			</MudTooltip>
 
 			@if (isInput && port.Connection.Type.AllowTextboxEdit && port.Links.Count == 0)
 			{
-				<MudTextField T="string" Class="border rounded" Value="@port.Connection.TextboxValue" />
+				<MudTextField T="string" Class="border rounded pr-2" Value="@port.Connection.TextboxValue" Label="@port.Connection.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
 			}
 		</div>
 

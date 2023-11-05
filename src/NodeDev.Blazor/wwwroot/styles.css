@@ -62,6 +62,8 @@
     .my-node .title {
         border-radius: 10px;
         border: 1px solid #e8e8e8;
+        width: 100%;
+        text-align: center;
     }
 
     .my-node .diagram-port {
@@ -75,7 +77,16 @@
     }
 
     .my-node .row {
-        margin-top: 10px
+        margin-top: 10px;
+        display: flex;
+        flex-direction: row;
+        align-items: center
+    }
+
+    .my-node .output .name {
+        width: 100%;
+        position: relative;
+        text-align: right;
     }
 
     .my-node .diagram-port.left {
@@ -86,10 +97,6 @@
     .my-node .diagram-port.right {
         right: 0px;
         top: 50%;
-    }
-
-    .my-node .output {
-        text-align: right;
     }
 
 g.diagram-link path:not(.selection-helper) {
