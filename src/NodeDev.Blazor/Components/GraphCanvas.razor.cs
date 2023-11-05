@@ -15,6 +15,8 @@ using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
 using System.Numerics;
 using System.Reactive.Linq;
+using static MudBlazor.CategoryTypes;
+using System.Xml.Linq;
 
 namespace NodeDev.Blazor.Components;
 
@@ -168,35 +170,47 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	#region Connection Added / Removed
 
+	private bool DisableConnectionUpdate = false;
 	private void OnConnectionUpdated(BaseLinkModel baseLinkModel, Anchor old, Anchor newAnchor)
 	{
-		if (old is not PositionAnchor)
-			throw new NotImplementedException("Cannot take an existing connection and move it somewhere else (yet");
+		if (DisableConnectionUpdate || baseLinkModel.Source is PositionAnchor || baseLinkModel.Target is PositionAnchor)
+			return;
 
 		Graph.Invoke(() =>
 		{
-			var source = ((GraphPortModel?)baseLinkModel.Source.Model)?.Connection;
-			var destination = ((GraphPortModel?)baseLinkModel.Target.Model)?.Connection;
+			var source = ((GraphPortModel?)baseLinkModel.Source.Model);
+			var destination = ((GraphPortModel?)baseLinkModel.Target.Model);
 
 			if (source != null && destination != null)
 			{
-				source.Connections.Add(destination);
-				destination.Connections.Add(source);
+				if(source.Alignment == PortAlignment.Left) // it's an input, let's swap it so the "source" is an output
+				{
+					DisableConnectionUpdate = true;
+					var old = baseLinkModel.Source;
+					baseLinkModel.SetSource(baseLinkModel.Target);
+					baseLinkModel.SetTarget(old);
+					DisableConnectionUpdate = false;
+				}
+				source.Connection.Connections.Add(destination.Connection);
+				destination.Connection.Connections.Add(source.Connection);
 
 				// we're plugging something something with a generic into something without a generic
-				if (source.Type.HasUndefinedGenerics && !destination.Type.HasUndefinedGenerics)
+				if (source.Connection.Type.HasUndefinedGenerics && !destination.Connection.Type.HasUndefinedGenerics)
 				{
-					if (source.Type.IsAssignableTo(destination.Type, out var newTypes))
+					if (source.Connection.Type.IsAssignableTo(destination.Connection.Type, out var newTypes))
 					{
 						foreach (var newType in newTypes)
-							PropagateNewGeneric(source.Parent, newType.Key, newType.Value);
+							PropagateNewGeneric(source.Connection.Parent, newType.Key, newType.Value);
 					}
 				}
-				else if (destination.Type is UndefinedGenericType destinationType && source.Type is not UndefinedGenericType)
-					PropagateNewGeneric(destination.Parent, destinationType, source.Type);
+				else if (destination.Connection.Type is UndefinedGenericType destinationType && source.Connection.Type is not UndefinedGenericType)
+					PropagateNewGeneric(destination.Connection.Parent, destinationType, source.Connection.Type);
 
-				if (destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit) // gotta remove the textbox
-					UpdateConnectionType(destination);
+				if (destination.Connection.Connections.Count == 1 && destination.Connection.Type.AllowTextboxEdit) // gotta remove the textbox
+					UpdateConnectionType(destination.Connection);
+
+				if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel port)
+					link.Color = GetTypeShapeColor(port.Connection.Type, port.Connection.Parent.TypeFactory);
 			}
 		});
 	}
@@ -205,8 +219,10 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 	{
 		baseLinkModel.SourceChanged += OnConnectionUpdated;
 		baseLinkModel.TargetChanged += OnConnectionUpdated;
-
 		baseLinkModel.TargetMarker = LinkMarker.Arrow;
+
+		if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel port)
+			link.Color = GetTypeShapeColor(port.Connection.Type, port.Connection.Parent.TypeFactory);
 	}
 
 	public void OnConnectionRemoved(BaseLinkModel baseLinkModel)
@@ -515,10 +531,9 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 					target = portModel;
 				}
 
-				var link = Diagram.Links.Add(new LinkModel(portModel, otherPortModel));
-				link.TargetMarker = LinkMarker.Arrow;
+				var link = Diagram.Links.Add(new LinkModel(source, target));
 
-				link.Color = GetTypeShapeColor(connection.Type, node.TypeFactory);
+				OnConnectionAdded(link);
 			}
 		}
 	}
