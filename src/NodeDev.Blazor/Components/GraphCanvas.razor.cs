@@ -228,9 +228,9 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 			{
 
 				if (baseLinkModel.Source is PositionAnchor positionAnchor && destination != null)
-					OnPortDroppedOnCanvas(destination, Diagram.GetScreenPoint(positionAnchor.GetPlainPosition()!.X, positionAnchor.GetPlainPosition()!.Y).Subtract(Diagram.Container!.Left, Diagram.Container!.Top));
+					OnPortDroppedOnCanvas(destination, Diagram.GetScreenPoint(positionAnchor.GetPlainPosition()!.X, positionAnchor.GetPlainPosition()!.Y) - Diagram.Container!.NorthWest);
 				else if (baseLinkModel.Target is PositionAnchor positionAnchor2 && source != null)
-					OnPortDroppedOnCanvas(source, Diagram.GetScreenPoint(positionAnchor2.GetPlainPosition()!.X, positionAnchor2.GetPlainPosition()!.Y).Subtract(Diagram.Container!.Left, Diagram.Container!.Top));
+					OnPortDroppedOnCanvas(source, Diagram.GetScreenPoint(positionAnchor2.GetPlainPosition()!.X, positionAnchor2.GetPlainPosition()!.Y) - Diagram.Container!.NorthWest);
 			}
 		});
 	}
