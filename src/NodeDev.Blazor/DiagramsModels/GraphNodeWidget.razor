@@ -7,11 +7,8 @@
 
 	@foreach (var port in Node.Ports.OfType<GraphPortModel>())
 	{
-		<div class="row relative w100">
-			@{
-				var isInput = port.Alignment == PortAlignment.Left;
-			}
-
+		var isInput = port.Alignment == PortAlignment.Left;
+		<div class="@($"row relative w100 {(isInput ? "input" : "output")}")">
 			<span class="@(isInput ? "pl-3 pr-1" : "pr-3 pl-1")">@port.Connection.Name</span>
 
 			<PortRenderer @key="port" Port="port" Class="rounded-full absolute" Style="@($"background-color: {port.PortColor};")" />

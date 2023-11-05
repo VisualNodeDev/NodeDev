@@ -58,10 +58,12 @@
     -ms-flex-pack: center;
     justify-content: center;
 }
+
     .my-node .title {
         border-radius: 10px;
         border: 1px solid #e8e8e8;
     }
+
     .my-node .diagram-port {
         width: 20px;
         height: 20px;
@@ -72,18 +74,23 @@
         position: absolute;
     }
 
-        .my-node .row {
-            margin-top: 10px
-        }
+    .my-node .row {
+        margin-top: 10px
+    }
 
-        .my-node .diagram-port.left {
-            left: 0px;
-            top: 50%;
-        }
-        .my-node .diagram-port.right {
-            right: 0px;
-            top: 50%;
-        }
+    .my-node .diagram-port.left {
+        left: 0px;
+        top: 50%;
+    }
+
+    .my-node .diagram-port.right {
+        right: 0px;
+        top: 50%;
+    }
+
+    .my-node .output {
+        text-align: right;
+    }
 
 g.diagram-link path:not(.selection-helper) {
     stroke-dasharray: 5;
