@@ -1,0 +1,33 @@
+﻿@using global::Blazor.Diagrams.Core.Models
+
+<div class="drop-shadow-lg bg-white border my-node">
+	<div class="bg-main pa-2 mb-1 font-semibold text-white uppercase title">
+		@Node.Node.Name
+	</div>
+
+	@foreach (var port in Node.Ports.OfType<GraphPortModel>())
+	{
+		<div class="row relative w100">
+			@{
+				var isInput = port.Alignment == PortAlignment.Left;
+			}
+
+			<span class="@(isInput ? "pl-3 pr-1" : "pr-3 pl-1")">@port.Connection.Name</span>
+
+			<PortRenderer @key="port" Port="port" Class="rounded-full absolute" Style="@($"background-color: {port.PortColor};")" />
+
+			@if (isInput && port.Connection.Type.AllowTextboxEdit && port.Links.Count == 0)
+			{
+				<MudTextField T="string" Class="border rounded" Value="@port.Connection.TextboxValue" />
+			}
+		</div>
+
+	}
+</div>
+
+@code {
+
+	[Parameter]
+	public GraphNodeModel Node { get; set; } = null!;
+
+}
