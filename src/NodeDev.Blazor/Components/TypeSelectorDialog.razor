@@ -1,6 +1,8 @@
-﻿<MudDialog>
+﻿@using NodeDev.Core.Types
+
+<MudDialog>
     <DialogContent>
-        <TypeSelector TypeFactory="TypeFactory" OnTypeSelected="MudDialog.Close<Type>" />
+        <TypeSelector TypeFactory="TypeFactory" OnTypeSelected="MudDialog.Close<TypeBase>" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>

@@ -5,13 +5,12 @@ namespace NodeDev.Core.Types;
 public class RealMemberInfo : IMemberInfo
 {
 	internal readonly MemberInfo MemberInfo;
-	private readonly TypeFactory TypeFactory;
+	private TypeFactory TypeFactory => RealType.TypeFactory;
 	private readonly RealType RealType;
 
-	public RealMemberInfo(MemberInfo memberInfo, RealType realType, TypeFactory typeFactory)
+	public RealMemberInfo(MemberInfo memberInfo, RealType realType)
 	{
 		MemberInfo = memberInfo;
-		TypeFactory = typeFactory;
 		RealType = realType;
 	}
 
@@ -40,6 +39,20 @@ public class RealMemberInfo : IMemberInfo
 	{
 		FieldInfo field => field.IsStatic,
 		PropertyInfo property => property.GetMethod?.IsStatic ?? false,
+		_ => throw new Exception("Invalid member type")
+	};
+
+	public bool CanGet => MemberInfo switch
+	{
+		FieldInfo => true,
+		PropertyInfo property => property.CanRead,
+		_ => throw new Exception("Invalid member type")
+	};
+
+	public bool CanSet => MemberInfo switch
+	{
+		FieldInfo => true,
+		PropertyInfo property => property.CanWrite,
 		_ => throw new Exception("Invalid member type")
 	};
 }

@@ -41,17 +41,15 @@ namespace NodeDev.Core
 
 			var results = nodes.Select(x => new NodeSearchResult(x));
 
-			IEnumerable<NodeSearchResult> GetPropertiesAndFields(Type type, string text)
+			IEnumerable<NodeSearchResult> GetPropertiesAndFields(TypeBase type, string text)
 			{
-				IEnumerable<MemberInfo> members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanRead);
-				members = members.Concat(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
-				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
-				IEnumerable<NodeSearchResult> results = members.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), new RealMemberInfo(x, project.TypeFactory.Get(type, null), project.TypeFactory)));
+				IEnumerable<IMemberInfo> members = type.GetMembers();
+				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase)); // filter with the name
 
-				members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(x => x.CanWrite);
-				members = members.Concat(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
-				members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
-				return results.Concat(members.Select(x => new SetPropertyOrFieldNode(typeof(GetPropertyOrField), new RealMemberInfo(x, project.TypeFactory.Get(type, null),project.TypeFactory))));
+				IEnumerable<NodeSearchResult> results = members.Where( x=> x.CanGet).Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x));
+				results = results.Concat(members.Where(x => x.CanGet).Select(x => new SetPropertyOrFieldNode(typeof(SetPropertyOrField), x)));
+
+				return results;
 			}
 
 			// check if the text is a method call like 'ClassName.MethodName'
@@ -63,9 +61,9 @@ namespace NodeDev.Core
 				if (type != null)
 				{
 					// find if the method exists
-					var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy | BindingFlags.Static).Where(x => x.Name.Contains(methodCallSplit[1], StringComparison.OrdinalIgnoreCase));
+					var methods = type.GetMethods().Where(x => x.Name.Contains(methodCallSplit[1], StringComparison.OrdinalIgnoreCase));
 
-					results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), new RealMethodInfo(project.TypeFactory, x, project.TypeFactory.Get(type, null)))));
+					results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
 
 					results = results.Concat(GetPropertiesAndFields(type, methodCallSplit[1]));
 				}
@@ -80,7 +78,7 @@ namespace NodeDev.Core
 
 				results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), new RealMethodInfo(project.TypeFactory, x, realType))));
 
-				results = results.Concat(GetPropertiesAndFields(realType.BackendType, text));
+				results = results.Concat(GetPropertiesAndFields(realType, text));
 			}
 			else if (startConnection?.Type is NodeClassType nodeClassType)
 			{

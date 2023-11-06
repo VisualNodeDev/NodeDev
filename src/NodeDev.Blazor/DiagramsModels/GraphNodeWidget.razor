@@ -2,7 +2,19 @@
 
 <div class="drop-shadow-lg bg-white border my-node">
 	<div class="bg-main pa-2 mb-1 font-semibold text-white uppercase title">
-		@Node.Node.Name
+		@{
+			var undefinedGenerics = Node.Node.GetUndefinedGenericTypes().ToList();
+		}
+		<span>@Node.Node.Name</span>
+		@if (undefinedGenerics.Count != 0)
+		{
+			<span class="ml-1">&lt;</span>
+			@foreach (var undefinedGeneric in undefinedGenerics)
+			{
+				<span class="ml-1 undefined-generic" @onclick="() => GraphCanvas.OnGenericTypeSelectionMenuAsked(Node, undefinedGeneric)">@(undefinedGeneric.Name + (undefinedGeneric == undefinedGenerics[^1] ? "" : ", "))</span>
+			}
+			<span class="ml-1">&gt;</span>
+		}
 	</div>
 
 	@foreach (var port in Node.Ports.OfType<GraphPortModel>())
@@ -22,7 +34,6 @@
 				<MudTextField T="string" Class="border rounded pr-2" Value="@port.Connection.TextboxValue" Label="@port.Connection.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
 			}
 		</div>
-
 	}
 </div>
 
@@ -31,4 +42,6 @@
 	[Parameter]
 	public GraphNodeModel Node { get; set; } = null!;
 
+	[CascadingParameter]
+	public GraphCanvas GraphCanvas { get; set; } = null!;
 }

@@ -32,13 +32,13 @@
 	public TypeFactory TypeFactory { get; set; } = null!;
 
 	[Parameter]
-	public EventCallback<Type> OnTypeSelected { get; set; }
+	public EventCallback<TypeBase> OnTypeSelected { get; set; }
 
 	[CascadingParameter]
 	public MudDialogInstance? MudDialog { get; set; } = null!;
 
 	private string? Error;
-	private Type? Type;
+	private TypeBase? Type;
 
 	private string TypeText { get; set; } = "";
 

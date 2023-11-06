@@ -32,9 +32,19 @@ namespace NodeDev.Core.Types
 
 		public override TypeBase[] Interfaces => Array.Empty<TypeBase>();
 
+		public override IEnumerable<IMemberInfo> GetMembers() =>NodeClass.Properties;
+
 		internal protected override string Serialize()
 		{
 			return FullName;
+		}
+
+		public override TypeBase CloneWithGenerics(TypeBase[] newGenerics)
+		{
+			if (Generics.Length != newGenerics.Length)
+				throw new ArgumentException("Generics count mismatch");
+
+			return new NodeClassType(NodeClass, newGenerics);
 		}
 
 		public new static NodeClassType Deserialize(TypeFactory typeFactory, string typeName)

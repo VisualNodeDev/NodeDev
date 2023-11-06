@@ -22,13 +22,15 @@
 	}
 
 	<div style="width:100%; height:100%;">
-		<CascadingValue Value="Diagram" IsFixed="true">
-			<Blazor.Diagrams.Components.DiagramCanvas>
-				<Widgets>
-					<GridWidget Size="30" Mode="GridMode.Line" BackgroundColor="white" />
-					<SelectionBoxWidget />
-				</Widgets>
-			</Blazor.Diagrams.Components.DiagramCanvas>
+		<CascadingValue Value="this" IsFixed="true">
+			<CascadingValue Value="Diagram" IsFixed="true">
+				<Blazor.Diagrams.Components.DiagramCanvas>
+					<Widgets>
+						<GridWidget Size="30" Mode="GridMode.Line" BackgroundColor="white" />
+						<SelectionBoxWidget />
+					</Widgets>
+				</Blazor.Diagrams.Components.DiagramCanvas>
+			</CascadingValue>
 		</CascadingValue>
 	</div>
 

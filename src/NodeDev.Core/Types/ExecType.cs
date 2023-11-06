@@ -24,6 +24,16 @@ namespace NodeDev.Core.Types
 
 		public override TypeBase[] Interfaces => throw new NotImplementedException();
 
+		public override IEnumerable<IMemberInfo> GetMembers() => throw new NotImplementedException();
+
+		public override TypeBase CloneWithGenerics(TypeBase[] newGenerics)
+		{
+			if (newGenerics.Length != 0)
+				throw new Exception("ExecType does not have generics");
+
+			return this;
+		}
+
 		internal protected override string Serialize()
 		{
 			return "";

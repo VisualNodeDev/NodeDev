@@ -26,6 +26,10 @@ public class NodeClassProperty : IMemberInfo
 
 	public bool IsStatic => false;
 
+	public bool CanGet => true;
+
+	public bool CanSet => true;
+
 	#region UI Actions
 
 	public void Rename(string newName)

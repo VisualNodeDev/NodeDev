@@ -41,7 +41,7 @@ namespace NodeDev.Core.Nodes
 				if (type is RealType realType)
 				{
 					var member = realType.BackendType.GetMember(info.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.GetField | BindingFlags.GetProperty).FirstOrDefault() ?? throw new Exception("Unable to find member: " + info.Name);
-					return new GetPropertyOrFieldDecoration(new RealMemberInfo(member, realType, typeFactory));
+					return new GetPropertyOrFieldDecoration(new RealMemberInfo(member, realType));
 				}
 				else if (type is NodeClassType nodeClassType)
 				{

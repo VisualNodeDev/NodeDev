@@ -36,7 +36,11 @@ public abstract class TypeBase
 
 	public abstract Type MakeRealType();
 
+	public abstract TypeBase CloneWithGenerics(TypeBase[] newGenerics);
+
 	public virtual object? ParseTextboxEdit(string text) => throw new NotImplementedException();
+
+	public abstract IEnumerable<IMemberInfo> GetMembers();
 
 	private record class SerializedType(string TypeFullName, string SerializedTypeCustom);
 	public string SerializeWithFullTypeName()
@@ -44,6 +48,34 @@ public abstract class TypeBase
 		var serializedType = new SerializedType(GetType().FullName!, Serialize());
 
 		return System.Text.Json.JsonSerializer.Serialize(serializedType);
+	}
+
+	public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes()
+	{
+		IEnumerable<UndefinedGenericType> undefinedGenericTypes = this is UndefinedGenericType undefinedGenericType ? new[] { undefinedGenericType } : Enumerable.Empty<UndefinedGenericType>();
+
+		return undefinedGenericTypes.Concat(Generics.SelectMany(x => x.GetUndefinedGenericTypes())).Distinct();
+	}
+
+	public TypeBase ReplaceUndefinedGeneric(IReadOnlyDictionary<UndefinedGenericType, TypeBase> genericTypes)
+	{
+		var generics = new TypeBase[Generics.Length];
+
+        for (int i = 0; i < Generics.Length; ++i)
+		{
+			var generic = Generics[i];
+			if (generic is UndefinedGenericType undefinedGenericType)
+			{
+				if(genericTypes.TryGetValue(undefinedGenericType, out var newType))
+					generics[i] = newType;
+				else
+					generics[i] = undefinedGenericType; // put back the undefined generic if we didn't find a replacement
+			}
+			else
+				generics[i] = generic.ReplaceUndefinedGeneric(genericTypes); // ask a more complex type to replace its own undefined generics
+		}
+
+		return CloneWithGenerics(generics);
 	}
 
 	#region Assignation checks

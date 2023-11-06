@@ -39,6 +39,8 @@ namespace NodeDev.Core.Nodes
 
         public Project Project => Graph.SelfClass.Project;
 
+        public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
+
         public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
         public virtual IEnumerable<AlternateOverload> AlternatesOverloads => Enumerable.Empty<AlternateOverload>();
 

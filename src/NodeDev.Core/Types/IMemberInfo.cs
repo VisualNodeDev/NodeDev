@@ -9,4 +9,8 @@ public interface IMemberInfo
 	public TypeBase MemberType { get; }
 
 	public bool IsStatic { get; }
+
+	public bool CanGet { get; }
+
+	public bool CanSet { get; }
 }

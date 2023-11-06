@@ -67,7 +67,7 @@ public class TypeFactory
 
 	#region CreateBaseFromUserInput
 
-	public string? CreateBaseFromUserInput(string typeName, out Type? type)
+	public string? CreateBaseFromUserInput(string typeName, out TypeBase? type)
 	{
 		typeName = typeName.Replace(" ", "");
 		if (typeName.Count(c => c == '<') != typeName.Count(c => c == '>'))
@@ -82,14 +82,30 @@ public class TypeFactory
 			var correspondance = TypeCorrespondances.FirstOrDefault(x => x.Value.Contains(typeName));
 			if (correspondance.Key != null)
 				typeName = correspondance.Key;
-			type = GetTypeFromAllAssemblies(typeName) ?? IncludedNamespaces.Select(ns => GetTypeFromAllAssemblies($"{ns}.{typeName}")).FirstOrDefault(t => t != null);
+			var currentRealType = GetTypeFromAllAssemblies(typeName) ?? IncludedNamespaces.Select(ns => GetTypeFromAllAssemblies($"{ns}.{typeName}")).FirstOrDefault(t => t != null);
 
-			if (type?.IsGenericType == true)
+			if (currentRealType?.IsGenericType == true)
 			{
 				type = null;
 				return "Not all generics are provided for type:" + typeName;
 			}
-			return type == null ? $"Type {typeName} not found" : null;
+			else if(currentRealType != null)
+			{
+				type = Get(currentRealType, null);
+				return null;
+			}
+			else if(currentRealType == null)
+			{
+				var nodeClass = Project.Classes.FirstOrDefault(x => x.Name.Equals(typeName, StringComparison.InvariantCultureIgnoreCase));
+				if(nodeClass != null)
+				{
+					type = nodeClass.ClassTypeBase;
+					return null;
+				}
+			}
+
+			type = null;
+			return $"Type {typeName} not found";
 		}
 
 		// we have a generic type, we need to find the base type and the generic arguments
@@ -109,7 +125,7 @@ public class TypeFactory
 		}
 
 		// find the generic arguments
-		var genericArgsTypes = new Type[genericArgs.Length];
+		var genericArgsTypes = new TypeBase[genericArgs.Length];
 		for (int i = 0; i < genericArgs.Length; i++)
 		{
 			var error = CreateBaseFromUserInput(genericArgs[i], out var genericArgType);
@@ -122,13 +138,7 @@ public class TypeFactory
 		}
 
 		// create the generic type
-		type = baseType.MakeGenericType(genericArgsTypes);
-
-		if (type.ContainsGenericParameters)
-		{
-			type = null;
-			return "Not all generics are provided for type:" + name;
-		}
+		type = Get(baseType, genericArgsTypes);
 		return null;
 	}
 

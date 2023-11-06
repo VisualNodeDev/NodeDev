@@ -28,16 +28,21 @@ public class TypeFactoryTests
 
 		var err = typeFactory.CreateBaseFromUserInput("int", out var type);
 		Assert.Null(err);
-		Assert.Equal(typeof(int), type);
+		Assert.Equal(typeFactory.Get<int>(), type);
 
 
 		err = typeFactory.CreateBaseFromUserInput("List<int>", out type);
 		Assert.Null(err);
-		Assert.Equal(typeof(List<int>), type);
+		Assert.IsType<RealType>(type);
+		Assert.Same(typeof(List<>), ((RealType)type).BackendType);
+		Assert.Same(typeof(int), ((RealType)((RealType)type).Generics[0]).BackendType);
 
 		err = typeFactory.CreateBaseFromUserInput("Dictionary<int, string>", out type);
 		Assert.Null(err);
-		Assert.Equal(typeof(Dictionary<int, string>), type);
+		Assert.IsType<RealType>(type);
+		Assert.Same(typeof(Dictionary<,>), ((RealType)type).BackendType);
+		Assert.Same(typeof(int), ((RealType)((RealType)type).Generics[0]).BackendType);
+		Assert.Same(typeof(string), ((RealType)((RealType)type).Generics[1]).BackendType);
 	}
 
 	[Fact]

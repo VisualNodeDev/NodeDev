@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,7 +13,7 @@ public class RealType : TypeBase
 {
 	internal readonly Type BackendType;
 
-	private readonly TypeFactory TypeFactory;
+	internal readonly TypeFactory TypeFactory;
 
 	public override string Name => BackendType.Name;
 
@@ -78,6 +79,22 @@ public class RealType : TypeBase
 
 			return "0";
 		}
+	}
+
+	public override IEnumerable<IMemberInfo> GetMembers()
+	{
+		var properties = BackendType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+		var fields = BackendType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+
+		return properties.Select(x => new RealMemberInfo(x, this)).Concat(fields.Select(x => new RealMemberInfo(x, this)));
+	}
+
+	public override TypeBase CloneWithGenerics(TypeBase[] newGenerics)
+	{
+		if (newGenerics.Length != Generics.Length)
+			throw new Exception("Unable to clone type with different number of generics");
+
+		return TypeFactory.Get(BackendType, newGenerics);
 	}
 
 	public override Type MakeRealType()

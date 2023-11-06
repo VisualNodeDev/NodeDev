@@ -33,7 +33,6 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	private BlazorDiagram Diagram { get; set; } = null!;
 
-
 	#region OnInitialized
 
 	protected override void OnInitialized()
@@ -389,31 +388,26 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 	#region OnGenericTypeSelectionMenuAsked
 
 	private bool IsShowingGenericTypeSelection = false;
+	private UndefinedGenericType? GenericTypeSelectionMenuGeneric;
 
-	[JSInvokable]
-	public void OnGenericTypeSelectionMenuAsked(string nodeId, string connectionId, int x, int y)
+	public void OnGenericTypeSelectionMenuAsked(GraphNodeModel nodeModel, UndefinedGenericType undefinedGenericType)
 	{
-		if (!Graph.Nodes.TryGetValue(nodeId, out var node))
-			return;
-		var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
-		if (connection == null)
-			return;
-
-		PopupNode = node;
-		PopupNodeConnection = connection;
-		PopupX = x;
-		PopupY = y;
+		PopupNode = nodeModel.Node;
+		var p = Diagram.GetScreenPoint(nodeModel.Position.X, nodeModel.Position.Y) - Diagram.Container!.NorthWest;
+		PopupX = (int)p.X;
+		PopupY = (int)p.Y;
+		GenericTypeSelectionMenuGeneric = undefinedGenericType;
 		IsShowingGenericTypeSelection = true;
 
 		StateHasChanged();
 	}
 
-	private void OnGenericTypeSelected(Type type)
+	private void OnGenericTypeSelected(TypeBase type)
 	{
-		if (PopupNode == null || PopupNodeConnection?.Type is not UndefinedGenericType generic)
+		if (PopupNode == null || GenericTypeSelectionMenuGeneric == null)
 			return;
 
-		PropagateNewGeneric(PopupNode, generic, Graph.SelfClass.TypeFactory.Get(type, null));
+		PropagateNewGeneric(PopupNode, GenericTypeSelectionMenuGeneric, type);
 
 		CancelPopup();
 	}

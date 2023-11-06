@@ -21,6 +21,10 @@ public class UndefinedGenericType : TypeBase
 
 	public override TypeBase[] Interfaces => throw new NotImplementedException();
 
+	public override TypeBase CloneWithGenerics(TypeBase[] newGenerics) => throw new NotImplementedException();
+
+	public override IEnumerable<IMemberInfo> GetMembers() => throw new NotImplementedException();
+
 	public UndefinedGenericType(string name)
 	{
 		FullName = Name = name;
