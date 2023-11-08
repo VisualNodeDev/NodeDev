@@ -59,14 +59,22 @@ public abstract class TypeBase
 
 	public TypeBase ReplaceUndefinedGeneric(IReadOnlyDictionary<UndefinedGenericType, TypeBase> genericTypes)
 	{
+		if(this is UndefinedGenericType undefinedGeneric)
+		{
+			if(genericTypes.TryGetValue(undefinedGeneric, out var newType))
+				return newType;
+			else
+				return undefinedGeneric; // put back the undefined generic if we didn't find a replacement
+		}
+
 		var generics = new TypeBase[Generics.Length];
 
-        for (int i = 0; i < Generics.Length; ++i)
+		for (int i = 0; i < Generics.Length; ++i)
 		{
 			var generic = Generics[i];
 			if (generic is UndefinedGenericType undefinedGenericType)
 			{
-				if(genericTypes.TryGetValue(undefinedGenericType, out var newType))
+				if (genericTypes.TryGetValue(undefinedGenericType, out var newType))
 					generics[i] = newType;
 				else
 					generics[i] = undefinedGenericType; // put back the undefined generic if we didn't find a replacement

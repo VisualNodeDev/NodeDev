@@ -99,7 +99,10 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	private void UpdateConnectionType(Connection connection)
 	{
-		var node = Diagram.Nodes.OfType<GraphNodeModel>().First(x => x.Node == connection.Parent);
+		var node = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == connection.Parent);
+		if (node == null)
+			return;
+
 		var port = node.GetPort(connection);
 
 		var color = GetTypeShapeColor(connection.Type, node.Node.TypeFactory);
@@ -127,10 +130,16 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 	{
 		Diagram.Batch(() =>
 		{
+			DisableConnectionUpdate = true;
+			DisableNodeRemovedUpdate = true;
+
 			Diagram.Links.Clear();
 			Diagram.Nodes.Clear();
 
 			InitializeCanvasWithGraphNodes();
+
+			DisableNodeRemovedUpdate = false;
+			DisableConnectionUpdate = false;
 		});
 	}
 
@@ -140,8 +149,13 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	#region Node Removed
 
+	bool DisableNodeRemovedUpdate = false;
+
 	public void OnNodeRemoved(NodeModel nodeModel)
 	{
+		if (DisableNodeRemovedUpdate)
+			return;
+
 		Graph.Invoke(() =>
 		{
 			var node = ((GraphNodeModel)nodeModel).Node;
@@ -182,7 +196,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 			if (source != null && destination != null)
 			{
-				if(source.Alignment == PortAlignment.Left) // it's an input, let's swap it so the "source" is an output
+				if (source.Alignment == PortAlignment.Left) // it's an input, let's swap it so the "source" is an output
 				{
 					DisableConnectionUpdate = true;
 					var old = baseLinkModel.Source;
@@ -196,14 +210,13 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 				// we're plugging something something with a generic into something without a generic
 				if (source.Connection.Type.HasUndefinedGenerics && !destination.Connection.Type.HasUndefinedGenerics)
 				{
-					if (source.Connection.Type.IsAssignableTo(destination.Connection.Type, out var newTypes))
+					if (source.Connection.Type.IsAssignableTo(destination.Connection.Type, out var newTypes) && newTypes.Count != 0)
 					{
-						foreach (var newType in newTypes)
-							PropagateNewGeneric(source.Connection.Parent, newType.Key, newType.Value);
+						PropagateNewGeneric(source.Connection.Parent, newTypes);
 					}
 				}
 				else if (destination.Connection.Type is UndefinedGenericType destinationType && source.Connection.Type is not UndefinedGenericType)
-					PropagateNewGeneric(destination.Connection.Parent, destinationType, source.Connection.Type);
+					PropagateNewGeneric(destination.Connection.Parent, new Dictionary<UndefinedGenericType, TypeBase>() { [destinationType] = source.Connection.Type });
 
 				if (destination.Connection.Connections.Count == 1 && destination.Connection.Type.AllowTextboxEdit) // gotta remove the textbox
 					UpdateConnectionType(destination.Connection);
@@ -216,6 +229,9 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	public void OnConnectionAdded(BaseLinkModel baseLinkModel)
 	{
+		if (DisableConnectionUpdate)
+			return;
+
 		baseLinkModel.SourceChanged += OnConnectionUpdated;
 		baseLinkModel.TargetChanged += OnConnectionUpdated;
 		baseLinkModel.TargetMarker = LinkMarker.Arrow;
@@ -226,6 +242,8 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	public void OnConnectionRemoved(BaseLinkModel baseLinkModel)
 	{
+		if (DisableConnectionUpdate)
+			return;
 		Graph.Invoke(() =>
 		{
 			var source = ((GraphPortModel?)baseLinkModel.Source.Model)?.Connection;
@@ -284,51 +302,54 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		var node = Graph.AddNode(searchResult);
 		node.AddDecoration(new NodeDecorationPosition(new(PopupNodePosition.X, PopupNodePosition.Y)));
 
-		if (PopupNodeConnection != null && PopupNode != null)
-		{
-			// check if the source was an input or output and choose the proper destination based on that
-			List<Connection> sources, destinations;
-			if (PopupNode.Inputs.Contains(PopupNodeConnection))
-			{
-				sources = PopupNode.Inputs;
-				destinations = node.Outputs;
-			}
-			else
-			{
-				sources = PopupNode.Outputs;
-				destinations = node.Inputs;
-			}
-
-			Connection? destination = null;
-			if (PopupNodeConnection.Type is UndefinedGenericType) // can connect to anything except exec
-				destination = destinations.FirstOrDefault(x => !x.Type.IsExec);
-			else // can connect to anything that is the same type or generic (except exec)
-				destination = destinations.FirstOrDefault(x => x.Type == PopupNodeConnection.Type || (x.Type is UndefinedGenericType && !PopupNodeConnection.Type.IsExec));
-
-			// if we found a connection, connect them together
-			if (destination != null)
-			{
-				PopupNodeConnection.Connections.Add(destination);
-				destination.Connections.Add(PopupNodeConnection);
-
-				if (destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit)
-					UpdateConnectionType(destination);
-				if (PopupNodeConnection.Connections.Count == 1 && PopupNodeConnection.Type.AllowTextboxEdit)
-					UpdateConnectionType(PopupNodeConnection);
-
-				// if one of the connection ( destination or PopupNodeConnection ) is generic and the other isn't
-				// We have to propagate the non-generic type to the generic one
-				if (destination.Type is UndefinedGenericType && PopupNodeConnection.Type is not UndefinedGenericType)
-					PropagateNewGeneric(destination.Parent, (UndefinedGenericType)destination.Type, PopupNodeConnection.Type);
-				else if (destination.Type is not UndefinedGenericType && PopupNodeConnection.Type is UndefinedGenericType)
-					PropagateNewGeneric(PopupNodeConnection.Parent, (UndefinedGenericType)PopupNodeConnection.Type, destination.Type);
-			}
-		}
-
-		CancelPopup();
-
 		Diagram.Batch(() =>
 		{
+			if (PopupNodeConnection != null && PopupNode != null)
+			{
+				// check if the source was an input or output and choose the proper destination based on that
+				List<Connection> sources, destinations;
+				bool isPopupNodeInput = PopupNode.Inputs.Contains(PopupNodeConnection);
+				if (isPopupNodeInput)
+				{
+					sources = PopupNode.Inputs;
+					destinations = node.Outputs;
+				}
+				else
+				{
+					sources = PopupNode.Outputs;
+					destinations = node.Inputs;
+				}
+
+				Connection? destination = null;
+				if (PopupNodeConnection.Type is UndefinedGenericType) // can connect to anything except exec
+					destination = destinations.FirstOrDefault(x => !x.Type.IsExec);
+				else // can connect to anything that is assignable to the type
+					destination = destinations.FirstOrDefault(x => PopupNodeConnection.Type.IsAssignableTo(x.Type, out _) || (x.Type is UndefinedGenericType && !PopupNodeConnection.Type.IsExec));
+
+				// if we found a connection, connect them together
+				if (destination != null)
+				{
+					PopupNodeConnection.Connections.Add(destination);
+					destination.Connections.Add(PopupNodeConnection);
+
+					if (destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit)
+						UpdateConnectionType(destination);
+					if (PopupNodeConnection.Connections.Count == 1 && PopupNodeConnection.Type.AllowTextboxEdit)
+						UpdateConnectionType(PopupNodeConnection);
+
+					// check if we need to propagate some generic
+					var source = isPopupNodeInput ? destination : PopupNodeConnection;
+					var target = isPopupNodeInput ? PopupNodeConnection : destination;
+					if (!destination.Type.IsExec && source.Type.IsAssignableTo(target.Type, out var changedGenerics))
+					{
+						PropagateNewGeneric(node, changedGenerics);
+						PropagateNewGeneric(destination.Parent, changedGenerics);
+					}
+				}
+			}
+
+			CancelPopup();
+
 			CreateGraphNodeModel(node);
 			AddNodeLinks(node, false);
 		});
@@ -407,39 +428,34 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		if (PopupNode == null || GenericTypeSelectionMenuGeneric == null)
 			return;
 
-		PropagateNewGeneric(PopupNode, GenericTypeSelectionMenuGeneric, type);
+		PropagateNewGeneric(PopupNode, new Dictionary<UndefinedGenericType, TypeBase>() { [GenericTypeSelectionMenuGeneric] = type });
+
+		UpdateNodes(Graph.Nodes.Values.ToList());
 
 		CancelPopup();
 	}
 
-	private void PropagateNewGeneric(Node node, UndefinedGenericType generic, TypeBase newType)
+	private void PropagateNewGeneric(Node node, IReadOnlyDictionary<UndefinedGenericType, TypeBase> changedGenerics)
 	{
-		var inputsOrOutputs = node.InputsAndOutputs.ToDictionary(x => x, x => x.Type);
-
-		foreach (var connection in node.InputsAndOutputs)
+		foreach (var port in node.InputsAndOutputs) // check if any of the ports have the generic we just solved
 		{
-			if (connection.Type == generic)
+			if (port.Type.GetUndefinedGenericTypes().Any(changedGenerics.ContainsKey))
 			{
-				connection.UpdateType(newType);
+				var isPortInput = node.Inputs.Contains(port);
 
-				UpdateConnectionType(connection);
+				port.UpdateType(port.Type.ReplaceUndefinedGeneric(changedGenerics));
 
-				foreach (var other in connection.Connections)
+				UpdateConnectionType(port);
+
+				// check if other connections had their own generics and if we just solved them
+				foreach (var other in port.Connections.ToList())
 				{
-					if (other.Type is UndefinedGenericType generic2)
-						PropagateNewGeneric(other.Parent, generic2, newType);
-				}
-
-				var updated = node.GenericConnectionTypeDefined(generic, connection, newType);
-				UpdateNodeBaseInfo(node);
-
-				foreach (var other in updated)
-				{
-					UpdateConnectionType(other);
-
-					var oldType = inputsOrOutputs[other];
-					if (oldType is UndefinedGenericType generic2)
-						PropagateNewGeneric(node, generic2, other.Type);
+					var source = isPortInput ? other : port;
+					var target = isPortInput ? port : other;
+					if (source.Type.IsAssignableTo(target.Type, out var changedGenerics2) && changedGenerics2.Count != 0)
+						PropagateNewGeneric(other.Parent, changedGenerics2);
+					else if((changedGenerics2?.Count ?? 0) != 0)// damn, looks like changing the generic made it so we can't link to this connection anymore
+						Graph.Disconnect(port, other);
 				}
 			}
 		}

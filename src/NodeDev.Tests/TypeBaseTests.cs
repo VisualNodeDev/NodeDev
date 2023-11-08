@@ -6,6 +6,25 @@ namespace NodeDev.Tests;
 public class TypeBaseTests
 {
 	[Fact]
+	public void Generics_ReplaceUndefinedGeneric()
+	{
+		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
+
+		var t = new UndefinedGenericType("T");
+		var type = typeFactory.Get(typeof(List<>), new[] { t });
+
+		var newType = type.ReplaceUndefinedGeneric(new Dictionary<UndefinedGenericType, TypeBase>()
+		{
+			[t] = typeFactory.Get<int>()
+		});
+
+		Assert.False(newType.HasUndefinedGenerics);
+		Assert.NotSame(type, newType);
+		Assert.Same(typeFactory.Get<int>(), newType.Generics[0]);
+		Assert.Same(((RealType)newType).BackendType, typeof(List<>));
+	}
+
+	[Fact]
 	public void Assignations_GetAssignableTypes_Basic()
 	{
 		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
