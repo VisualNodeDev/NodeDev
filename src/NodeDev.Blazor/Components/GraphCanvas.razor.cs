@@ -361,13 +361,9 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	private bool IsShowingOverloadSelection = false;
 
-	[JSInvokable]
-	public void OnOverloadSelectionRequested(string nodeId)
+	public void OnOverloadSelectionRequested(GraphNodeModel graphNode)
 	{
-		if (!Graph.Nodes.TryGetValue(nodeId, out var node))
-			return;
-
-		PopupNode = node;
+		PopupNode = graphNode.Node;
 		IsShowingOverloadSelection = true;
 
 		StateHasChanged();

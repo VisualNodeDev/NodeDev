@@ -107,10 +107,17 @@
         top: 50%;
     }
 
-g.diagram-link path:not(.selection-helper) {
-    stroke-dasharray: 5;
-    animation: dash .5s linear infinite;
-}
+    .my-node .overload-icon {
+        position: absolute;
+        right: -25px;
+        top: -20px;
+        padding: 0px;
+    }
+
+    g.diagram-link path:not(.selection-helper) {
+        stroke-dasharray: 5;
+        animation: dash .5s linear infinite;
+    }
 
 @keyframes dash {
     to {

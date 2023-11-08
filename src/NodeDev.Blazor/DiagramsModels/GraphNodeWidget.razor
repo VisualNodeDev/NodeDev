@@ -1,7 +1,13 @@
 ﻿@using global::Blazor.Diagrams.Core.Models
 
 <div class="drop-shadow-lg bg-white border my-node">
-	<div class="bg-main pa-2 mb-1 font-semibold text-white uppercase title">
+	
+
+	<div class="bg-main pa-2 mb-1 font-semibold text-white uppercase title relative">
+		@if (Node.Node.AlternatesOverloads.Any())
+		{
+			<MudIconButton Class="overload-icon" Icon="@Icons.Material.Filled.ChangeCircle" OnClick="() => GraphCanvas.OnOverloadSelectionRequested(Node)" />
+		}
 		@{
 			var undefinedGenerics = Node.Node.GetUndefinedGenericTypes().ToList();
 		}
