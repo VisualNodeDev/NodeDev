@@ -59,9 +59,9 @@ public abstract class TypeBase
 
 	public TypeBase ReplaceUndefinedGeneric(IReadOnlyDictionary<UndefinedGenericType, TypeBase> genericTypes)
 	{
-		if(this is UndefinedGenericType undefinedGeneric)
+		if (this is UndefinedGenericType undefinedGeneric)
 		{
-			if(genericTypes.TryGetValue(undefinedGeneric, out var newType))
+			if (genericTypes.TryGetValue(undefinedGeneric, out var newType))
 				return newType;
 			else
 				return undefinedGeneric; // put back the undefined generic if we didn't find a replacement
@@ -174,6 +174,12 @@ public abstract class TypeBase
 
 	public bool IsAssignableTo(TypeBase other, [MaybeNullWhen(false)] out Dictionary<UndefinedGenericType, TypeBase> changedGenerics)
 	{
+		if ((this is ExecType && other is not ExecType) || (other is ExecType && this is not ExecType))
+		{
+			changedGenerics = null;
+			return false;
+		}
+
 		if (IsDirectlyAssignableTo(other, true, out changedGenerics))
 			return true; // Either plugging something easy like List<int> to List<int>, some generic or covariant like IEnumerable<Parent> to IEnumerable<Child>
 
