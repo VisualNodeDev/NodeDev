@@ -194,35 +194,48 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 			var source = ((GraphPortModel?)baseLinkModel.Source.Model);
 			var destination = ((GraphPortModel?)baseLinkModel.Target.Model);
 
-			if (source != null && destination != null)
+			if (source == null || destination == null)
+				return;
+
+			if (source.Alignment == PortAlignment.Left) // it's an input, let's swap it so the "source" is an output
 			{
-				if (source.Alignment == PortAlignment.Left) // it's an input, let's swap it so the "source" is an output
+				DisableConnectionUpdate = true;
+				var old = baseLinkModel.Source;
+				baseLinkModel.SetSource(baseLinkModel.Target);
+				baseLinkModel.SetTarget(old);
+				DisableConnectionUpdate = false;
+
+				var tmp = source;
+				source = destination;
+				destination = tmp;
+			}
+
+			source.Connection.Connections.Add(destination.Connection);
+			destination.Connection.Connections.Add(source.Connection);
+
+			// we're plugging something something with a generic into something without a generic
+			if (source.Connection.Type.HasUndefinedGenerics && !destination.Connection.Type.HasUndefinedGenerics)
+			{
+				if (source.Connection.Type.IsAssignableTo(destination.Connection.Type, out var newTypes) && newTypes.Count != 0)
 				{
-					DisableConnectionUpdate = true;
-					var old = baseLinkModel.Source;
-					baseLinkModel.SetSource(baseLinkModel.Target);
-					baseLinkModel.SetTarget(old);
-					DisableConnectionUpdate = false;
+					PropagateNewGeneric(source.Connection.Parent, newTypes);
 				}
-				source.Connection.Connections.Add(destination.Connection);
-				destination.Connection.Connections.Add(source.Connection);
+			}
+			else if (destination.Connection.Type is UndefinedGenericType destinationType && source.Connection.Type is not UndefinedGenericType)
+				PropagateNewGeneric(destination.Connection.Parent, new Dictionary<UndefinedGenericType, TypeBase>() { [destinationType] = source.Connection.Type });
 
-				// we're plugging something something with a generic into something without a generic
-				if (source.Connection.Type.HasUndefinedGenerics && !destination.Connection.Type.HasUndefinedGenerics)
+			if (destination.Connection.Connections.Count == 1 && destination.Connection.Type.AllowTextboxEdit) // gotta remove the textbox
+				UpdateConnectionType(destination.Connection);
+
+			if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel port)
+			{
+				link.Color = GetTypeShapeColor(port.Connection.Type, port.Connection.Parent.TypeFactory);
+
+				if (source.Connection.Type.IsExec && source.Connection.Connections.Count > 1 && link.Target.Model is GraphPortModel target)
 				{
-					if (source.Connection.Type.IsAssignableTo(destination.Connection.Type, out var newTypes) && newTypes.Count != 0)
-					{
-						PropagateNewGeneric(source.Connection.Parent, newTypes);
-					}
+					Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source.Connection && (x.Target.Model as GraphPortModel)?.Connection != target.Connection));
+					Graph.Disconnect(source.Connection, source.Connection.Connections.First(x => x != target.Connection));
 				}
-				else if (destination.Connection.Type is UndefinedGenericType destinationType && source.Connection.Type is not UndefinedGenericType)
-					PropagateNewGeneric(destination.Connection.Parent, new Dictionary<UndefinedGenericType, TypeBase>() { [destinationType] = source.Connection.Type });
-
-				if (destination.Connection.Connections.Count == 1 && destination.Connection.Type.AllowTextboxEdit) // gotta remove the textbox
-					UpdateConnectionType(destination.Connection);
-
-				if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel port)
-					link.Color = GetTypeShapeColor(port.Connection.Type, port.Connection.Parent.TypeFactory);
 			}
 		});
 	}
@@ -236,8 +249,8 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		baseLinkModel.TargetChanged += OnConnectionUpdated;
 		baseLinkModel.TargetMarker = LinkMarker.Arrow;
 
-		if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel port)
-			link.Color = GetTypeShapeColor(port.Connection.Type, port.Connection.Parent.TypeFactory);
+		if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel source)
+			link.Color = GetTypeShapeColor(source.Connection.Type, source.Connection.Parent.TypeFactory);
 	}
 
 	public void OnConnectionRemoved(BaseLinkModel baseLinkModel)
@@ -339,13 +352,19 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 					if (PopupNodeConnection.Connections.Count == 1 && PopupNodeConnection.Type.AllowTextboxEdit)
 						UpdateConnectionType(PopupNodeConnection);
 
-					// check if we need to propagate some generic
 					var source = isPopupNodeInput ? destination : PopupNodeConnection;
 					var target = isPopupNodeInput ? PopupNodeConnection : destination;
+
+					// check if we need to propagate some generic
 					if (!destination.Type.IsExec && source.Type.IsAssignableTo(target.Type, out var changedGenerics))
 					{
 						PropagateNewGeneric(node, changedGenerics);
 						PropagateNewGeneric(destination.Parent, changedGenerics);
+					}
+					else if (source.Type.IsExec && source.Connections.Count > 1) // check if we have to disconnect the previously connected exec
+					{
+						Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source && (x.Target.Model as GraphPortModel)?.Connection != target));
+						Graph.Disconnect(source, source.Connections.First(x => x != target));
 					}
 				}
 			}
@@ -452,7 +471,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 					var target = isPortInput ? port : other;
 					if (source.Type.IsAssignableTo(target.Type, out var changedGenerics2) && changedGenerics2.Count != 0)
 						PropagateNewGeneric(other.Parent, changedGenerics2);
-					else if((changedGenerics2?.Count ?? 0) != 0)// damn, looks like changing the generic made it so we can't link to this connection anymore
+					else if ((changedGenerics2?.Count ?? 0) != 0)// damn, looks like changing the generic made it so we can't link to this connection anymore
 						Graph.Disconnect(port, other);
 				}
 			}
