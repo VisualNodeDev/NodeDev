@@ -261,9 +261,9 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 			{
 
 				if (baseLinkModel.Source is PositionAnchor positionAnchor && destination != null)
-					OnPortDroppedOnCanvas(destination, Diagram.GetScreenPoint(positionAnchor.GetPlainPosition()!.X, positionAnchor.GetPlainPosition()!.Y) - Diagram.Container!.NorthWest);
+					OnPortDroppedOnCanvas(destination, positionAnchor.GetPlainPosition()!);
 				else if (baseLinkModel.Target is PositionAnchor positionAnchor2 && source != null)
-					OnPortDroppedOnCanvas(source, Diagram.GetScreenPoint(positionAnchor2.GetPlainPosition()!.X, positionAnchor2.GetPlainPosition()!.Y) - Diagram.Container!.NorthWest);
+					OnPortDroppedOnCanvas(source, positionAnchor2.GetPlainPosition()!);
 			}
 		});
 	}
@@ -290,8 +290,10 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 	{
 		PopupNode = connection.Parent;
 		PopupNodeConnection = connection;
-		PopupX = (int)point.X;
-		PopupY = (int)point.Y;
+		var screenPosition = Diagram.GetScreenPoint(point.X, point.Y) - Diagram.Container!.NorthWest;
+		PopupX = (int)screenPosition.X;
+		PopupY = (int)screenPosition.Y;
+		PopupNodePosition = new((float)point.X, (float)point.Y);
 		IsShowingNodeSelection = true;
 
 		StateHasChanged();
