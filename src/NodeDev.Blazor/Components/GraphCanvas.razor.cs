@@ -58,7 +58,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		Diagram.RegisterComponent<GraphNodeModel, GraphNodeWidget>();
 
 		Diagram.Nodes.Removed += OnNodeRemoved;
-		Diagram.Links.Added += OnConnectionAdded;
+		Diagram.Links.Added += x => OnConnectionAdded(x, false);
 		Diagram.Links.Removed += OnConnectionRemoved;
 	}
 
@@ -227,9 +227,9 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		});
 	}
 
-	public void OnConnectionAdded(BaseLinkModel baseLinkModel)
+	public void OnConnectionAdded(BaseLinkModel baseLinkModel, bool force)
 	{
-		if (DisableConnectionUpdate)
+		if (DisableConnectionUpdate && !force)
 			return;
 
 		baseLinkModel.SourceChanged += OnConnectionUpdated;
@@ -533,7 +533,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 				var link = Diagram.Links.Add(new LinkModel(source, target));
 
-				OnConnectionAdded(link);
+				OnConnectionAdded(link, true);
 			}
 		}
 	}
