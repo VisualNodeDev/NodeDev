@@ -40,7 +40,9 @@ public class RealMethodParameterInfo : IMethodParameterInfo
 	{
 		get
 		{
-			if (ParameterInfo.ParameterType.IsGenericType)
+			if(ParameterInfo.ParameterType.IsGenericParameter)
+				return DeclaringRealType.Generics[ParameterInfo.ParameterType.GenericParameterPosition];
+			else if (ParameterInfo.ParameterType.IsGenericType)
 			{
 				var generics = ReplaceGenericsRecursively(ParameterInfo.ParameterType).ToArray();
 				return TypeFactory.Get(ParameterInfo.ParameterType, generics);
