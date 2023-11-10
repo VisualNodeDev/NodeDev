@@ -461,15 +461,9 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	#region OnTextboxValueChanged
 
-	[JSInvokable]
-	public void OnTextboxValueChanged(string nodeId, string connectionId, string? text)
+	public void OnTextboxValueChanged(GraphPortModel port, string? text)
 	{
-		if (!Graph.Nodes.TryGetValue(nodeId, out var node))
-			return;
-
-		var connection = node.InputsAndOutputs.FirstOrDefault(x => x.Id == connectionId);
-		if (connection == null)
-			return;
+		var connection = port.Connection;
 
 		if (connection.Type.AllowTextboxEdit)
 			connection.UpdateTextboxText(text);

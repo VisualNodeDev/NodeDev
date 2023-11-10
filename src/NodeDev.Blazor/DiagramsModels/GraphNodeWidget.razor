@@ -37,7 +37,7 @@
 
 			@if (isInput && port.Connection.Type.AllowTextboxEdit && port.Links.Count == 0)
 			{
-				<MudTextField T="string" Class="border rounded pr-2" Value="@port.Connection.TextboxValue" Label="@port.Connection.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+				<MudTextField T="string" Class="border rounded pr-2" Value="@port.Connection.TextboxValue" ValueChanged="x => GraphCanvas.OnTextboxValueChanged(port, x)" Label="@port.Connection.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
 			}
 		</div>
 	}
