@@ -94,7 +94,7 @@ namespace NodeDev.Core
 				}
 
 				if (execConnection != null && alterExecutionStackOnPop)
-					stack.Push(connectionToExecute);
+					stack.Push(execConnection);
 			}
 		}
 
