@@ -39,7 +39,7 @@
     border-radius: 9999px;
 }
 
-.diagram-node.selected .my-node{
+.diagram-node.selected .my-node {
     border: 1px solid black;
 }
 
@@ -92,11 +92,26 @@
         margin-top: 10px;
         display: flex;
         flex-direction: row;
-        align-items: center
+        position: relative;
+        width: 100%
     }
 
         .my-node .row .mud-input-label {
             background-color: #f5f5f5
+        }
+
+        .my-node .row .col {
+            align-items: center;
+            display: flex;
+            flex-direction: row;
+        }
+
+        .my-node .input  {
+            flex: 1
+        }
+
+        .my-node .output:not(.sharing) {
+            flex: 1;
         }
 
     .my-node .output .name {
@@ -122,10 +137,10 @@
         padding: 0px;
     }
 
-    g.diagram-link path:not(.selection-helper) {
-        stroke-dasharray: 5;
-        animation: dash .5s linear infinite;
-    }
+g.diagram-link path:not(.selection-helper) {
+    stroke-dasharray: 5;
+    animation: dash .5s linear infinite;
+}
 
 @keyframes dash {
     to {
