@@ -6,7 +6,7 @@ public class RealMethodInfo : IMethodInfo
 {
 	public readonly TypeFactory TypeFactory;
 
-	public readonly MethodInfo Method;
+	private readonly MethodInfo Method;
 
 	public string Name => Method.Name;
 
@@ -31,6 +31,11 @@ public class RealMethodInfo : IMethodInfo
 		TypeFactory = typeFactory;
 		Method = method;
 		DeclaringRealType = declaringType;
+	}
+
+	public MethodInfo CreateMethodInfo()
+	{
+		return DeclaringRealType.MakeRealType().GetMethod(Method.Name, GetParameters().Select(x => x.ParameterType.MakeRealType()).ToArray())!;
 	}
 
 	public IEnumerable<IMethodParameterInfo> GetParameters()

@@ -196,7 +196,7 @@ public class MethodCall : NormalFlowNode
 
 	#endregion
 
-	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
+	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state)
 	{
 		if (TargetMethod == null)
 			throw new Exception("Target method is not set");
@@ -212,7 +212,7 @@ public class MethodCall : NormalFlowNode
 
 			var target = TargetMethod.IsStatic ? null : inputs[0];
 
-			var result = realMethod.Method.Invoke(target, inputs[(TargetMethod.IsStatic ? 1 : 2)..].ToArray());
+			var result = realMethod.CreateMethodInfo().Invoke(target, inputs[(TargetMethod.IsStatic ? 1 : 2)..].ToArray());
 
 			if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void), null))
 				outputs[^1] = result;

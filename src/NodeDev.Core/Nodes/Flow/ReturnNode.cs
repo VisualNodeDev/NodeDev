@@ -21,7 +21,7 @@ namespace NodeDev.Core.Nodes.Flow
 
         public override bool IsFlowNode => throw new NotImplementedException();
 
-        public override Connection? Execute(GraphExecutor executor, object? self, Connection? execInput, Span<object?> inputs, Span<object?> outputs, out bool alterExecutionStackOnPop)
+        public override Connection? Execute(GraphExecutor executor, object? self, Connection? execInput, Span<object?> inputs, Span<object?> outputs, ref object? state, out bool alterExecutionStackOnPop)
 		{
 			alterExecutionStackOnPop = false;
 			return null;

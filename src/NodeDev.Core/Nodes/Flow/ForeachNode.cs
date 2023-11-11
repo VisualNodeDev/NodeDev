@@ -12,6 +12,8 @@ namespace NodeDev.Core.Nodes.Flow
 	{
 		public override bool IsFlowNode => true;
 
+		public override bool FetchState => true;
+
 		public ForeachNode(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Foreach";
@@ -19,7 +21,7 @@ namespace NodeDev.Core.Nodes.Flow
 			var t = new UndefinedGenericType("T");
 
 			Inputs.Add(new("Exec", this, TypeFactory.ExecType));
-			Inputs.Add(new("IEnumerable", this, TypeFactory.Get(typeof(IEnumerable<>), new[] {t})));
+			Inputs.Add(new("IEnumerable", this, TypeFactory.Get(typeof(IEnumerable<>), new[] { t })));
 
 			Outputs.Add(new("Item", this, t));
 			Outputs.Add(new("ExecLoop", this, TypeFactory.ExecType));
@@ -39,19 +41,26 @@ namespace NodeDev.Core.Nodes.Flow
 			return new();
 		}
 
-
-		public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, out bool alterExecutionStackOnPop)
+		public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
 		{
-			if (inputs[1] is bool b && b == true)
-			{
-				alterExecutionStackOnPop = true; // re-execute the 'while' when this line is done
-				return Outputs[0];
-			}
-			else
+			// check if we're looping of we're starting a new loop
+			IEnumerator<object?> enumeratorState;
+			if (connectionBeingExecuted == Inputs[0]) // start the loop
+				state = enumeratorState = ((IEnumerable<object?>)inputs[1]!).GetEnumerator();
+			else // continue the loop
+				enumeratorState = (IEnumerator<object?>)state!;
+
+			// get the next item
+			if (!enumeratorState.MoveNext())
 			{
 				alterExecutionStackOnPop = false;
-				return Outputs[1];
+				nodeOutputs[0] = null;
+				return Outputs[2];
 			}
+
+			nodeOutputs[0] = enumeratorState.Current;
+			alterExecutionStackOnPop = true;
+			return Outputs[1];
 		}
 	}
 }

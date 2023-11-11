@@ -60,13 +60,13 @@ namespace NodeDev.Core.Nodes
 			Inputs.AddRange(newConnections);
 		}
 
-		protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
+		protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state)
 		{
 			if (Outputs[1].Type is UndefinedGenericType)
 				throw new InvalidOperationException("Output type is not defined");
 
 			if (Outputs[1].Type is RealType realType)
-				outputs[1] = Activator.CreateInstance(realType.BackendType, inputs[1..].ToArray());
+				outputs[1] = Activator.CreateInstance(realType.MakeRealType(), inputs[1..].ToArray());
 			else if (Outputs[1].Type is NodeClassType nodeClassType)
 				outputs[1] = Activator.CreateInstance(Graph.SelfClass.Project.GetCreatedClassType(nodeClassType.NodeClass), inputs[1..].ToArray());
 			else

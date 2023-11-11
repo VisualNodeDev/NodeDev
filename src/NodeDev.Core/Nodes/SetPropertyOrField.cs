@@ -55,7 +55,7 @@ namespace NodeDev.Core.Nodes
 		}
 
 
-		protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
+		protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state)
 		{
 			if (TargetMember == null)
 				throw new Exception("Target method is not set");

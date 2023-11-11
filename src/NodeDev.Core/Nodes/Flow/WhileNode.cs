@@ -24,7 +24,7 @@ namespace NodeDev.Core.Nodes.Flow
 			Outputs.Add(new("ExecOut", this, TypeFactory.ExecType));
 		}
 
-		public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, out bool alterExecutionStackOnPop)
+		public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
 		{
 			if (inputs[1] is bool b && b == true)
 			{

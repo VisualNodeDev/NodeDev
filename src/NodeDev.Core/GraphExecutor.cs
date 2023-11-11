@@ -12,9 +12,15 @@ namespace NodeDev.Core
 {
 	public class GraphExecutor : IDisposable
 	{
+		private class State
+		{
+			public object? Value;
+		}
 		public readonly Graph Graph;
 
 		private readonly Dictionary<Connection, object?> Connections = new();
+
+		private readonly Dictionary<Node, State> NodeStates = new();
 
 		private readonly Stack<GraphExecutor>? ExecutorStack;
 
@@ -30,7 +36,7 @@ namespace NodeDev.Core
 				Root = this;
 			}
 			else
-				Root = root; 
+				Root = root;
 
 			if (Root.ExecutorStack == null)
 				throw new Exception("Root should have an executor stack");
@@ -43,11 +49,13 @@ namespace NodeDev.Core
 			return Graph.Nodes.First(n => n.Value is EntryNode).Value;
 		}
 
+		private readonly State DiscardedState = new State();
+
 		public void Execute(object? self, Span<object?> inputs, Span<object?> outputs)
 		{
 			var node = FindEntryNode();
 
-			var execConnection = node.Execute(this, self, null, inputs, inputs, out var _);
+			var execConnection = node.Execute(this, self, null, inputs, inputs, ref DiscardedState.Value, out var _);
 			if (execConnection == null)
 				throw new Exception("Entry node should have an output connection");
 			if (inputs.Length != node.Outputs.Count)
@@ -86,7 +94,15 @@ namespace NodeDev.Core
 				var nodeInputs = GetNodeInputs(self, nodeToExecute);
 				var nodeOutputs = new object?[nodeToExecute.Outputs.Count];
 
-				execConnection = nodeToExecute.Execute(this, self, connectionToExecute, nodeInputs, nodeOutputs, out var alterExecutionStackOnPop);
+				// Get the state of the node, if necessary
+				var state = DiscardedState;
+				if (nodeToExecute.FetchState)
+				{
+					if(!NodeStates.TryGetValue(nodeToExecute, out state))
+						NodeStates[nodeToExecute] = state = new State();
+				}
+				execConnection = nodeToExecute.Execute(this, self, connectionToExecute, nodeInputs, nodeOutputs, ref state.Value, out var alterExecutionStackOnPop);
+
 				for (int i = 0; i < nodeOutputs.Length; i++)
 				{
 					var output = nodeToExecute.Outputs[i];
@@ -126,9 +142,10 @@ namespace NodeDev.Core
 			// this will also automatically crawl back the inputs of the node we are executing
 			var inputs = GetNodeInputs(self, other.Parent);
 			var outputs = new object?[other.Parent.Outputs.Count];
+			
+			other.Parent.Execute(this, self, null, inputs, outputs, ref DiscardedState.Value, out var _);
 
 			object? myOutput = null;
-			other.Parent.Execute(this, self, null, inputs, outputs, out var _);
 			for (int i = 0; i < outputs.Length; i++)
 			{
 				var output = other.Parent.Outputs[i];

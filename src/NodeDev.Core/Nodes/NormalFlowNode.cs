@@ -24,15 +24,15 @@ namespace NodeDev.Core.Nodes
             Outputs.Add(new("Exec", this, TypeFactory.ExecType));
         }
 
-        public override Connection Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs, out bool alterExecutionStackOnPop)
+        public override Connection Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs, ref object? state, out bool alterExecutionStackOnPop)
 		{
             alterExecutionStackOnPop = false;
 
-			ExecuteInternal(executor, self, inputs, outputs);
+			ExecuteInternal(executor, self, inputs, outputs, ref state);
 
             return Outputs[0];
         }
 
-        protected abstract void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs);
+        protected abstract void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state);
     }
 }

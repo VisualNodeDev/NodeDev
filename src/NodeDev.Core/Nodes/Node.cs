@@ -39,6 +39,8 @@ namespace NodeDev.Core.Nodes
 
         public Project Project => Graph.SelfClass.Project;
 
+        public virtual bool FetchState => false;
+
         public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
 
         public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
@@ -56,7 +58,7 @@ namespace NodeDev.Core.Nodes
         /// <summary>
         /// Returns the next node to execute. The connection is on the current node, must look at what it's connected to
         /// </summary>
-        public abstract Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, out bool alterExecutionStackOnPop);
+        public abstract Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop);
 
         public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
         {

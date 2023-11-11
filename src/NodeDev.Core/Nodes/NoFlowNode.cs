@@ -17,7 +17,7 @@ namespace NodeDev.Core.Nodes
 
         public override bool IsFlowNode => false;
 
-        public override Connection? Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs, out bool alterExecutionStackOnPop)
+        public override Connection? Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs, ref object? state, out bool alterExecutionStackOnPop)
 		{
             alterExecutionStackOnPop = false;
 
