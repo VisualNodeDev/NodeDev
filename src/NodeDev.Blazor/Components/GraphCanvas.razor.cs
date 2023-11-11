@@ -364,7 +364,9 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 					else if (source.Type.IsExec && source.Connections.Count > 1) // check if we have to disconnect the previously connected exec
 					{
 						Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source && (x.Target.Model as GraphPortModel)?.Connection != target));
-						Graph.Disconnect(source, source.Connections.First(x => x != target));
+						var toRemove = source.Connections.FirstOrDefault(x => x != target);
+						if (toRemove != null)
+							Graph.Disconnect(source, toRemove);
 					}
 				}
 			}
