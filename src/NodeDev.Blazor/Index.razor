@@ -26,14 +26,16 @@
 				</MudTabPanel>
 			</MudTabs>
 
-			<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100">
-				@foreach (var method in OpenedMethods)
-				{
-					<MudTabPanel @key="method" Text="@method.Name">
-						<GraphCanvas @key="method.Graph" Graph="method.Graph"></GraphCanvas>
-					</MudTabPanel>
-				}
-			</MudTabs>
+			<CascadingValue Value="this" IsFixed="true">
+				<MudTabs @ref="Tabs" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" @bind-ActivePanelIndex="ActivePanelIndex">
+					@foreach (var method in OpenedMethods)
+					{
+						<MudTabPanel ID="method" @key="method" Text="@method.Name">
+							<GraphCanvas @key="method.Graph" Graph="method.Graph"></GraphCanvas>
+						</MudTabPanel>
+					}
+				</MudTabs>
+			</CascadingValue>
 
 		</MudStack>
 	</MudMainContent>
@@ -47,6 +49,10 @@
 
 	private List<Core.Class.NodeClassMethod> OpenedMethods { get; } = new();
 
+	private MudTabs Tabs { get; set; } = null!;
+
+	private int ActivePanelIndex = 0;
+
 	protected override void OnInitialized()
 	{
 		if (File.Exists("project.json"))
@@ -55,12 +61,15 @@
 			Project = Core.Project.CreateNewDefaultProject();
 	}
 
-	private void OpenMethod(Core.Class.NodeClassMethod? method)
+	public void OpenMethod(Core.Class.NodeClassMethod? method)
 	{
 		if (method == null)
 			return;
 		if (!OpenedMethods.Contains(method))
 			OpenedMethods.Add(method);
+
+		ActivePanelIndex = OpenedMethods.IndexOf(method);
+		StateHasChanged();
 	}
 
 	private void Save()
