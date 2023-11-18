@@ -17,6 +17,7 @@ using System.Numerics;
 using System.Reactive.Linq;
 using static MudBlazor.CategoryTypes;
 using System.Xml.Linq;
+using NodeDev.Core.Class;
 
 namespace NodeDev.Blazor.Components;
 
@@ -24,6 +25,9 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 {
 	[Parameter, EditorRequired]
 	public Graph Graph { get; set; } = null!;
+
+	[CascadingParameter]
+	public Index Index { get; set; } = null!;
 
 	private int PopupX = 0;
 	private int PopupY = 0;
@@ -492,13 +496,25 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 			connection.UpdateTextboxText(text);
 	}
 
-	#endregion
+    #endregion
 
-	#endregion
+    #region OnNodeDoubleClick
 
-	#region ShowAddNode
+	public void OnNodeDoubleClick(Node node)
+	{
+		if(node is MethodCall methodCall && methodCall.TargetMethod is NodeClassMethod nodeClassMethod)
+		{
+			Index.OpenMethod(nodeClassMethod);
+		}
+	}
 
-	public void ShowAddNode()
+    #endregion
+
+    #endregion
+
+    #region ShowAddNode
+
+    public void ShowAddNode()
 	{
 		IsShowingNodeSelection = true;
 		PopupX = 300;

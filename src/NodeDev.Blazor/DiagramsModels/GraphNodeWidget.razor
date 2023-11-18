@@ -1,6 +1,6 @@
 ﻿@using global::Blazor.Diagrams.Core.Models
 
-<div class="drop-shadow-lg bg-white border my-node">
+<div class="drop-shadow-lg bg-white border my-node" @ondblclick="OnDoubleClick">
 
 
 	<div class="bg-main pa-2 mb-1 font-semibold text-white uppercase title relative">
@@ -65,5 +65,12 @@
 	{
 		<MudTextField T="string" Class="border rounded pr-2" Value="@port.Connection.TextboxValue" ValueChanged="x => GraphCanvas.OnTextboxValueChanged(port, x)" Label="@port.Connection.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
 	}
-	</div>;
+	</div>
+	;
+
+
+	private void OnDoubleClick()
+	{
+		GraphCanvas.OnNodeDoubleClick(Node.Node);
+	}
 }

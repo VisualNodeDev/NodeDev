@@ -49,7 +49,7 @@ public class MethodCall : NormalFlowNode
 	public override string TitleColor => "lightblue";
 
 
-	internal IMethodInfo? TargetMethod;
+	public IMethodInfo? TargetMethod { get; private set; }
 
 	public override string Name
 	{
