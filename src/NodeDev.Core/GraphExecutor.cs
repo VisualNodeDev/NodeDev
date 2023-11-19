@@ -20,6 +20,10 @@ namespace NodeDev.Core
 
 		private readonly Dictionary<Connection, object?> Connections = new();
 
+		/// <summary>
+		/// NodeState is used when some nodes have values they need to remember.
+		/// A good example is the ForeachNode, which needs to remember the current state of the enumerator.
+		/// </summary>
 		private readonly Dictionary<Node, State> NodeStates = new();
 
 		private readonly Stack<GraphExecutor>? ExecutorStack;
