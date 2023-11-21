@@ -27,7 +27,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 	public Graph Graph { get; set; } = null!;
 
 	[CascadingParameter]
-	public Index Index { get; set; } = null!;
+	public Index IndexPage { get; set; } = null!;
 
 	private int PopupX = 0;
 	private int PopupY = 0;
