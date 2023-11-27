@@ -106,13 +106,13 @@
             flex-direction: row;
         }
 
-        .my-node .input  {
-            flex: 1
-        }
+    .my-node .input {
+        flex: 1
+    }
 
-        .my-node .output:not(.sharing) {
-            flex: 1;
-        }
+    .my-node .output:not(.sharing) {
+        flex: 1;
+    }
 
     .my-node .output .name {
         width: 100%;
@@ -136,6 +136,17 @@
         top: -20px;
         padding: 0px;
     }
+
+g.diagram-link path {
+    transition: 2s linear all;
+}
+
+g.diagram-link.executing path {
+    animation: dash .1s linear infinite !important;
+    stroke: red !important;
+    transition: 0.1s linear all;
+    stroke-width: 5px;
+}
 
 g.diagram-link path:not(.selection-helper) {
     stroke-dasharray: 5;

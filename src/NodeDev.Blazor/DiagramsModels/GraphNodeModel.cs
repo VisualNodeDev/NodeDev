@@ -15,6 +15,8 @@ namespace NodeDev.Blazor.DiagramsModels
     {
         internal readonly Node Node;
 
+		
+
         public GraphNodeModel(Node node) : base(new(node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero)).X, node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero)).Y))
         {
             Node = node;
@@ -26,5 +28,32 @@ namespace NodeDev.Blazor.DiagramsModels
         {
 
         }
-    }
+
+		internal void OnNodeExecuted(Connection exec)
+		{
+
+		}
+
+		internal async Task OnNodeExecuting(Connection exec)
+		{
+            var port = GetPort(exec);
+
+            foreach (var link in port.Links.OfType<LinkModel>())
+            {
+                link.Classes = "executing";
+                link.Refresh();
+            }
+
+            var currentCount = ++port.ExecutionCount;
+            await Task.Delay(100);
+            if (currentCount == port.ExecutionCount)
+            {
+                foreach (var link in port.Links.OfType<LinkModel>())
+                {
+                    link.Classes = "";
+					link.Refresh();
+				}
+			}
+		}
+	}
 }

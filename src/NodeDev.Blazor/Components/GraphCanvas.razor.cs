@@ -64,6 +64,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		Diagram.Nodes.Removed += OnNodeRemoved;
 		Diagram.Links.Added += x => OnConnectionAdded(x, false);
 		Diagram.Links.Removed += OnConnectionRemoved;
+
 	}
 
 	#endregion
@@ -80,7 +81,40 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 			await Graph.Invoke(() => Diagram.Batch(InitializeCanvasWithGraphNodes));
 
 			GraphChangedSubscription = Graph.SelfClass.Project.GraphChanged.Where(x => x == Graph).AcceptThenSample(TimeSpan.FromMilliseconds(250)).Subscribe(OnGraphChangedFromCore);
+			NodeExecutingSubscription = Graph.SelfClass.Project.GraphNodeExecuting.Where(x => x.Executor.Graph == Graph).Buffer(TimeSpan.FromMilliseconds(250)).Subscribe(OnGraphNodeExecuting);
+			NodeExecutedSubscription = Graph.SelfClass.Project.GraphNodeExecuted.Where(x => x.Executor.Graph == Graph).Sample(TimeSpan.FromMilliseconds(250)).Subscribe(OnGraphNodeExecuted);
 		}
+	}
+
+	#endregion
+
+	#region OnGraphNodeExecuting / OnGraphNodeExecuted
+
+	private void OnGraphNodeExecuting(IList<(GraphExecutor Executor, Node Node, Connection Exec)> options)
+	{
+		InvokeAsync(() =>
+		{
+			foreach (var option in options.DistinctBy(x => x.Exec))
+			{
+				var nodeModel = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == option.Node);
+				if (nodeModel == null)
+					return;
+
+				_ = nodeModel.OnNodeExecuting(option.Exec);
+			}
+		});
+	}
+
+	private void OnGraphNodeExecuted((GraphExecutor Executor, Node Node, Connection Exec) options)
+	{
+		InvokeAsync(() =>
+		{
+			var nodeModel = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == options.Node);
+			if (nodeModel == null)
+				return;
+
+			nodeModel.OnNodeExecuted(options.Exec);
+		});
 	}
 
 	#endregion
@@ -504,7 +538,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 	{
 		if(node is MethodCall methodCall && methodCall.TargetMethod is NodeClassMethod nodeClassMethod)
 		{
-			Index.OpenMethod(nodeClassMethod);
+			IndexPage.OpenMethod(nodeClassMethod);
 		}
 	}
 
@@ -613,10 +647,16 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 	#region Dispose
 
 	private IDisposable? GraphChangedSubscription;
+	private IDisposable? NodeExecutingSubscription;
+	private IDisposable? NodeExecutedSubscription;
 	public void Dispose()
 	{
 		GraphChangedSubscription?.Dispose();
+		NodeExecutingSubscription?.Dispose();
+		NodeExecutedSubscription?.Dispose();
 		GraphChangedSubscription = null;
+		NodeExecutingSubscription = null;
+		NodeExecutedSubscription = null;
 	}
 
 	#endregion

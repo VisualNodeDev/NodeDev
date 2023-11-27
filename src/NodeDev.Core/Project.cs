@@ -1,4 +1,5 @@
 ﻿using NodeDev.Core.Class;
+using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using NodeDev.Core.Types;
@@ -24,9 +25,18 @@ public class Project
 
 	public NodeClassTypeCreator? NodeClassTypeCreator { get; private set; }
 
+	public GraphExecutor? GraphExecutor { get; set; }
+
 	internal Subject<Graph> GraphChangedSubject { get; } = new();
 
+	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutingSubject { get; } = new();
+	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutedSubject { get; } = new();
+
 	public IObservable<Graph> GraphChanged => GraphChangedSubject.AsObservable();
+
+	public IObservable<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecuting => GraphNodeExecutingSubject.AsObservable();
+
+	public IObservable<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecuted => GraphNodeExecutedSubject.AsObservable();
 
 	public Project(Guid id)
 	{
@@ -64,15 +74,19 @@ public class Project
 		var program = Classes.Single(x => x.Name == "Program");
 
 		var main = program.Methods.Single(x => x.Name == "Main");
-		var executor = new GraphExecutor(main.Graph, null);
+		GraphExecutor = new GraphExecutor(main.Graph, null);
 
-		var outputs = new object[main.ReturnType == TypeFactory.Get(typeof(void), null) ? 1 : 2]; // 1 for the exec, 2 for exec + the actual return value
-		executor.Execute(null, inputs, outputs);
-
-		NodeClassTypeCreator = null;
-		GC.Collect();
-
-		return outputs[^1];
+		try
+		{
+			var outputs = new object[main.ReturnType == TypeFactory.Get(typeof(void), null) ? 1 : 2]; // 1 for the exec, 2 for exec + the actual return value
+			GraphExecutor.Execute(null, inputs, outputs);
+			return outputs[^1];
+		}
+		finally
+		{
+			NodeClassTypeCreator = null;
+			GC.Collect();
+		}
 	}
 
 	public Type GetCreatedClassType(NodeClass nodeClass)

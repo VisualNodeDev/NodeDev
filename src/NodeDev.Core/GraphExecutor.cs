@@ -30,6 +30,8 @@ namespace NodeDev.Core
 
 		internal readonly GraphExecutor Root;
 
+		public Project Project => Root.Graph.SelfClass.Project;
+
 		public GraphExecutor(Graph graph, GraphExecutor? root)
 		{
 			Graph = graph;
@@ -60,6 +62,7 @@ namespace NodeDev.Core
 			var node = FindEntryNode();
 
 			var execConnection = node.Execute(this, self, null, inputs, inputs, ref DiscardedState.Value, out var _);
+
 			if (execConnection == null)
 				throw new Exception("Entry node should have an output connection");
 			if (inputs.Length != node.Outputs.Count)
@@ -87,6 +90,8 @@ namespace NodeDev.Core
 
 				if (nodeToExecute is ReturnNode) // we are done
 				{
+					Project.GraphNodeExecutingSubject.OnNext((this, nodeToExecute, connectionToExecute));
+					Project.GraphNodeExecutedSubject.OnNext((this, nodeToExecute, connectionToExecute));
 					for (int i = 0; i < outputs.Length; i++)
 					{
 						var output = nodeToExecute.Inputs[i];
@@ -102,10 +107,12 @@ namespace NodeDev.Core
 				var state = DiscardedState;
 				if (nodeToExecute.FetchState)
 				{
-					if(!NodeStates.TryGetValue(nodeToExecute, out state))
+					if (!NodeStates.TryGetValue(nodeToExecute, out state))
 						NodeStates[nodeToExecute] = state = new State();
 				}
+				Project.GraphNodeExecutingSubject.OnNext((this, nodeToExecute, connectionToExecute));
 				execConnection = nodeToExecute.Execute(this, self, connectionToExecute, nodeInputs, nodeOutputs, ref state.Value, out var alterExecutionStackOnPop);
+				Project.GraphNodeExecutedSubject.OnNext((this, nodeToExecute, connectionToExecute));
 
 				for (int i = 0; i < nodeOutputs.Length; i++)
 				{
@@ -146,7 +153,7 @@ namespace NodeDev.Core
 			// this will also automatically crawl back the inputs of the node we are executing
 			var inputs = GetNodeInputs(self, other.Parent);
 			var outputs = new object?[other.Parent.Outputs.Count];
-			
+
 			other.Parent.Execute(this, self, null, inputs, outputs, ref DiscardedState.Value, out var _);
 
 			object? myOutput = null;

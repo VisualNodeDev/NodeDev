@@ -9,6 +9,8 @@ public class GraphPortModel: PortModel
 {
     internal readonly Connection Connection;
 
+    internal int ExecutionCount = 0;
+
     internal string PortColor => GraphCanvas.GetTypeShapeColor(Connection.Type, Connection.Parent.TypeFactory);
 
     public GraphPortModel(GraphNodeModel parent, Connection connection, bool isInput) : base(parent, isInput ? PortAlignment.Left : PortAlignment.Right)
