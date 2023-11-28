@@ -9,6 +9,7 @@ public class TypeFactory
 		"System.Collections.Generic",
 		"System.Linq",
 		"System.Text",
+		"System.Threading",
 		"System.Threading.Tasks",
 	};
 	private Dictionary<string, List<string>> TypeCorrespondances = new()
