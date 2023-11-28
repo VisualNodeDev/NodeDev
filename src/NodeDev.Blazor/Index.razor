@@ -85,6 +85,9 @@
 
 	public void Run()
 	{
-		Project.Run(new object?[1]);
+		new Thread(() =>
+		{
+			Project.Run(new object?[1]);
+		}).Start();
 	}
 }
