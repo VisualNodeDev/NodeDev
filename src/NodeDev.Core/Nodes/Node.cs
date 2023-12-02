@@ -41,6 +41,11 @@ namespace NodeDev.Core.Nodes
 
         public virtual bool FetchState => false;
 
+        /// <summary>
+        /// Global index of this node in the graph. Each node in a graph has a unique index.
+        /// </summary>
+        public int GraphIndex { get; set; } = -1;
+
         public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
 
         public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);

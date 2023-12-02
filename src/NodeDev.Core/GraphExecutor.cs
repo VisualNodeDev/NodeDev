@@ -18,23 +18,28 @@ namespace NodeDev.Core
 		}
 		public readonly Graph Graph;
 
-		private readonly Dictionary<Connection, object?> Connections = new();
+		public readonly object?[] Connections;
 
 		/// <summary>
 		/// NodeState is used when some nodes have values they need to remember.
 		/// A good example is the ForeachNode, which needs to remember the current state of the enumerator.
 		/// </summary>
-		private readonly Dictionary<Node, State> NodeStates = new();
+		private readonly State?[] NodeStates;
 
 		private readonly Stack<GraphExecutor>? ExecutorStack;
 
 		internal readonly GraphExecutor Root;
+
+		public bool MustDispose = false;
 
 		public Project Project => Root.Graph.SelfClass.Project;
 
 		public GraphExecutor(Graph graph, GraphExecutor? root)
 		{
 			Graph = graph;
+
+			Connections = new object[graph.NbConnections];
+			NodeStates = new State[graph.Nodes.Count];
 
 			if (root == null) // we're the root!
 			{
@@ -69,7 +74,7 @@ namespace NodeDev.Core
 				throw new Exception("EntryNode doesn't have the same amount of inputs as the provided inputs array");
 
 			for (int i = 0; i < inputs.Length; ++i)
-				Connections[node.Outputs[i]] = inputs[i];
+				Connections[node.Outputs[i].GraphIndex] = inputs[i];
 
 
 			var stack = new Stack<Connection>(); // stack of input connections on nodes that can alter execution path
@@ -107,8 +112,9 @@ namespace NodeDev.Core
 				var state = DiscardedState;
 				if (nodeToExecute.FetchState)
 				{
-					if (!NodeStates.TryGetValue(nodeToExecute, out state))
-						NodeStates[nodeToExecute] = state = new State();
+					state = NodeStates[nodeToExecute.GraphIndex];
+					if(state == null)
+						NodeStates[nodeToExecute.GraphIndex] = state = new State();
 				}
 				Project.GraphNodeExecutingSubject.OnNext((this, nodeToExecute, connectionToExecute));
 				execConnection = nodeToExecute.Execute(this, self, connectionToExecute, nodeInputs, nodeOutputs, ref state.Value, out var alterExecutionStackOnPop);
@@ -117,7 +123,7 @@ namespace NodeDev.Core
 				for (int i = 0; i < nodeOutputs.Length; i++)
 				{
 					var output = nodeToExecute.Outputs[i];
-					Connections[output] = nodeOutputs[i];
+					Connections[output.GraphIndex] = nodeOutputs[i];
 				}
 
 				if (execConnection != null && alterExecutionStackOnPop)
@@ -145,8 +151,11 @@ namespace NodeDev.Core
 			if (other == null)
 				return inputConnection.ParsedTextboxValue;
 
-			if (other.Parent.IsFlowNode) // we can stop crawling back and just get the value of the input
-				return Connections.TryGetValue(other, out var v) ? v : null;
+			// we can stop crawling back and just get the value of the input
+			// The input is from a flow node, meaning it has an exec input
+			// Nodes with an exec input already have their outputs calculated (when they are executed)
+			if (other.Parent.IsFlowNode) 
+				return Connections[other.GraphIndex];
 
 
 			// if this is not a flow node, we are allowed to execute the node on demande to calculate the outputs
@@ -160,7 +169,7 @@ namespace NodeDev.Core
 			for (int i = 0; i < outputs.Length; i++)
 			{
 				var output = other.Parent.Outputs[i];
-				Connections[output] = outputs[i];
+				Connections[output.GraphIndex] = outputs[i];
 
 				if (output == other)
 					myOutput = outputs[i];
@@ -171,12 +180,14 @@ namespace NodeDev.Core
 
 		public void Dispose()
 		{
-			foreach (var value in Connections)
+			if (MustDispose)
 			{
-				if (value.Value is IDisposable disposable)
-					disposable.Dispose();
+				foreach (var value in Connections)
+				{
+					if (value is IDisposable disposable)
+						disposable.Dispose();
+				}
 			}
-			Connections.Clear();
 
 			if (Root.ExecutorStack == null)
 				throw new Exception("Root executor stack shouldn't be null");

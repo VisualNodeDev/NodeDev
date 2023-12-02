@@ -24,6 +24,11 @@ namespace NodeDev.Core.Connections
 		public string? TextboxValue { get; private set; }
 		public object? ParsedTextboxValue { get; set; }
 
+		/// <summary>
+		/// Global index of this connection in the graph. Each connection of each node in a graph has a unique index.
+		/// </summary>
+		public int GraphIndex { get; set; } = -1;
+
 		public Connection(string name, Node parent, TypeBase type, string? id = null)
 		{
 			Id = id ?? Guid.NewGuid().ToString();

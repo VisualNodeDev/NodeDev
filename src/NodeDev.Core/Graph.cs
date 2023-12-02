@@ -20,6 +20,26 @@ public class Graph
 	}
 
 
+	#region PreprocessGraph
+
+	public int NbConnections { get; private set; }
+
+	internal void PreprocessGraph()
+	{
+		NbConnections = 0;
+		int nodeIndex = 0;
+		foreach(var node in Nodes.Values)
+		{
+			node.GraphIndex = nodeIndex++;
+			int connectionIndex = 0;
+			foreach(var connection in node.InputsAndOutputs)
+				connection.GraphIndex = connectionIndex++;
+			NbConnections += node.Inputs.Count + node.Outputs.Count;
+		}
+	}
+
+	#endregion
+
 	#region Invoke
 
 	public Task Invoke(Action action)
