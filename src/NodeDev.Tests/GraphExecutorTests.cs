@@ -41,6 +41,15 @@ public class GraphExecutorTests
 		graph.Connect(entryNode.Outputs[2], addNode.Inputs[1]);
 		graph.Connect(addNode.Outputs[0], returnNode.Inputs[1]);
 
+		// preprocess every graph everywhere
+		foreach (var node in project.Classes)
+		{
+			foreach (var m in nodeClass.Methods)
+			{
+				m.Graph.PreprocessGraph();
+			}
+		}
+
 		return graph;
 	}
 
@@ -82,18 +91,23 @@ public class GraphExecutorTests
 		smallerThan.Inputs[0].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateTextboxText("0");
+		graph.AddNode(smallerThan);
 		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0]);
 
 		var returnNode2 = new Core.Nodes.Flow.ReturnNode(graph);
 		returnNode2.Inputs.Add(new("Result", entryNode, graph.SelfClass.TypeFactory.Get<int>()));
 		returnNode2.Inputs[1].UpdateTextboxText("0");
+		graph.AddNode(returnNode2);
 
 		var branchNode = new Core.Nodes.Flow.Branch(graph);
 		graph.Connect(entryNode.Outputs[0], branchNode.Inputs[0]);
 		graph.Connect(smallerThan.Outputs[0], branchNode.Inputs[1]);
+		graph.AddNode(branchNode);
 
 		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0]);
 		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0]);
+
+		graph.PreprocessGraph();
 
 		var executor = new Core.GraphExecutor(graph, null);
 
@@ -114,16 +128,19 @@ public class GraphExecutorTests
 		returnNode1.Inputs[1].UpdateTextboxText("1");
 
 		var smallerThan = new Core.Nodes.Math.SmallerThan(graph);
+		graph.AddNode(smallerThan);
 		smallerThan.Inputs[0].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateTextboxText("0");
 		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0]);
 
 		var returnNode2 = new Core.Nodes.Flow.ReturnNode(graph);
+		graph.AddNode(returnNode2);
 		returnNode2.Inputs.Add(new("Result", entryNode, graph.SelfClass.TypeFactory.Get<int>()));
 		returnNode2.Inputs[1].UpdateTextboxText("0");
 
 		var branchNode = new Core.Nodes.Flow.Branch(graph);
+		graph.AddNode(branchNode);
 		graph.Connect(entryNode.Outputs[0], branchNode.Inputs[0]);
 		graph.Connect(smallerThan.Outputs[0], branchNode.Inputs[1]);
 

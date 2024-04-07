@@ -11,8 +11,9 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Nodes
 {
+	[System.Diagnostics.DebuggerDisplay("{Name}. Inputs: {Inputs.Count}. Outputs: {Outputs.Count}")]
     public abstract class Node
-    {
+	{
         public Node(Graph graph, string? id = null)
         {
             Graph = graph;

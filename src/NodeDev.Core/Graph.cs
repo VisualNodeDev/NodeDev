@@ -31,10 +31,8 @@ public class Graph
 		foreach(var node in Nodes.Values)
 		{
 			node.GraphIndex = nodeIndex++;
-			int connectionIndex = 0;
 			foreach(var connection in node.InputsAndOutputs)
-				connection.GraphIndex = connectionIndex++;
-			NbConnections += node.Inputs.Count + node.Outputs.Count;
+				connection.GraphIndex = NbConnections++;
 		}
 	}
 

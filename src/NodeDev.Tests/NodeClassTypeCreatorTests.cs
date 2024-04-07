@@ -85,7 +85,6 @@ public class NodeClassTypeCreatorTests
 		graph.Connect(newNode.Outputs[1], getProp.Inputs[0]);
 		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1]);
 
-
 		var result = project.Run(new object?[] { null, 10 });
 
 		Assert.Equal(10, result);

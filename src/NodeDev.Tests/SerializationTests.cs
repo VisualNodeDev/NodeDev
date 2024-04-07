@@ -21,10 +21,12 @@ public class SerializationTests
 		Assert.Single(deserializedProject.Classes.First().Methods);
 
 		graph = deserializedProject.Classes.First().Methods.First().Graph; // swap the original graph with the deserialized one
-		var executor = new Core.GraphExecutor(graph, null);
+		graph.PreprocessGraph();
 
+		var executor = new Core.GraphExecutor(graph, null);
+		
 		var outputs = new object?[2];
-		executor.Execute(null, new object?[] { null, 1, 2 }, outputs);
+		executor.Execute(null, [null, 1, 2], outputs);
 
 		Assert.Equal(3, outputs[1]);
 	}
@@ -63,6 +65,7 @@ public class SerializationTests
 		testMethodGraph.Connect(methodCall.Outputs[0], returnNode.Inputs[0]); // exec from method to return node
 		testMethodGraph.Connect(methodCall.Outputs[1], returnNode.Inputs[1]); // method call result to return node result
 
+		testMethodGraph.PreprocessGraph();
 		var executor = new Core.GraphExecutor(testMethodGraph, null);
 
 		var outputs = new object?[2];
