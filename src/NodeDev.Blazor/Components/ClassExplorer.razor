@@ -31,10 +31,10 @@
 				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption">
 					<BodyContent Context="Item">
 						<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item" @onmouseout="() => Hovered = null">
-							<MudText Style="justify-self: start;">@Item.Value.Method!.ReturnType.FriendlyName @Item.Text (@string.Join(',', Item.Value.Method!.Parameters.Select( x=> $"{x.ParameterType.FriendlyName} {x.Name}")))</MudText>
+							<MudText Style="justify-self: start;">@Item.Value!.Method!.ReturnType.FriendlyName @Item.Text (@string.Join(',', Item.Value.Method!.Parameters.Select( x=> $"{x.ParameterType.FriendlyName} {x.Name}")))</MudText>
 							<div style="@($"justify-self: end; visibility: {(Hovered == Item ? "visible" : "hidden")}")">
-								<MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowMethodEdit(Item.Value)" />
-								<MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value)" />
+								<MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowMethodEdit(Item.Value!)" />
+								<MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value!)" />
 							</div>
 						</div>
 					</BodyContent>
@@ -45,10 +45,10 @@
 				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption">
 					<BodyContent Context="Item">
 						<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item" @onmouseout="() => Hovered = null">
-							<MudText Style="justify-self: start;">@Item.Value.Property!.PropertyType.FriendlyName @Item.Text</MudText>
+							<MudText Style="justify-self: start;">@Item.Value!.Property!.PropertyType.FriendlyName @Item.Text</MudText>
 							<div style="@($"justify-self: end; visibility: {(Hovered == Item ? "visible" : "hidden")}")">
-								<MudIconButton Icon="@Icons.Material.Filled.ShapeLine" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowPropertyTypeEdit(Item.Value)" />
-								<MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value)" />
+								<MudIconButton Icon="@Icons.Material.Filled.ShapeLine" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowPropertyTypeEdit(Item.Value!)" />
+								<MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value!)" />
 								<MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" Color="Color.Inherit" />
 							</div>
 						</div>

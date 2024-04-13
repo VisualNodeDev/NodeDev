@@ -4,11 +4,11 @@
 
 @code {
 
-    [Parameter] 
-    public Action<T, TProperty> SetCallback { get; set; }
+    [Parameter]
+    public Action<T, TProperty?> SetCallback { get; set; } = null!;
 
-    protected override void SetProperty(object item, object value)
+    protected override void SetProperty(object item, object? value)
     {
-        SetCallback((T)item, (TProperty)Convert.ChangeType(value, typeof(TProperty)));
+        SetCallback((T)item, (TProperty?)Convert.ChangeType(value, typeof(TProperty)));
     }
 }

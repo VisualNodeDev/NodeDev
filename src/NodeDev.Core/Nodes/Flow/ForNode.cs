@@ -21,7 +21,7 @@ namespace NodeDev.Core.Nodes.Flow
 			Name = "For";
 
 			Inputs.Add(new("Exec", this, TypeFactory.ExecType));
-			Inputs.Add(new("Start (Include)", this, TypeFactory.Get<int>()));
+			Inputs.Add(new("Start", this, TypeFactory.Get<int>()));
 			Inputs.Add(new("End (Exclude)", this, TypeFactory.Get<int>()));
 
 			Outputs.Add(new("ExecLoop", this, TypeFactory.ExecType));

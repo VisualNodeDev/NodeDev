@@ -1,4 +1,5 @@
-﻿@inject Services.DebuggedPathService DebuggedPathService
+﻿@implements IDisposable
+@inject Services.DebuggedPathService DebuggedPathService
 
 <MudStack Row="true" Class="w100 mb-n2" AlignItems=" AlignItems.Center" Justify="Justify.Center">
 	@{
@@ -48,5 +49,10 @@
 			var node = nodes.Last() as NodeDev.Core.Nodes.MethodCall;
 			OpenMethod.InvokeAsync((NodeDev.Core.Class.NodeClassMethod?)node?.TargetMethod);
 		}
+	}
+
+	public void Dispose()
+	{
+		DebuggedPathService.DebuggedPathChanged -= DebuggedPathService_DebuggedPathChanged;
 	}
 }

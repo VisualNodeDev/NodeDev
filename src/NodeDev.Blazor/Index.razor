@@ -29,22 +29,28 @@
 				</MudTabPanel>
 			</MudTabs>
 
-			<MudStack Row="false" Class="w100">
+			<div class="w100 relative flex-1">
 
-				<DebuggedPathView OpenMethod="OpenMethodFromDebuggedPath" />
+				<MudStack Row="false" Class="wh100">
 
-				<CascadingValue Value="this" IsFixed="true">
-					<MudTabs @ref="Tabs" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" @bind-ActivePanelIndex="ActivePanelIndex">
-						@foreach (var method in OpenedMethods)
-						{
-							<MudTabPanel ID="method" @key="method" Text="@method.Name">
-								<GraphCanvas @key="method.Graph" Graph="method.Graph"></GraphCanvas>
-							</MudTabPanel>
-						}
-					</MudTabs>
-				</CascadingValue>
+					<DebuggedPathView OpenMethod="OpenMethodFromDebuggedPath" />
 
-			</MudStack>
+					<CascadingValue Value="this" IsFixed="true">
+						<MudTabs @ref="Tabs" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" @bind-ActivePanelIndex="ActivePanelIndex">
+							@foreach (var method in OpenedMethods)
+							{
+								<MudTabPanel ID="method" @key="method" Text="@method.Name">
+									<GraphCanvas @key="method.Graph" Graph="method.Graph"></GraphCanvas>
+								</MudTabPanel>
+							}
+						</MudTabs>
+					</CascadingValue>
+
+					<DebuggerConsolePanel Project="Project" />
+
+				</MudStack>
+
+			</div>
 
 		</MudStack>
 	</MudMainContent>
@@ -74,7 +80,7 @@
 
 	public void OpenMethodFromDebuggedPath(Core.Class.NodeClassMethod? method)
 	{
-		if(method == null)
+		if (method == null)
 		{
 			// Find the main method
 			var program = Project.Classes.FirstOrDefault(x => x.Name == "Program");

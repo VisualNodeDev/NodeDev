@@ -31,12 +31,15 @@ public class Project
 
 	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutingSubject { get; } = new();
 	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutedSubject { get; } = new();
+	internal Subject<bool> GraphExecutionChangedSubject { get; } = new();
 
 	public IObservable<Graph> GraphChanged => GraphChangedSubject.AsObservable();
 
 	public IObservable<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecuting => GraphNodeExecutingSubject.AsObservable();
 
 	public IObservable<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecuted => GraphNodeExecutedSubject.AsObservable();
+
+	public IObservable<bool> GraphExecutionChanged => GraphExecutionChangedSubject.AsObservable();
 
 	public bool IsLiveDebuggingEnabled { get; private set; }
 
@@ -99,6 +102,8 @@ public class Project
 
 		try
 		{
+			GraphExecutionChangedSubject.OnNext(true);
+
 			// Execute the main method
 			var outputs = new object[main.ReturnType == TypeFactory.Get(typeof(void), null) ? 1 : 2]; // 1 for the exec, 2 for exec + the actual return value
 			GraphExecutor.Execute(null, inputs, outputs);
@@ -110,6 +115,8 @@ public class Project
 		{
 			NodeClassTypeCreator = null;
 			GC.Collect();
+
+			GraphExecutionChangedSubject.OnNext(false);
 		}
 	}
 
