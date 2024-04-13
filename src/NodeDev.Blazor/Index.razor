@@ -1,4 +1,6 @@
-﻿<MudThemeProvider />
+﻿@inject Services.DebuggedPathService DebuggedPathService
+
+<MudThemeProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
@@ -7,6 +9,7 @@
 		<MudButton OnClick="Save" Class="ml-3">Save</MudButton>
 		<MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
 		<MudButton OnClick="Run" Class="ml-3">Run</MudButton>
+		<MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
 		<MudSpacer />
 		<MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
 	</MudAppBar>
@@ -26,16 +29,22 @@
 				</MudTabPanel>
 			</MudTabs>
 
-			<CascadingValue Value="this" IsFixed="true">
-				<MudTabs @ref="Tabs" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" @bind-ActivePanelIndex="ActivePanelIndex">
-					@foreach (var method in OpenedMethods)
-					{
-						<MudTabPanel ID="method" @key="method" Text="@method.Name">
-							<GraphCanvas @key="method.Graph" Graph="method.Graph"></GraphCanvas>
-						</MudTabPanel>
-					}
-				</MudTabs>
-			</CascadingValue>
+			<MudStack Row="false" Class="w100">
+
+				<DebuggedPathView OpenMethod="OpenMethodFromDebuggedPath" />
+
+				<CascadingValue Value="this" IsFixed="true">
+					<MudTabs @ref="Tabs" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" @bind-ActivePanelIndex="ActivePanelIndex">
+						@foreach (var method in OpenedMethods)
+						{
+							<MudTabPanel ID="method" @key="method" Text="@method.Name">
+								<GraphCanvas @key="method.Graph" Graph="method.Graph"></GraphCanvas>
+							</MudTabPanel>
+						}
+					</MudTabs>
+				</CascadingValue>
+
+			</MudStack>
 
 		</MudStack>
 	</MudMainContent>
@@ -59,6 +68,22 @@
 			Project = Core.Project.Deserialize(File.ReadAllText("project.json"));
 		else
 			Project = Core.Project.CreateNewDefaultProject();
+
+		DebuggedPathService.ChangeProject(Project);
+	}
+
+	public void OpenMethodFromDebuggedPath(Core.Class.NodeClassMethod? method)
+	{
+		if(method == null)
+		{
+			// Find the main method
+			var program = Project.Classes.FirstOrDefault(x => x.Name == "Program");
+
+			// Find the main method in the program class
+			method = program?.Methods.FirstOrDefault(x => x.Name == "Main");
+		}
+
+		OpenMethod(method);
 	}
 
 	public void OpenMethod(Core.Class.NodeClassMethod? method)
@@ -89,5 +114,13 @@
 		{
 			Project.Run(new object?[1]);
 		}).Start();
+	}
+
+	private void SwitchLiveDebugging()
+	{
+		if (Project.IsLiveDebuggingEnabled)
+			Project.StopLiveDebugging();
+		else
+			Project.StartLiveDebugging();
 	}
 }

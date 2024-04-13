@@ -14,6 +14,8 @@ public class Graph
 	public NodeClass SelfClass => SelfMethod.Class;
 	public NodeClassMethod SelfMethod { get; set; }
 
+	public Project Project => SelfMethod.Class.Project;
+
 	static Graph()
 	{
 		NodeProvider.Initialize();

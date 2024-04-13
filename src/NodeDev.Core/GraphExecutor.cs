@@ -26,6 +26,12 @@ namespace NodeDev.Core
 		/// </summary>
 		private readonly State?[] NodeStates;
 
+		/// <summary>
+		/// Contains all the executers that were executed for the current graph, if the project is in debug
+		/// Otherwise if we are not in debug mode, we won't track each executor
+		/// </summary>
+		internal readonly GraphExecutor?[] ChildrenExecutors;
+
 		private readonly Stack<GraphExecutor>? ExecutorStack;
 
 		internal readonly GraphExecutor Root;
@@ -40,6 +46,7 @@ namespace NodeDev.Core
 
 			Connections = new object[graph.NbConnections];
 			NodeStates = new State[graph.Nodes.Count];
+			ChildrenExecutors = new GraphExecutor[graph.Nodes.Count];
 
 			if (root == null) // we're the root!
 			{
@@ -53,6 +60,11 @@ namespace NodeDev.Core
 				throw new Exception("Root should have an executor stack");
 
 			Root.ExecutorStack.Push(this);
+		}
+
+		public GraphExecutor? GetChildrenExecutor(int index)
+		{
+			return ChildrenExecutors[index];
 		}
 
 		private Node FindEntryNode()

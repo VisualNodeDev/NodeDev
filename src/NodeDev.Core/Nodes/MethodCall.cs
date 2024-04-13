@@ -203,8 +203,21 @@ public class MethodCall : NormalFlowNode
 
 		if (TargetMethod is NodeClassMethod nodeClassMethod)
 		{
-			using var childExecutor = new GraphExecutor(nodeClassMethod.Graph, executor.Root);
-			childExecutor.Execute(inputs[0] ?? self, inputs[1..], outputs);
+			var childExecutor = new GraphExecutor(nodeClassMethod.Graph, executor.Root);
+
+			if (Project.IsLiveDebuggingEnabled)
+			{
+				// Store the child executor in the parent executor
+				executor.ChildrenExecutors[GraphIndex] = childExecutor;
+
+				childExecutor.Execute(inputs[0] ?? self, inputs[1..], outputs);
+			}
+			else
+			{
+				using (childExecutor)
+					childExecutor.Execute(inputs[0] ?? self, inputs[1..], outputs);
+			}
+
 		}
 		else
 		{

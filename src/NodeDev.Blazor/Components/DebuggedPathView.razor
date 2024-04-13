@@ -1,0 +1,52 @@
+﻿@inject Services.DebuggedPathService DebuggedPathService
+
+<MudStack Row="true" Class="w100 mb-n2" AlignItems=" AlignItems.Center" Justify="Justify.Center">
+	@{
+		var index = 0;
+	}
+
+	<MudText Inline="true" Class="pr-2 debugged-path" @onclick="@(() => OnNodeClicked(0))">Main</MudText>
+
+	@foreach (var node in DebuggedPathService.GraphNodes)
+	{
+		++index;
+		var local = index;
+
+		<MudText Inline="true" Class="pr-2">@(">")</MudText>
+
+		<MudText Inline="true" Class="pr-2 debugged-path" @onclick="@(() => OnNodeClicked(local))">@node.Name</MudText>
+	}
+</MudStack>
+
+@code {
+
+	[Parameter]
+	public EventCallback<Core.Class.NodeClassMethod?> OpenMethod { get; set; }
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+
+		DebuggedPathService.DebuggedPathChanged += DebuggedPathService_DebuggedPathChanged;
+	}
+
+	private void DebuggedPathService_DebuggedPathChanged()
+	{
+		StateHasChanged();
+	}
+
+	private void OnNodeClicked(int index)
+	{
+		DebuggedPathService.ExitExecutor(index);
+
+		// Try to open the last node's method. If there is no last node, open the main method.
+		var nodes = DebuggedPathService.GraphNodes;
+		if (nodes.Count == 0)
+			OpenMethod.InvokeAsync(null);
+		else
+		{
+			var node = nodes.Last() as NodeDev.Core.Nodes.MethodCall;
+			OpenMethod.InvokeAsync((NodeDev.Core.Class.NodeClassMethod?)node?.TargetMethod);
+		}
+	}
+}

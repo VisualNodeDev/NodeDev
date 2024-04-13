@@ -18,6 +18,7 @@ using System.Reactive.Linq;
 using static MudBlazor.CategoryTypes;
 using System.Xml.Linq;
 using NodeDev.Core.Class;
+using NodeDev.Blazor.Services;
 
 namespace NodeDev.Blazor.Components;
 
@@ -28,6 +29,9 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	[CascadingParameter]
 	public Index IndexPage { get; set; } = null!;
+
+	[Inject]
+	internal DebuggedPathService DebuggedPathService { get; set; } = null!;
 
 	private int PopupX = 0;
 	private int PopupY = 0;
@@ -539,6 +543,8 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		if(node is MethodCall methodCall && methodCall.TargetMethod is NodeClassMethod nodeClassMethod)
 		{
 			IndexPage.OpenMethod(nodeClassMethod);
+
+			DebuggedPathService.EnterExecutor(node);
 		}
 	}
 

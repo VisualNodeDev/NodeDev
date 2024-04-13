@@ -13,7 +13,9 @@ namespace NodeDev.Blazor.Services
 
 		public static IServiceCollection AddNodeDev(this IServiceCollection services)
 		{
-			services.AddMudServices();
+			services
+				.AddMudServices()
+				.AddScoped<DebuggedPathService>();
 
 			return services;
 		}

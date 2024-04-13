@@ -38,6 +38,8 @@ public class Project
 
 	public IObservable<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecuted => GraphNodeExecutedSubject.AsObservable();
 
+	public bool IsLiveDebuggingEnabled { get; private set; }
+
 	public Project(Guid id)
 	{
 		Id = id;
@@ -48,6 +50,8 @@ public class Project
 	{
 		return Classes.SelectMany(x => x.Methods).SelectMany(x => x.Graph.Nodes.Values).OfType<T>();
 	}
+
+	#region CreateNewDefaultProject
 
 	public static Project CreateNewDefaultProject()
 	{
@@ -65,6 +69,10 @@ public class Project
 
 		return project;
 	}
+
+	#endregion
+
+	#region Run
 
 	public object? Run(object?[] inputs)
 	{
@@ -105,6 +113,10 @@ public class Project
 		}
 	}
 
+	#endregion
+
+	#region GetCreatedClassType / GetNodeClassType
+
 	public Type GetCreatedClassType(NodeClass nodeClass)
 	{
 		if (NodeClassTypeCreator == null)
@@ -115,6 +127,17 @@ public class Project
 
 		throw new Exception("Unable to get generated node class for provided class: " + nodeClass.Name);
 	}
+
+	public NodeClassType GetNodeClassType(NodeClass nodeClass, TypeBase[]? generics = null)
+	{
+		if (!NodeClassTypes.ContainsKey(nodeClass))
+			return NodeClassTypes[nodeClass] = new(nodeClass, generics ?? Array.Empty<TypeBase>());
+		return NodeClassTypes[nodeClass];
+	}
+
+	#endregion
+
+	#region Serialize / Deserialize
 
 	public string Serialize()
 	{
@@ -150,10 +173,23 @@ public class Project
 		return project;
 	}
 
-	public NodeClassType GetNodeClassType(NodeClass nodeClass, TypeBase[]? generics = null)
+
+	#endregion
+
+	#region Debugging
+
+	public void StopLiveDebugging()
 	{
-		if (!NodeClassTypes.ContainsKey(nodeClass))
-			return NodeClassTypes[nodeClass] = new(nodeClass, generics ?? Array.Empty<TypeBase>());
-		return NodeClassTypes[nodeClass];
+		IsLiveDebuggingEnabled = false;
+
+		// TODO Search through the executors tree and free up all unused executors
 	}
+
+	public void StartLiveDebugging()
+	{
+		IsLiveDebuggingEnabled = true;
+	}
+
+	#endregion
+
 }
