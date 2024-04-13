@@ -14,6 +14,8 @@ namespace NodeDev.Core.Nodes.Flow
 
 		public override bool FetchState => true;
 
+		public override bool ReOrderExecInputsAndOutputs => false;
+
 		public ForeachNode(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Foreach";
@@ -21,10 +23,10 @@ namespace NodeDev.Core.Nodes.Flow
 			var t = new UndefinedGenericType("T");
 
 			Inputs.Add(new("Exec", this, TypeFactory.ExecType));
-			Inputs.Add(new("IEnumerable", this, TypeFactory.Get(typeof(IEnumerable<>), new[] { t })));
+			Inputs.Add(new("IEnumerable", this, TypeFactory.Get(typeof(IEnumerable<>), [t])));
 
-			Outputs.Add(new("Item", this, t));
 			Outputs.Add(new("ExecLoop", this, TypeFactory.ExecType));
+			Outputs.Add(new("Item", this, t));
 			Outputs.Add(new("ExecOut", this, TypeFactory.ExecType));
 		}
 
@@ -35,7 +37,7 @@ namespace NodeDev.Core.Nodes.Flow
 				var type = newType.Generics[0]; // get the 'T' our of IEnumerable<T>
 				Inputs[1].UpdateType(type);
 
-				return new() { Inputs[1] };
+				return [Inputs[1]];
 			}
 
 			return new();
@@ -54,13 +56,13 @@ namespace NodeDev.Core.Nodes.Flow
 			if (!enumeratorState.MoveNext())
 			{
 				alterExecutionStackOnPop = false;
-				nodeOutputs[0] = null;
+				nodeOutputs[1] = null;
 				return Outputs[2];
 			}
 
-			nodeOutputs[0] = enumeratorState.Current;
+			nodeOutputs[1] = enumeratorState.Current;
 			alterExecutionStackOnPop = true;
-			return Outputs[1];
+			return Outputs[0];
 		}
 	}
 }

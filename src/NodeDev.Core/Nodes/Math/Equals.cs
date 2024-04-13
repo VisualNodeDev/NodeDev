@@ -14,6 +14,8 @@ namespace NodeDev.Core.Nodes.Math
 		public Equals(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Equals";
+
+			Outputs[0].UpdateType(TypeFactory.Get(typeof(bool), null));
 		}
 
         protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)
