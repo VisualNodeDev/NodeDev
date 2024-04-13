@@ -26,6 +26,10 @@ namespace NodeDev.Core.Types
 
 		public override IEnumerable<IMemberInfo> GetMembers() => throw new NotImplementedException();
 
+		public override IEnumerable<IMethodInfo> GetMethods() => [];
+
+		public override IEnumerable<IMethodInfo> GetMethods(string name) => [];
+
 		public override TypeBase CloneWithGenerics(TypeBase[] newGenerics)
 		{
 			if (newGenerics.Length != 0)

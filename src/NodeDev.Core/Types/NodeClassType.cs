@@ -57,6 +57,11 @@ namespace NodeDev.Core.Types
 			return NodeClass.Methods;
 		}
 
+		public override IEnumerable<IMethodInfo> GetMethods(string name)
+		{
+			return NodeClass.Methods.Where(x => x.Name == name);
+		}
+
 		public override Type MakeRealType()
 		{
 			return NodeClass.Project.GetCreatedClassType(NodeClass);

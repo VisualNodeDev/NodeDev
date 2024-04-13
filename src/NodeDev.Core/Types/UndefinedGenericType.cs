@@ -30,6 +30,10 @@ public class UndefinedGenericType : TypeBase
 		FullName = Name = name;
 	}
 
+	public override IEnumerable<IMethodInfo> GetMethods() => [];
+
+	public override IEnumerable<IMethodInfo> GetMethods(string name) => [];
+
 	internal protected override string Serialize() => JsonSerializer.Serialize(new SerializedUndefinedGenericType(Name));
 
 	public new static UndefinedGenericType Deserialize(TypeFactory typeFactory, string serialized)

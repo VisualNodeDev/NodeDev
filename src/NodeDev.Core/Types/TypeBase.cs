@@ -324,7 +324,9 @@ public abstract class TypeBase
 		}
 	}
 
-	public virtual IEnumerable<IMethodInfo> GetMethods() => Enumerable.Empty<IMethodInfo>();
+	public abstract IEnumerable<IMethodInfo> GetMethods();
+
+	public abstract IEnumerable<IMethodInfo> GetMethods(string name);
 
 	public static TypeBase Deserialize(TypeFactory typeFactory, string serialized)
 	{

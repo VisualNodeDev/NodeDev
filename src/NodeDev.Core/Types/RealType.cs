@@ -28,9 +28,9 @@ public class RealType : TypeBase
 	private TypeBase[]? _Interfaces;
 	public override TypeBase[] Interfaces => _Interfaces ?? InitializeInterfaces();
 
-	public override bool IsIn(int genericIndex) => BackendType.GetGenericArguments()[genericIndex].IsGenericParameter && (BackendType.GetGenericArguments()[genericIndex].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Contravariant) !=  System.Reflection.GenericParameterAttributes.None;
-	
-	public override bool IsOut(int genericIndex) => BackendType.GetGenericArguments()[genericIndex].IsGenericParameter && (BackendType.GetGenericArguments()[genericIndex].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Covariant) !=  System.Reflection.GenericParameterAttributes.None;
+	public override bool IsIn(int genericIndex) => BackendType.GetGenericArguments()[genericIndex].IsGenericParameter && (BackendType.GetGenericArguments()[genericIndex].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Contravariant) != System.Reflection.GenericParameterAttributes.None;
+
+	public override bool IsOut(int genericIndex) => BackendType.GetGenericArguments()[genericIndex].IsGenericParameter && (BackendType.GetGenericArguments()[genericIndex].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Covariant) != System.Reflection.GenericParameterAttributes.None;
 
 	/// <summary>
 	/// Types that the UI will show a textbox for editing
@@ -110,7 +110,7 @@ public class RealType : TypeBase
 
 	private string GetFriendlyName(TypeBase t)
 	{
-		if(t is RealType realType)
+		if (t is RealType realType)
 			return realType.FriendlyName;
 		return t.Name;
 	}
@@ -131,6 +131,10 @@ public class RealType : TypeBase
 		return BackendType.GetMethods().Select(x => new RealMethodInfo(TypeFactory, x, this));
 	}
 
+	public override IEnumerable<IMethodInfo> GetMethods(string name)
+	{
+		return BackendType.GetMethods().Where(x => x.Name == name).Select(x => new RealMethodInfo(TypeFactory, x, this));
+	}
 
 	internal RealType(TypeFactory typeFactory, Type backendType, TypeBase[]? generics)
 	{
@@ -211,7 +215,7 @@ public class RealType : TypeBase
 
 	public override object? ParseTextboxEdit(string text)
 	{
-	    return Convert.ChangeType(text, BackendType);
+		return Convert.ChangeType(text, BackendType);
 	}
 
 	public override bool IsSameBackend(TypeBase other)
