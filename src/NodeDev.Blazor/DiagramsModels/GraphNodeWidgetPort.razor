@@ -38,14 +38,6 @@
 		if (!GraphCanvas.Graph.Project.IsLiveDebuggingEnabled || port.Connection.GraphIndex == -1)
 			return port.Connection.Type.FriendlyName;
 
-		var executor = GraphCanvas.DebuggedPathService.GraphExecutor;
-
-		// Make sure the executor is not null
-		if (executor == null)
-			return port.Connection.Type.FriendlyName;
-
-		var value = executor.Connections[port.Connection.GraphIndex];
-
-		return value?.ToString() ?? "null";
+		return GraphCanvas.DebuggedPathService.GetDebugValue(port.Connection);
 	}
 }

@@ -23,8 +23,8 @@
 	</div>
 
 	@{
-		var inputs = Node.Ports.OfType<GraphPortModel>().Where(x => x.Alignment == PortAlignment.Left).OrderBy(x => !x.Connection.Type.IsExec).ToList();
-		var outputs = Node.Ports.OfType<GraphPortModel>().Where(x => x.Alignment == PortAlignment.Right).OrderBy(x => !x.Connection.Type.IsExec).ToList();
+		var inputs = Node.Ports.OfType<GraphPortModel>().Where(x => x.Alignment == PortAlignment.Left).OrderBy(x => Node.Node.ReOrderExecInputsAndOutputs ? !x.Connection.Type.IsExec : true).ToList();
+		var outputs = Node.Ports.OfType<GraphPortModel>().Where(x => x.Alignment == PortAlignment.Right).OrderBy(x => Node.Node.ReOrderExecInputsAndOutputs ? !x.Connection.Type.IsExec : true).ToList();
 		var nbRows = Math.Max(inputs.Count, outputs.Count);
 	}
 	@for (int i = 0; i < nbRows; ++i)

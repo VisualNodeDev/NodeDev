@@ -95,7 +95,7 @@ public class MethodCall : NormalFlowNode
 		}
 
 		// assumes that every parameters is a real type
-		var method = parentType.GetMethods().FirstOrDefault(x => x.Name == TargetMethod.Name && overload.Parameters.Select(x => x.ParameterType).SequenceEqual(overload.Parameters.Select(x => x.ParameterType)));
+		var method = parentType.GetMethods(TargetMethod.Name).FirstOrDefault(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(overload.Parameters.Select(y => y.ParameterType)));
 		if (method == null)
 			throw new Exception("Unable to find method overload");
 
@@ -103,9 +103,16 @@ public class MethodCall : NormalFlowNode
 			throw new Exception("Return type mismatch");
 
 		// remove the old connections, except the Exec inputs and outputs
-		removedConnections = Inputs.Skip(2).Append(Inputs[0]).Concat(Outputs.Skip(1)).ToList();
-		Inputs.RemoveAt(0);
-		Inputs.RemoveRange(1, Inputs.Count - 1);
+		removedConnections = Inputs.Skip(2).Concat(Outputs.Skip(1)).ToList();
+		if (!TargetMethod.IsStatic)
+		{
+			Inputs.RemoveAt(0);
+			removedConnections.Add(Inputs[0]); // add the target input
+		}
+
+		if(Inputs.Count != 0)
+			Inputs.RemoveRange(1, Inputs.Count - 1);
+
 		Outputs.RemoveRange(1, Outputs.Count - 1);
 
 		// Set the new method, this will add all the required inputs and outputs

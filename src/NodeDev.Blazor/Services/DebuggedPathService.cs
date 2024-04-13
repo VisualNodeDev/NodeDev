@@ -1,6 +1,7 @@
 ﻿
 using Microsoft.AspNetCore.Components;
 using NodeDev.Core;
+using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using static MudBlazor.Defaults;
 
@@ -47,6 +48,19 @@ internal class DebuggedPathService
 
 			return executor;
 		}
+	}
+
+	public string GetDebugValue(Connection connection)
+	{
+		var executor = GraphExecutor;
+
+		// Make sure the executor is not null
+		if (executor == null)
+			return connection.Type.FriendlyName;
+
+		var value = executor.Connections[connection.GraphIndex];
+
+		return value?.ToString() ?? "null";
 	}
 
 	public void ChangeProject(Project project)

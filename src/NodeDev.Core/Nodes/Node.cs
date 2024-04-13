@@ -42,6 +42,8 @@ namespace NodeDev.Core.Nodes
 
         public virtual bool FetchState => false;
 
+        public virtual bool ReOrderExecInputsAndOutputs => true;
+
         /// <summary>
         /// Global index of this node in the graph. Each node in a graph has a unique index.
         /// </summary>
