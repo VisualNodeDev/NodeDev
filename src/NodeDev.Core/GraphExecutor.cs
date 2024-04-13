@@ -118,7 +118,7 @@ namespace NodeDev.Core
 				}
 
 				var nodeInputs = GetNodeInputs(self, nodeToExecute);
-				var nodeOutputs = new object?[nodeToExecute.Outputs.Count];
+				var nodeOutputs = nodeToExecute.Outputs.Count == 0 ? Array.Empty<object?>() : Connections.AsSpan(nodeToExecute.Outputs[0].GraphIndex, nodeToExecute.Outputs.Count);
 
 				// Get the state of the node, if necessary
 				var state = DiscardedState;
@@ -132,20 +132,17 @@ namespace NodeDev.Core
 				execConnection = nodeToExecute.Execute(this, self, connectionToExecute, nodeInputs, nodeOutputs, ref state.Value, out var alterExecutionStackOnPop);
 				Project.GraphNodeExecutedSubject.OnNext((this, nodeToExecute, connectionToExecute));
 
-				for (int i = 0; i < nodeOutputs.Length; i++)
-				{
-					var output = nodeToExecute.Outputs[i];
-					Connections[output.GraphIndex] = nodeOutputs[i];
-				}
-
 				if (execConnection != null && alterExecutionStackOnPop)
 					stack.Push(execConnection);
 			}
 		}
 
-		private object?[] GetNodeInputs(object? self, Node node)
+		private Span<object?> GetNodeInputs(object? self, Node node)
 		{
-			var inputs = new object?[node.Inputs.Count];
+			if(node.Inputs.Count == 0)
+				return Array.Empty<object?>();
+
+			var inputs = Connections.AsSpan(node.Inputs[0].GraphIndex, node.Inputs.Count);
 
 			for (int i = 0; i < node.Inputs.Count; i++)
 			{
@@ -173,21 +170,11 @@ namespace NodeDev.Core
 			// if this is not a flow node, we are allowed to execute the node on demande to calculate the outputs
 			// this will also automatically crawl back the inputs of the node we are executing
 			var inputs = GetNodeInputs(self, other.Parent);
-			var outputs = new object?[other.Parent.Outputs.Count];
+			var outputs = Connections.AsSpan(other.Parent.Outputs[0].GraphIndex, other.Parent.Outputs.Count); // no need to check if there's any output, since we're crawling back from an input connected to this output
 
 			other.Parent.Execute(this, self, null, inputs, outputs, ref DiscardedState.Value, out var _);
 
-			object? myOutput = null;
-			for (int i = 0; i < outputs.Length; i++)
-			{
-				var output = other.Parent.Outputs[i];
-				Connections[output.GraphIndex] = outputs[i];
-
-				if (output == other)
-					myOutput = outputs[i];
-			}
-
-			return myOutput;
+			return Connections[other.GraphIndex];
 		}
 
 		public void Dispose()

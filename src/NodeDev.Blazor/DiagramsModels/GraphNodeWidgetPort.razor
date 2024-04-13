@@ -35,7 +35,7 @@
 
 	private string GetDebugValue(GraphPortModel port)
 	{
-		if (!GraphCanvas.Graph.Project.IsLiveDebuggingEnabled || port.Connection.GraphIndex == -1 || IsInput)
+		if (!GraphCanvas.Graph.Project.IsLiveDebuggingEnabled || port.Connection.GraphIndex == -1)
 			return port.Connection.Type.FriendlyName;
 
 		var executor = GraphCanvas.DebuggedPathService.GraphExecutor;
