@@ -27,7 +27,7 @@ public class TypeFactory
 
 	private ExecType ExecType_;
 
-	private readonly Dictionary<string, RealType> RealTypesCache = new();
+	private readonly Dictionary<string, RealType> RealTypesCache = new(5_000);
 
 	public readonly Project Project;
 
