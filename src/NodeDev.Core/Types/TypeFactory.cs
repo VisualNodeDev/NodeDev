@@ -27,8 +27,7 @@ public class TypeFactory
 
 	private ExecType ExecType_;
 
-	private readonly Dictionary<Type, RealType> FullyConstructedRealTypes = new();
-	private readonly Dictionary<string, RealType> RealTypesWithPendingGenerics = new();
+	private readonly Dictionary<string, RealType> RealTypesCache = new();
 
 	public readonly Project Project;
 
@@ -43,29 +42,34 @@ public class TypeFactory
 	public RealType Get<T>() => Get(typeof(T), null);
 	public RealType Get(Type type, TypeBase[]? generics)
 	{
-		if (generics == null || generics.Length == 0)
+		if (generics == null)
 		{
-			if (!FullyConstructedRealTypes.TryGetValue(type, out var realType))
+			if (type.IsGenericType)
 			{
-				realType = new RealType(this, type, null);
-				FullyConstructedRealTypes[type] = realType;
-			}
+				if (!type.IsConstructedGenericType) // this is something list List<T> instead of List<int>
+					throw new Exception("Unable to create real type with undefined generics. To do so you must manually specify the generics through the 'generics' parameter in the RealType constructor");
 
-			return realType;
+				generics = type.GetGenericArguments().Select(x => Get(x, null)).ToArray();
+				type = type.GetGenericTypeDefinition();
+			}
+		}
+		else if (type.IsGenericType)
+			type = type.GetGenericTypeDefinition(); // make sure we always store the generic type, so List<> instead of List<int>
+
+		var sb = new StringBuilder();
+		sb.Append(type.GetHashCode()); // start with the type hash code
+
+		if (generics?.Length > 0)
+		{
+			foreach (var generic in generics)
+				sb.Append('-').Append(generic.GetHashCode()); // add the hash code of each generic
 		}
 
-		// bad luck, there are generics in here, we need to construct a unique key for the type and the generics so we can check the cache
-		var sb = new StringBuilder();
-		sb.Append(type.GetGenericTypeDefinition().GetHashCode()); // start with the type hash code
-
-		foreach(var generic in generics)
-			sb.Append(generic.GetHashCode()); // add the hash code of each generic
-
 		var key = sb.ToString();
-		if(!RealTypesWithPendingGenerics.TryGetValue(key, out var realTypeWithGenerics))
+		if (!RealTypesCache.TryGetValue(key, out var realTypeWithGenerics))
 		{
 			realTypeWithGenerics = new RealType(this, type, generics);
-			RealTypesWithPendingGenerics[key] = realTypeWithGenerics;
+			RealTypesCache[key] = realTypeWithGenerics;
 		}
 
 		return realTypeWithGenerics;
