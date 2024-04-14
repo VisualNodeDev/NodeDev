@@ -3,6 +3,7 @@ using NodeDev.Core.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -20,9 +21,17 @@ namespace NodeDev.Core.Connections
 
 		public TypeBase Type { get; private set; }
 
-		public ICollection<Connection> Connections { get; } = new List<Connection>();
+		public readonly ICollection<Connection> Connections = [];
+
+		/// <summary>
+		/// Vertices of the connection. Used for drawing connections with multiple segments.
+		/// This is defined either if the connection is an input AND not exec, or if the connection is an output AND exec.
+		/// This is because for every possible types of inputs there is always only one output connected to it. Except for execs since multiple output paths can be connected to it.
+		/// </summary>
+		public readonly List<Vector2> Vertices = [];
 
 		public string? TextboxValue { get; private set; }
+
 		public object? ParsedTextboxValue { get; set; }
 
 		/// <summary>
@@ -40,12 +49,13 @@ namespace NodeDev.Core.Connections
 
 		#region Serialization
 
-		public record SerializedConnection(string Id, string Name, string SerializedType, List<string> Connections, string? TextboxValue);
+		private record class SerializedConnectionVertex(float X, float Y);
+		private record SerializedConnection(string Id, string Name, string SerializedType, List<string> Connections, string? TextboxValue, List<SerializedConnectionVertex>? Vertices);
 		internal string Serialize()
 		{
 			var connections = Connections.ToList();
 
-			var serializedConnection = new SerializedConnection(Id, Name, Type.SerializeWithFullTypeName(), Connections.Select(x => x.Id).ToList(), TextboxValue);
+			var serializedConnection = new SerializedConnection(Id, Name, Type.SerializeWithFullTypeName(), Connections.Select(x => x.Id).ToList(), TextboxValue, Vertices.Select(x => new SerializedConnectionVertex(x.X, x.Y)).ToList());
 
 			return JsonSerializer.Serialize(serializedConnection);
 		}
@@ -60,16 +70,19 @@ namespace NodeDev.Core.Connections
 			if (connection.TextboxValue != null)
 				connection.ParsedTextboxValue = connection.Type.ParseTextboxEdit(connection.TextboxValue);
 
+			if (serializedConnectionObj.Vertices != null)
+				connection.Vertices.AddRange(serializedConnectionObj.Vertices.Select(x => new Vector2(x.X, x.Y)));
+
 			foreach (var connectionId in serializedConnectionObj.Connections)
 			{
 				var otherConnection = parent.Graph.Nodes.SelectMany(x => x.Value.InputsAndOutputs).FirstOrDefault(x => x.Id == connectionId);
 				if (otherConnection == null)
 					continue;
 
-				if(!connection.Connections.Contains(otherConnection))
-                    connection.Connections.Add(otherConnection);
-				if(!otherConnection.Connections.Contains(connection))
-                    otherConnection.Connections.Add(connection);
+				if (!connection.Connections.Contains(otherConnection))
+					connection.Connections.Add(otherConnection);
+				if (!otherConnection.Connections.Contains(connection))
+					otherConnection.Connections.Add(connection);
 			}
 
 			return connection;
@@ -77,18 +90,25 @@ namespace NodeDev.Core.Connections
 
 		#endregion
 
-        public void UpdateType(TypeBase newType)
-        {
+		public void UpdateVertices(IEnumerable<Vector2> vertices)
+		{
+			Vertices.Clear();
+			Vertices.AddRange(vertices);
+		}
+
+
+		public void UpdateType(TypeBase newType)
+		{
 			Type = newType;
 
 			if (Type.AllowTextboxEdit)
 				TextboxValue = Type.DefaultTextboxValue;
 			else
 				TextboxValue = null;
-        }
+		}
 
 		public void UpdateTextboxText(string? text)
-        {
+		{
 			if (Type.AllowTextboxEdit)
 			{
 				TextboxValue = text;
@@ -104,8 +124,8 @@ namespace NodeDev.Core.Connections
 					{ }
 				}
 			}
-        }
+		}
 
 
-    }
+	}
 }

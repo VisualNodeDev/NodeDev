@@ -59,7 +59,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 			Links =
 			{
 				DefaultRouter = new NormalRouter(),
-				DefaultPathGenerator = new SmoothPathGenerator(),
+				DefaultPathGenerator = new SmoothPathGeneratorWithDirectVertices()
 			},
 		};
 		Diagram = new BlazorDiagram(options);
@@ -223,7 +223,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	#endregion
 
-	#region Connection Added / Removed
+	#region Connection Added / Removed, Vertex Added / Removed
 
 	private bool DisableConnectionUpdate = false;
 	private void OnConnectionUpdated(BaseLinkModel baseLinkModel, Anchor old, Anchor newAnchor)
@@ -266,19 +266,24 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 			else if (destination.Connection.Type is UndefinedGenericType destinationType && source.Connection.Type is not UndefinedGenericType)
 				PropagateNewGeneric(destination.Connection.Parent, new Dictionary<UndefinedGenericType, TypeBase>() { [destinationType] = source.Connection.Type });
 
-			if (destination.Connection.Connections.Count == 1 && destination.Connection.Type.AllowTextboxEdit) // gotta remove the textbox
+			// we have to remove the textbox ?
+			if (destination.Connection.Connections.Count == 1 && destination.Connection.Type.AllowTextboxEdit)
 				UpdateConnectionType(destination.Connection);
 
 			if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel port)
 			{
 				link.Color = GetTypeShapeColor(port.Connection.Type, port.Connection.Parent.TypeFactory);
 
+				// we have to disconnect the previously connected exec, since exec outputs can only have one connection
 				if (source.Connection.Type.IsExec && source.Connection.Connections.Count > 1 && link.Target.Model is GraphPortModel target)
 				{
 					Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source.Connection && (x.Target.Model as GraphPortModel)?.Connection != target.Connection));
 					Graph.Disconnect(source.Connection, source.Connection.Connections.First(x => x != target.Connection));
 				}
+
 			}
+
+			UpdateVerticesInConnection(source.Connection, destination.Connection, baseLinkModel);
 		});
 	}
 
@@ -290,15 +295,68 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		baseLinkModel.SourceChanged += OnConnectionUpdated;
 		baseLinkModel.TargetChanged += OnConnectionUpdated;
 		baseLinkModel.TargetMarker = LinkMarker.Arrow;
+		baseLinkModel.Segmentable = true;
+		baseLinkModel.DoubleClickToSegment = true;
+		baseLinkModel.VertexAdded += BaseLinkModel_VertexAdded;
+		baseLinkModel.VertexRemoved += BaseLinkModel_VertexRemoved;
 
-		if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel source)
-			link.Color = GetTypeShapeColor(source.Connection.Type, source.Connection.Parent.TypeFactory);
+		if (baseLinkModel is LinkModel link)
+		{
+			if (link.Source.Model is GraphPortModel source)
+			{
+				link.Color = GetTypeShapeColor(source.Connection.Type, source.Connection.Parent.TypeFactory);
+			}
+		}
+	}
+
+	private Connection GetConnectionContainingVertices(Connection source, Connection destination)
+	{
+		if (source.Type.IsExec) // execs can only have one connection, therefor they always contains the vertex information
+			return source;
+		else // if this is not an exec, the destination (input) will always contain the vertex information
+			return destination;
+	}
+
+	private void UpdateVerticesInConnection(Connection source, Connection destination, BaseLinkModel linkModel)
+	{
+		var connection = GetConnectionContainingVertices(source, destination);
+
+		connection.UpdateVertices(linkModel.Vertices.Select(x => new Vector2((float)x.Position.X, (float)x.Position.Y)));
+
+		var other = connection == source ? destination : source;
+		other.UpdateVertices([]); // make sure there's no leftover vertices
+	}
+
+	private bool DisableVertexAddDuringLoading = false;
+	private void BaseLinkModel_VertexRemoved(BaseLinkModel baseLinkModel, LinkVertexModel vertex)
+	{
+		if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel source && link.Target.Model is GraphPortModel destination)
+			UpdateVerticesInConnection(source.Connection, destination.Connection, link);
+	}
+
+	private void BaseLinkModel_VertexAdded(BaseLinkModel baseLinkModel, LinkVertexModel vertex)
+	{
+		if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel source && link.Target.Model is GraphPortModel destination)
+		{
+			vertex.Moved += _ => Vertex_Moved(link, vertex);
+
+			if (!DisableVertexAddDuringLoading)
+				UpdateVerticesInConnection(source.Connection, destination.Connection, link);
+		}
+	}
+
+	private void Vertex_Moved(LinkModel link, LinkVertexModel vertex)
+	{
+		Console.WriteLine(vertex.Position.X + "," + vertex.Position.Y);
+		if (link.Source.Model is GraphPortModel source && link.Target.Model is GraphPortModel destination)
+			UpdateVerticesInConnection(source.Connection, destination.Connection, link);
 	}
 
 	public void OnConnectionRemoved(BaseLinkModel baseLinkModel)
 	{
 		if (DisableConnectionUpdate)
 			return;
+
 		Graph.Invoke(() =>
 		{
 			var source = ((GraphPortModel?)baseLinkModel.Source.Model)?.Connection;
@@ -309,8 +367,11 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 				source.Connections.Remove(destination);
 				destination.Connections.Remove(source);
 
-				if (destination.Connections.Count == 0 && destination.Type.AllowTextboxEdit) // gotta add back the textbox
+				// We have to add back the textbox editor
+				if (destination.Connections.Count == 0 && destination.Type.AllowTextboxEdit)
 					UpdateConnectionType(destination);
+
+				UpdateVerticesInConnection(source, destination, baseLinkModel);
 			}
 			else
 			{
@@ -534,13 +595,13 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 			connection.UpdateTextboxText(text);
 	}
 
-    #endregion
+	#endregion
 
-    #region OnNodeDoubleClick
+	#region OnNodeDoubleClick
 
 	public void OnNodeDoubleClick(Node node)
 	{
-		if(node is MethodCall methodCall && methodCall.TargetMethod is NodeClassMethod nodeClassMethod)
+		if (node is MethodCall methodCall && methodCall.TargetMethod is NodeClassMethod nodeClassMethod)
 		{
 			IndexPage.OpenMethod(nodeClassMethod);
 
@@ -548,13 +609,13 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		}
 	}
 
-    #endregion
+	#endregion
 
-    #endregion
+	#endregion
 
-    #region ShowAddNode
+	#region ShowAddNode
 
-    public void ShowAddNode()
+	public void ShowAddNode()
 	{
 		IsShowingNodeSelection = true;
 		PopupX = 300;
@@ -610,12 +671,36 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 					target = portModel;
 				}
 
+				// disable the connection update while adding the link so we can call it ourself and 'force' it to be sure it actually runs
+				// if we don't do that, we'll have to call it again after adding the link and put the 'force' parameter to true, but then
+				// it might be run twice, resulting in all callbacks being called twice!
+				DisableConnectionUpdate = true;
 				var link = Diagram.Links.Add(new LinkModel(source, target));
 
+				DisableConnectionUpdate = false;
 				OnConnectionAdded(link, true);
+
+				var connectionWithVertices = GetConnectionContainingVertices(source.Connection, target.Connection);
+
+				if (connectionWithVertices.Vertices.Count != 0)
+				{
+					Diagram.Batch(() =>
+					{
+						DisableVertexAddDuringLoading = true;
+
+						foreach (var vertex in connectionWithVertices.Vertices)
+							link.AddVertex(new(vertex.X, vertex.Y));
+
+						DisableVertexAddDuringLoading = false;
+					});
+				}
+
+
+
 			}
 		}
 	}
+
 
 	#endregion
 
