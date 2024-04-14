@@ -37,7 +37,7 @@ public class MethodCall : NormalFlowNode
 
 			var type = TypeBase.Deserialize(typeFactory, info.Type);
 			var parameterTypes = info.ParamTypes.Select(x => TypeBase.Deserialize(typeFactory, x.Type));
-			var method = type.GetMethods().FirstOrDefault(x => x.Name == info.Name && parameterTypes.SequenceEqual(x.GetParameters().Select(x => x.ParameterType)));
+			var method = type.GetMethods(info.Name).FirstOrDefault(x => parameterTypes.SequenceEqual(x.GetParameters().Select(y => y.ParameterType)));
 
 			if (method == null)
 				throw new Exception("Unable to find method:" + info.Name);

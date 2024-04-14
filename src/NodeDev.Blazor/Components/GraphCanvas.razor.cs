@@ -347,7 +347,6 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 	private void Vertex_Moved(LinkModel link, LinkVertexModel vertex)
 	{
-		Console.WriteLine(vertex.Position.X + "," + vertex.Position.Y);
 		if (link.Source.Model is GraphPortModel source && link.Target.Model is GraphPortModel destination)
 			UpdateVerticesInConnection(source.Connection, destination.Connection, link);
 	}

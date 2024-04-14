@@ -139,12 +139,13 @@ namespace NodeDev.Core.Nodes
             Name = serializedNodeObj.Name;
             foreach (var input in serializedNodeObj.Inputs)
             {
-                var connection = Connection.Deserialize(this, input);
+                var connection = Connection.Deserialize(this, input, true);
                 Inputs.Add(connection);
             }
+
             foreach (var output in serializedNodeObj.Outputs)
             {
-                var connection = Connection.Deserialize(this, output);
+                var connection = Connection.Deserialize(this, output, false);
                 Outputs.Add(connection);
             }
         }

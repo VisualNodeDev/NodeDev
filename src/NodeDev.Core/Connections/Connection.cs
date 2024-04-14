@@ -60,14 +60,14 @@ namespace NodeDev.Core.Connections
 			return JsonSerializer.Serialize(serializedConnection);
 		}
 
-		internal static Connection Deserialize(Node parent, string serializedConnection)
+		internal static Connection Deserialize(Node parent, string serializedConnection, bool isInput)
 		{
 			var serializedConnectionObj = JsonSerializer.Deserialize<SerializedConnection>(serializedConnection) ?? throw new Exception($"Unable to deserialize connection");
 			var type = TypeBase.Deserialize(parent.TypeFactory, serializedConnectionObj.SerializedType);
 			var connection = new Connection(serializedConnectionObj.Name, parent, type, serializedConnectionObj.Id);
 
 			connection.TextboxValue = serializedConnectionObj.TextboxValue;
-			if (connection.TextboxValue != null)
+			if (connection.TextboxValue != null && isInput)
 				connection.ParsedTextboxValue = connection.Type.ParseTextboxEdit(connection.TextboxValue);
 
 			if (serializedConnectionObj.Vertices != null)

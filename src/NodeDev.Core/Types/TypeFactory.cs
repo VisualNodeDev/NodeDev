@@ -1,4 +1,6 @@
 ﻿
+using System.Text;
+
 namespace NodeDev.Core.Types;
 
 public class TypeFactory
@@ -25,7 +27,8 @@ public class TypeFactory
 
 	private ExecType ExecType_;
 
-	private Dictionary<Type, TypeBase> FullyConstructedRealTypes = new();
+	private readonly Dictionary<Type, RealType> FullyConstructedRealTypes = new();
+	private readonly Dictionary<string, RealType> RealTypesWithPendingGenerics = new();
 
 	public readonly Project Project;
 
@@ -43,13 +46,29 @@ public class TypeFactory
 		if (generics == null || generics.Length == 0)
 		{
 			if (!FullyConstructedRealTypes.TryGetValue(type, out var realType))
+			{
 				realType = new RealType(this, type, null);
+				FullyConstructedRealTypes[type] = realType;
+			}
 
-			FullyConstructedRealTypes[type] = realType;
-			return (RealType)realType;
+			return realType;
 		}
-		else
-			return new RealType(this, type, generics);
+
+		// bad luck, there are generics in here, we need to construct a unique key for the type and the generics so we can check the cache
+		var sb = new StringBuilder();
+		sb.Append(type.GetGenericTypeDefinition().GetHashCode()); // start with the type hash code
+
+		foreach(var generic in generics)
+			sb.Append(generic.GetHashCode()); // add the hash code of each generic
+
+		var key = sb.ToString();
+		if(!RealTypesWithPendingGenerics.TryGetValue(key, out var realTypeWithGenerics))
+		{
+			realTypeWithGenerics = new RealType(this, type, generics);
+			RealTypesWithPendingGenerics[key] = realTypeWithGenerics;
+		}
+
+		return realTypeWithGenerics;
 	}
 
 	public Type? GetTypeByFullName(string name)
@@ -90,15 +109,15 @@ public class TypeFactory
 				type = null;
 				return "Not all generics are provided for type:" + typeName;
 			}
-			else if(currentRealType != null)
+			else if (currentRealType != null)
 			{
 				type = Get(currentRealType, null);
 				return null;
 			}
-			else if(currentRealType == null)
+			else if (currentRealType == null)
 			{
 				var nodeClass = Project.Classes.FirstOrDefault(x => x.Name.Equals(typeName, StringComparison.InvariantCultureIgnoreCase));
-				if(nodeClass != null)
+				if (nodeClass != null)
 				{
 					type = nodeClass.ClassTypeBase;
 					return null;
