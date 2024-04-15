@@ -49,7 +49,12 @@ namespace NodeDev.Core.Class
 
 		public void AddDefaultParameter()
 		{
-			var newParameter = new NodeClassMethodParameter("NewParameter", Class.TypeFactory.Get<int>(), this);
+			string name = "NewParameter";
+			int i = 2;
+			while (Parameters.Any(x => x.Name == name))
+                name = $"NewParameter_{i++}";
+			var newParameter = new NodeClassMethodParameter(name, Class.TypeFactory.Get<int>(), this);
+
 			Parameters.Add(newParameter);
 
 			foreach (var methodCall in Class.Project.GetNodes<MethodCall>())
