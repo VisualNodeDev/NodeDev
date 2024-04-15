@@ -501,26 +501,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 		PopupNode.SelectOverload(overload, out var newConnections, out var removedConnections);
 
-		var nodesToUpdate = new List<Node>();
-		foreach (var removedConnection in removedConnections)
-		{
-			var newConnection = newConnections.FirstOrDefault(x => x.Name == removedConnection.Name && x.Type == removedConnection.Type);
-
-			foreach (var oldLink in removedConnection.Connections)
-			{
-				// if we found a new connection, connect them together and remove the old connection
-				if (newConnection != null)
-				{
-					newConnection.Connections.Add(oldLink);
-					oldLink.Connections.Remove(removedConnection);
-					oldLink.Connections.Add(newConnection);
-				}
-
-				nodesToUpdate.Add(oldLink.Parent);
-			}
-		}
-
-		UpdateNodes(nodesToUpdate.Prepend(PopupNode).Distinct());
+		Graph.MergedRemovedConnectionsWithNewConnections(newConnections, removedConnections);
 
 		CancelPopup();
 	}

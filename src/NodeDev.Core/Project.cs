@@ -17,7 +17,7 @@ public class Project
 
 	internal readonly Guid Id;
 
-	public List<Class.NodeClass> Classes { get; } = new();
+	public List<NodeClass> Classes { get; } = new();
 
 	private Dictionary<NodeClass, NodeClassType> NodeClassTypes = new();
 
@@ -54,9 +54,9 @@ public class Project
 		return Classes.SelectMany(x => x.Methods).SelectMany(x => x.Graph.Nodes.Values).OfType<T>();
 	}
 
-	#region CreateNewDefaultProject
+    #region CreateNewDefaultProject
 
-	public static Project CreateNewDefaultProject()
+    public static Project CreateNewDefaultProject()
 	{
 		var project = new Project(Guid.NewGuid());
 
@@ -197,6 +197,6 @@ public class Project
 		IsLiveDebuggingEnabled = true;
 	}
 
-	#endregion
+    #endregion
 
 }

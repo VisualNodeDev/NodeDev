@@ -2,68 +2,68 @@
 
 <div style="@($"position: absolute; left: {PositionX - 250}px; top: {PositionY - 30}px; width: 500px; height: 400px")" @onclick:stopPropagation="true">
 
-	<MudPaper Style="height: 100%; width: 100%">
+    <MudPaper Style="height: 100%; width: 100%">
 
-		<MudStack Style="height: 100%; width: 100%" Class="pa-3">
+        <MudStack Style="height: 100%; width: 100%" Class="pa-3">
 
-			<MudTextField T="string" AutoFocus="true" @bind-Value="SearchText" Immediate="true" DebounceInterval="100" Label="Search" Class="flex-none" OnKeyDown="OnKeyDown"></MudTextField>
+            <MudTextField T="string" AutoFocus="true" @bind-Value="SearchText" Immediate="true" DebounceInterval="100" Label="Search" Class="flex-none" OnKeyDown="OnKeyDown"></MudTextField>
 
-			<MudList Clickable="true" SelectedItemChanged="@( x=> OnNodeTypeSelected.InvokeAsync((NodeDev.Core.NodeProvider.NodeSearchResult)x.Value))" Class="flex-1 overflow-y-hidden">
-				@foreach (var type in NodeDev.Core.NodeProvider.Search(GraphCanvas.Graph.SelfClass.Project, SearchText, Connection).Take(1000))
-				{
-					@if (type is NodeDev.Core.NodeProvider.MethodCallNode methodCallNode)
-					{
-						<MudListItem Text="@($"{methodCallNode.MethodInfo.DeclaringType.FriendlyName}.{methodCallNode.MethodInfo.Name}({string.Join(',', methodCallNode.MethodInfo.GetParameters().Select( x=> x.ParameterType.FriendlyName + " " + x.Name))})")" Value="type" />
-					}
-					else if (type is NodeDev.Core.NodeProvider.GetPropertyOrFieldNode getPropertyOrFieldNode)
-					{
-						<MudListItem Text="@($"{getPropertyOrFieldNode.MemberInfo.DeclaringType.FriendlyName}.{getPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
-					}
-					else if (type is NodeDev.Core.NodeProvider.SetPropertyOrFieldNode setPropertyOrFieldNode)
-					{
-						<MudListItem Text="@($"{setPropertyOrFieldNode.MemberInfo.DeclaringType.FriendlyName}.{setPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
-					}
-					else
-					{
-						<MudListItem Text="@type.Type.Name" Value="type" />
-					}
-				}
-			</MudList>
+            <MudList Clickable="true" SelectedItemChanged="@( x=> OnNodeTypeSelected.InvokeAsync((NodeDev.Core.NodeProvider.NodeSearchResult)x.Value))" Class="flex-1 overflow-y-hidden">
+                @foreach (var type in NodeDev.Core.NodeProvider.Search(GraphCanvas.Graph.SelfClass.Project, SearchText, Connection).Take(1000))
+                {
+                    @if (type is NodeDev.Core.NodeProvider.MethodCallNode methodCallNode)
+                    {
+                        <MudListItem Text="@($"{methodCallNode.MethodInfo.DeclaringType.FriendlyName}.{methodCallNode.MethodInfo.Name}({string.Join(',', methodCallNode.MethodInfo.GetParameters().Select( x=> x.FriendlyFormat()))})")" Value="type" />
+                    }
+                    else if (type is NodeDev.Core.NodeProvider.GetPropertyOrFieldNode getPropertyOrFieldNode)
+                    {
+                        <MudListItem Text="@($"{getPropertyOrFieldNode.MemberInfo.DeclaringType.FriendlyName}.{getPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
+                    }
+                    else if (type is NodeDev.Core.NodeProvider.SetPropertyOrFieldNode setPropertyOrFieldNode)
+                    {
+                        <MudListItem Text="@($"{setPropertyOrFieldNode.MemberInfo.DeclaringType.FriendlyName}.{setPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
+                    }
+                    else
+                    {
+                        <MudListItem Text="@type.Type.Name" Value="type" />
+                    }
+                }
+            </MudList>
 
-		</MudStack>
+        </MudStack>
 
 
-	</MudPaper>
+    </MudPaper>
 </div>
 
 @code {
 
-	[Parameter]
-	public int PositionX { get; set; }
+    [Parameter]
+    public int PositionX { get; set; }
 
-	[Parameter]
-	public int PositionY { get; set; }
+    [Parameter]
+    public int PositionY { get; set; }
 
-	[Parameter]
-	public NodeDev.Core.Connections.Connection? Connection { get; set; } = null!;
+    [Parameter]
+    public NodeDev.Core.Connections.Connection? Connection { get; set; } = null!;
 
-	[Parameter]
-	public GraphCanvas GraphCanvas { get; set; } = null!;
+    [Parameter]
+    public GraphCanvas GraphCanvas { get; set; } = null!;
 
-	[Parameter]
-	public EventCallback<NodeDev.Core.NodeProvider.NodeSearchResult> OnNodeTypeSelected { get; set; }
+    [Parameter]
+    public EventCallback<NodeDev.Core.NodeProvider.NodeSearchResult> OnNodeTypeSelected { get; set; }
 
-	private TypeFactory TypeFactory => GraphCanvas.Graph.SelfClass.Project.TypeFactory;
+    private TypeFactory TypeFactory => GraphCanvas.Graph.SelfClass.Project.TypeFactory;
 
-	private string SearchText { get; set; } = "";
+    private string SearchText { get; set; } = "";
 
-	private async Task OnKeyDown(KeyboardEventArgs args)
-	{
-		if (args.Key == "Enter")
-		{
-			var first = NodeDev.Core.NodeProvider.Search(GraphCanvas.Graph.SelfClass.Project, SearchText, Connection).FirstOrDefault();
-			if(first != null)
-				await OnNodeTypeSelected.InvokeAsync(first);
-		}
-	}
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            var first = NodeDev.Core.NodeProvider.Search(GraphCanvas.Graph.SelfClass.Project, SearchText, Connection).FirstOrDefault();
+            if (first != null)
+                await OnNodeTypeSelected.InvokeAsync(first);
+        }
+    }
 }

@@ -27,5 +27,18 @@ namespace NodeDev.Core.Nodes.Flow
 			return null;
 		}
 
+        internal void Refresh()
+        {
+			var removedConnections = Inputs.Skip(1).ToList(); // everything except exec
+            var newConnections = Graph.SelfMethod.Parameters.Where(x => x.IsOut).Select(x => new Connection(x.Name, this, x.ParameterType)).ToList();
+
+			if (Graph.SelfMethod.ReturnType != TypeFactory.Void)
+				newConnections.Add(new Connection("Return", this, Graph.SelfMethod.ReturnType));
+
+			Inputs.RemoveRange(1, Inputs.Count - 1);
+            Inputs.AddRange(newConnections);
+
+            Graph.MergedRemovedConnectionsWithNewConnections(newConnections, removedConnections);
+        }
     }
 }

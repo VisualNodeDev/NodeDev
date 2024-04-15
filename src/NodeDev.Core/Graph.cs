@@ -9,129 +9,159 @@ namespace NodeDev.Core;
 
 public class Graph
 {
-	public IReadOnlyDictionary<string, Node> Nodes { get; } = new Dictionary<string, Node>();
+    public IReadOnlyDictionary<string, Node> Nodes { get; } = new Dictionary<string, Node>();
 
-	public NodeClass SelfClass => SelfMethod.Class;
-	public NodeClassMethod SelfMethod { get; set; }
+    public NodeClass SelfClass => SelfMethod.Class;
+    public NodeClassMethod SelfMethod { get; set; }
 
-	public Project Project => SelfMethod.Class.Project;
+    public Project Project => SelfMethod.Class.Project;
 
-	static Graph()
-	{
-		NodeProvider.Initialize();
-	}
+    static Graph()
+    {
+        NodeProvider.Initialize();
+    }
 
 
-	#region PreprocessGraph
+    #region PreprocessGraph
 
-	public int NbConnections { get; private set; }
+    public int NbConnections { get; private set; }
 
-	internal void PreprocessGraph()
-	{
-		NbConnections = 0;
-		int nodeIndex = 0;
-		foreach(var node in Nodes.Values)
-		{
-			node.GraphIndex = nodeIndex++;
-			foreach(var connection in node.InputsAndOutputs)
-				connection.GraphIndex = NbConnections++;
-		}
-	}
+    internal void PreprocessGraph()
+    {
+        NbConnections = 0;
+        int nodeIndex = 0;
+        foreach (var node in Nodes.Values)
+        {
+            node.GraphIndex = nodeIndex++;
+            foreach (var connection in node.InputsAndOutputs)
+                connection.GraphIndex = NbConnections++;
 
-	#endregion
+            node.PreprocessBeforeExecution();
+        }
+    }
 
-	#region Invoke
+    #endregion
 
-	public Task Invoke(Action action)
-	{
-		return Invoke(() =>
-		{
-			action();
-			return Task.CompletedTask;
-		});
-	}
+    #region Invoke
 
-	public async Task Invoke(Func<Task> action)
-	{
-		await action(); // temporary
-	}
+    public Task Invoke(Action action)
+    {
+        return Invoke(() =>
+        {
+            action();
+            return Task.CompletedTask;
+        });
+    }
 
-	#endregion
+    public async Task Invoke(Func<Task> action)
+    {
+        await action(); // temporary
+    }
 
-	#region Connect/Disconnect
+    #endregion
 
-	public void Connect(Connection connection1, Connection connection2)
-	{
-		if (!connection1.Connections.Contains(connection2))
-			connection1.Connections.Add(connection2);
-		if (!connection2.Connections.Contains(connection1))
-			connection2.Connections.Add(connection1);
-	}
+    #region Connect / Disconnect / MergedRemovedConnectionsWithNewConnections
 
-	public void Disconnect(Connection connection1, Connection connection2)
-	{
-		connection1.Connections.Remove(connection2);
-		connection2.Connections.Remove(connection1);
-	}
+    public void MergedRemovedConnectionsWithNewConnections(List<Connection> newConnections, List<Connection> removedConnections)
+    {
+        foreach (var removedConnection in removedConnections)
+        {
+            var newConnection = newConnections.FirstOrDefault(x => x.Parent == removedConnection.Parent && x.Name == removedConnection.Name && x.Type == removedConnection.Type);
 
-	#endregion
+            // if we found a new connection, connect them together and remove the old connection
+            foreach (var oldLink in removedConnection.Connections)
+            {
+                oldLink.Connections.Remove(removedConnection); // cleanup the old connection
 
-	#region AddNode
+                if (newConnection != null)
+                {
+                    // Before we re-connect them let's make sure both are inputs or both outputs
+                    if (oldLink.Parent.Outputs.Contains(oldLink) == newConnection.Parent.Inputs.Contains(newConnection))
+                    {
+                        // we can safely reconnect the new connection to the old link
+                        // Either newConnection is an input and removedConnection is an output or vice versa
+                        newConnection.Connections.Add(oldLink);
+                        oldLink.Connections.Add(newConnection);
+                    }
+                }
+            }
+        }
 
-	public void AddNode(Node node)
-	{
-		((IDictionary<string, Node>)Nodes)[node.Id] = node;
-	}
+        Project.GraphChangedSubject.OnNext(this);
+    }
 
-	public Node AddNode(NodeProvider.NodeSearchResult searchResult)
-	{
-		var node = (Node)Activator.CreateInstance(searchResult.Type, this, null)!;
-		AddNode(node);
-		if (searchResult is NodeProvider.MethodCallNode methodCall && node is MethodCall methodCallNode)
-			methodCallNode.SetMethodTarget(methodCall.MethodInfo);
-		else if (searchResult is NodeProvider.GetPropertyOrFieldNode getPropertyOrField && node is GetPropertyOrField getPropertyOrFieldNode)
-			getPropertyOrFieldNode.SetMemberTarget(getPropertyOrField.MemberInfo);
-		else if (searchResult is NodeProvider.SetPropertyOrFieldNode setPropertyOrField && node is SetPropertyOrField setPropertyOrFieldNode)
-			setPropertyOrFieldNode.SetMemberTarget(setPropertyOrField.MemberInfo);
+    public void Connect(Connection connection1, Connection connection2)
+    {
+        if (!connection1.Connections.Contains(connection2))
+            connection1.Connections.Add(connection2);
+        if (!connection2.Connections.Contains(connection1))
+            connection2.Connections.Add(connection1);
+    }
 
-		return node;
-	}
+    public void Disconnect(Connection connection1, Connection connection2)
+    {
+        connection1.Connections.Remove(connection2);
+        connection2.Connections.Remove(connection1);
+    }
 
-	#endregion
+    #endregion
 
-	#region RemoveNode
+    #region AddNode
 
-	public void RemoveNode(Node node)
-	{
-		((IDictionary<string, Node>)Nodes).Remove(node.Id);
-	}
+    public void AddNode(Node node)
+    {
+        ((IDictionary<string, Node>)Nodes)[node.Id] = node;
+    }
 
-	#endregion
+    public Node AddNode(NodeProvider.NodeSearchResult searchResult)
+    {
+        var node = (Node)Activator.CreateInstance(searchResult.Type, this, null)!;
+        AddNode(node);
+        if (searchResult is NodeProvider.MethodCallNode methodCall && node is MethodCall methodCallNode)
+            methodCallNode.SetMethodTarget(methodCall.MethodInfo);
+        else if (searchResult is NodeProvider.GetPropertyOrFieldNode getPropertyOrField && node is GetPropertyOrField getPropertyOrFieldNode)
+            getPropertyOrFieldNode.SetMemberTarget(getPropertyOrField.MemberInfo);
+        else if (searchResult is NodeProvider.SetPropertyOrFieldNode setPropertyOrField && node is SetPropertyOrField setPropertyOrFieldNode)
+            setPropertyOrFieldNode.SetMemberTarget(setPropertyOrField.MemberInfo);
 
-	#region Serialization
+        return node;
+    }
 
-	private record class SerializedGraph(List<string> Nodes);
-	public string Serialize()
-	{
-		var nodes = new List<string>();
+    #endregion
 
-		foreach (var node in Nodes.Values)
-			nodes.Add(node.Serialize());
+    #region RemoveNode
 
-		var serializedGraph = new SerializedGraph(nodes);
+    public void RemoveNode(Node node)
+    {
+        ((IDictionary<string, Node>)Nodes).Remove(node.Id);
+    }
 
-		return JsonSerializer.Serialize(serializedGraph);
-	}
+    #endregion
 
-	public static void Deserialize(string serializedGraph, Graph graph)
-	{
-		var serializedGraphObj = JsonSerializer.Deserialize<SerializedGraph>(serializedGraph) ?? throw new Exception("Unable to deserialize graph");
-		foreach (var serializedNode in serializedGraphObj.Nodes)
-		{
-			var node = Node.Deserialize(graph, serializedNode);
-			graph.AddNode(node);
-		}
-	}
+    #region Serialization
 
-	#endregion
+    private record class SerializedGraph(List<string> Nodes);
+    public string Serialize()
+    {
+        var nodes = new List<string>();
+
+        foreach (var node in Nodes.Values)
+            nodes.Add(node.Serialize());
+
+        var serializedGraph = new SerializedGraph(nodes);
+
+        return JsonSerializer.Serialize(serializedGraph);
+    }
+
+    public static void Deserialize(string serializedGraph, Graph graph)
+    {
+        var serializedGraphObj = JsonSerializer.Deserialize<SerializedGraph>(serializedGraph) ?? throw new Exception("Unable to deserialize graph");
+        foreach (var serializedNode in serializedGraphObj.Nodes)
+        {
+            var node = Node.Deserialize(graph, serializedNode);
+            graph.AddNode(node);
+        }
+    }
+
+    #endregion
 }

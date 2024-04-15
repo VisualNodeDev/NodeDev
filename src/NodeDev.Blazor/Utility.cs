@@ -31,7 +31,7 @@ public static class Utility
 
 			var sub = source.Subscribe(x =>
 			{
-				if (!stopwatch.IsRunning) // either the first time or it's been a while since the last time
+				if (!stopwatch.IsRunning || (stopwatch.Elapsed > interval && !isTimerRunning)) // either the first time or it's been a while since the last time
 				{
 					o.OnNext(x); // send the value away
 					stopwatch.Restart(); // start the timer since the last time we sent a value

@@ -35,6 +35,7 @@ public class RealMethodInfo : IMethodInfo
 
 	public MethodInfo CreateMethodInfo()
 	{
+		// This seriously needs to be optimized, this will be called a lot and it's slow as hell
 		return DeclaringRealType.MakeRealType().GetMethod(Method.Name, GetParameters().Select(x => x.ParameterType.MakeRealType()).ToArray())!;
 	}
 

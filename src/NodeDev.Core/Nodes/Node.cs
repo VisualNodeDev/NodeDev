@@ -68,6 +68,8 @@ namespace NodeDev.Core.Nodes
         /// </summary>
         public abstract Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop);
 
+        public virtual void PreprocessBeforeExecution() { }
+
         public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
         {
             throw new NotImplementedException();

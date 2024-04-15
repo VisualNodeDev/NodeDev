@@ -3,8 +3,10 @@ using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Text;
@@ -15,228 +17,250 @@ namespace NodeDev.Core.Nodes;
 
 public class MethodCall : NormalFlowNode
 {
-	public class TargetMethodDecoration : INodeDecoration
-	{
-		private record class SavedMethodInfoParameter(string Type);
-		private record class SavedMethodInfo(string Type, string Name, SavedMethodInfoParameter[] ParamTypes);
-		internal IMethodInfo TargetMethod { get; set; }
+    public class TargetMethodDecoration : INodeDecoration
+    {
+        private record class SavedMethodInfoParameter(string Type);
+        private record class SavedMethodInfo(string Type, string Name, SavedMethodInfoParameter[] ParamTypes);
+        internal IMethodInfo TargetMethod { get; set; }
 
-		public TargetMethodDecoration(IMethodInfo targetMethod)
-		{
-			TargetMethod = targetMethod;
-		}
+        public TargetMethodDecoration(IMethodInfo targetMethod)
+        {
+            TargetMethod = targetMethod;
+        }
 
-		public string Serialize()
-		{
-			return JsonSerializer.Serialize(new SavedMethodInfo(TargetMethod.DeclaringType.SerializeWithFullTypeName(), TargetMethod.Name, TargetMethod.GetParameters().Select(p => new SavedMethodInfoParameter(p.ParameterType.SerializeWithFullTypeName())).ToArray()));
-		}
+        public string Serialize()
+        {
+            return JsonSerializer.Serialize(new SavedMethodInfo(TargetMethod.DeclaringType.SerializeWithFullTypeName(), TargetMethod.Name, TargetMethod.GetParameters().Select(p => new SavedMethodInfoParameter(p.ParameterType.SerializeWithFullTypeName())).ToArray()));
+        }
 
-		public static INodeDecoration Deserialize(TypeFactory typeFactory, string Json)
-		{
-			var info = JsonSerializer.Deserialize<SavedMethodInfo>(Json) ?? throw new Exception("Unable to deserialize method info");
+        public static INodeDecoration Deserialize(TypeFactory typeFactory, string Json)
+        {
+            var info = JsonSerializer.Deserialize<SavedMethodInfo>(Json) ?? throw new Exception("Unable to deserialize method info");
 
-			var type = TypeBase.Deserialize(typeFactory, info.Type);
-			var parameterTypes = info.ParamTypes.Select(x => TypeBase.Deserialize(typeFactory, x.Type));
-			var method = type.GetMethods(info.Name).FirstOrDefault(x => parameterTypes.SequenceEqual(x.GetParameters().Select(y => y.ParameterType)));
+            var type = TypeBase.Deserialize(typeFactory, info.Type);
+            var parameterTypes = info.ParamTypes.Select(x => TypeBase.Deserialize(typeFactory, x.Type));
+            var method = type.GetMethods(info.Name).FirstOrDefault(x => parameterTypes.SequenceEqual(x.GetParameters().Select(y => y.ParameterType)));
 
-			if (method == null)
-				throw new Exception("Unable to find method:" + info.Name);
+            if (method == null)
+                throw new Exception("Unable to find method:" + info.Name);
 
-			return new TargetMethodDecoration(method);
-		}
-	}
+            return new TargetMethodDecoration(method);
+        }
+    }
 
-	public override string TitleColor => "lightblue";
+    public override string TitleColor => "lightblue";
 
 
-	public IMethodInfo? TargetMethod { get; private set; }
+    public IMethodInfo? TargetMethod { get; private set; }
 
-	public override string Name
-	{
-		get => TargetMethod == null ? "Get" : TargetMethod.DeclaringType.FriendlyName + "." + TargetMethod.Name;
-		set { }
-	}
+    public override string Name
+    {
+        get => TargetMethod == null ? "Get" : TargetMethod.DeclaringType.FriendlyName + "." + TargetMethod.Name;
+        set { }
+    }
 
-	public override IEnumerable<AlternateOverload> AlternatesOverloads
-	{
-		get
-		{
-			var parentType = TargetMethod?.DeclaringType;
-			if (TargetMethod == null || parentType == null)
-				return Enumerable.Empty<AlternateOverload>();
+    /// <summary>
+    /// This is computed during preprocessing before the project is executed.
+    /// It indicates if the method has any out parameters, that way we don't need to check it every time the method is executed.
+    /// </summary>
+    private int Preprocessed_NbOutParameters;
 
-			var methods = parentType.GetMethods().Where(x => x.Name == TargetMethod.Name);
+    public override IEnumerable<AlternateOverload> AlternatesOverloads
+    {
+        get
+        {
+            var parentType = TargetMethod?.DeclaringType;
+            if (TargetMethod == null || parentType == null)
+                return Enumerable.Empty<AlternateOverload>();
 
-			return methods.Select(x => new AlternateOverload(x.ReturnType, x.GetParameters().ToList())).ToList();
-		}
-	}
+            var methods = parentType.GetMethods(TargetMethod.Name);
 
-	public MethodCall(Graph graph, string? id = null) : base(graph, id)
-	{
-	}
+            return methods.Select(x => x.AlternateOverload()).ToList();
+        }
+    }
 
-	protected override void Deserialize(SerializedNode serializedNodeObj)
-	{
-		base.Deserialize(serializedNodeObj);
+    public MethodCall(Graph graph, string? id = null) : base(graph, id)
+    {
+    }
 
-		if (Decorations.TryGetValue(typeof(TargetMethodDecoration), out var targetMethod))
-			TargetMethod = ((TargetMethodDecoration)targetMethod).TargetMethod;
-	}
+    protected override void Deserialize(SerializedNode serializedNodeObj)
+    {
+        base.Deserialize(serializedNodeObj);
 
-	public override void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
-	{
-		// find the MethodInfo for the overload
-		var parentType = TargetMethod?.DeclaringType;
-		if (TargetMethod == null || parentType == null)
-		{
-			newConnections = new List<Connection>();
-			removedConnections = new List<Connection>();
-			return;
-		}
+        if (Decorations.TryGetValue(typeof(TargetMethodDecoration), out var targetMethod))
+            TargetMethod = ((TargetMethodDecoration)targetMethod).TargetMethod;
+    }
 
-		// assumes that every parameters is a real type
-		var method = parentType.GetMethods(TargetMethod.Name).FirstOrDefault(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(overload.Parameters.Select(y => y.ParameterType)));
-		if (method == null)
-			throw new Exception("Unable to find method overload");
+    public override void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
+    {
+        // find the MethodInfo for the overload
+        var parentType = TargetMethod?.DeclaringType;
+        if (TargetMethod == null || parentType == null)
+        {
+            newConnections = new List<Connection>();
+            removedConnections = new List<Connection>();
+            return;
+        }
 
-		if (method.ReturnType != overload.ReturnType)
-			throw new Exception("Return type mismatch");
+        var method = parentType
+            .GetMethods(TargetMethod.Name)
+            .FirstOrDefault(x =>
+                x.GetParameters().Select(y => y.ParameterType).SequenceEqual(overload.Parameters.Select(y => y.ParameterType)) && // check if the types match
+                x.GetParameters().Select(y => y.IsOut).SequenceEqual(overload.Parameters.Select(y => y.IsOut))); // check if the IsOut match
 
-		// remove the old connections, except the Exec inputs and outputs
-		removedConnections = Inputs.Skip(2).Concat(Outputs.Skip(1)).ToList();
-		if (!TargetMethod.IsStatic)
-		{
-			Inputs.RemoveAt(0);
-			removedConnections.Add(Inputs[0]); // add the target input
-		}
+        if (method == null)
+            throw new Exception("Unable to find method overload");
 
-		if(Inputs.Count != 0)
-			Inputs.RemoveRange(1, Inputs.Count - 1);
+        if (method.ReturnType != overload.ReturnType)
+            throw new Exception("Return type mismatch");
 
-		Outputs.RemoveRange(1, Outputs.Count - 1);
+        // remove the old connections, except the Exec inputs and outputs
+        removedConnections = Inputs.Skip(2).Concat(Outputs.Skip(1)).ToList();
+        if (!TargetMethod.IsStatic)
+        {
+            removedConnections.Add(Inputs[0]); // add the target input
+            Inputs.RemoveAt(0);
+        }
 
-		// Set the new method, this will add all the required inputs and outputs
-		SetMethodTarget(method);
+        if (Inputs.Count != 0)
+            Inputs.RemoveRange(1, Inputs.Count - 1);
 
-		// return the new connections
-		newConnections = Inputs.Take(1).Concat(Inputs.Skip(2)).Concat(Outputs.Skip(1)).ToList();
-	}
+        Outputs.RemoveRange(1, Outputs.Count - 1);
 
-	public void SetMethodTarget(IMethodInfo methodInfo)
-	{
-		TargetMethod = methodInfo;
-		Decorations[typeof(TargetMethodDecoration)] = new TargetMethodDecoration(methodInfo);
+        // Set the new method, this will add all the required inputs and outputs
+        SetMethodTarget(method);
 
-		if (!TargetMethod.IsStatic)
-			Inputs.Insert(0, new("Target", this, TargetMethod.DeclaringType)); // the target is put first for later optimisation as it's not really an input to the method
+        // return the new connections
+        newConnections = Inputs.Take(1).Concat(Inputs.Skip(2)).Concat(Outputs.Skip(1)).ToList();
+    }
 
-		// update the inputs
-		Inputs.AddRange(TargetMethod.GetParameters().Select(x => new Connection(x.Name, this, x.ParameterType)));
+    public void SetMethodTarget(IMethodInfo methodInfo)
+    {
+        TargetMethod = methodInfo;
+        Decorations[typeof(TargetMethodDecoration)] = new TargetMethodDecoration(methodInfo);
 
-		if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void), null))
-			Outputs.Add(new Connection("Result", this, TargetMethod.ReturnType));
-	}
+        if (!TargetMethod.IsStatic)
+            Inputs.Insert(0, new("Target", this, TargetMethod.DeclaringType)); // the target is put first for later optimisation as it's not really an input to the method
 
-	#region Method parameter changes from UI
+        // update the inputs
+        Inputs.AddRange(TargetMethod.GetParameters().Where(x => !x.IsOut).Select(x => new Connection(x.Name, this, x.ParameterType)));
 
-	internal void RemoveParameterAt(int index)
-	{
-		if (TargetMethod == null)
-			throw new Exception("TargetMethod cannot be null here");
+        Outputs.AddRange(TargetMethod.GetParameters().Where(x => x.IsOut).Select(x => new Connection(x.Name, this, x.ParameterType)));
 
-		var inputsStart = !TargetMethod.IsStatic ? 2 : 1; // exec + target : exec
+        if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void), null))
+            Outputs.Add(new Connection("Result", this, TargetMethod.ReturnType));
+    }
 
-		var connection = Inputs[inputsStart + index];
-		foreach (var other in connection.Connections)
-			Graph.Disconnect(connection, other);
+    #region Method parameter changes from UI
 
-		Inputs.RemoveAt(inputsStart + index);
-	}
+    internal void OnMethodParameterRenamed(string oldName, NodeClassMethodParameter parameter)
+    {
+        if (TargetMethod == null)
+            throw new Exception("TargetMethod cannot be null here");
 
-	internal void SwapParameter(int index1, int index2)
-	{
-		if (TargetMethod == null)
-			throw new Exception("TargetMethod cannot be null here");
+        IEnumerable<Connection> connections = parameter.IsOut ? Outputs : Inputs;
 
-		var inputsStart = !TargetMethod.IsStatic ? 2 : 1; // exec + target : exec
+        var connection = connections.FirstOrDefault(x => x.Name == oldName);
+        if (connection == null)
+            throw new Exception("Unable to find connection: " + oldName);
 
-		var a = Inputs[index1 + inputsStart];
-		Inputs[index1 + inputsStart] = Inputs[index2 + inputsStart];
-		Inputs[index2 + inputsStart] = a;
-	}
+        connection.Name = parameter.Name;
 
-	internal void OnMethodParameterRenamed(NodeClassMethodParameter parameter)
-	{
-		if (TargetMethod == null)
-			throw new Exception("TargetMethod cannot be null here");
+        Graph.Project.GraphChangedSubject.OnNext(Graph);
+    }
 
-		var inputsStart = !TargetMethod.IsStatic ? 2 : 1; // exec + target : exec
+    internal void OnNewMethodParameter(NodeClassMethodParameter newParameter)
+    {
+        Inputs.Add(new Connection(newParameter.Name, this, newParameter.ParameterType));
+    }
 
-		var index = TargetMethod.GetParameters().ToList().IndexOf(parameter);
-		if (index == -1)
-			throw new Exception("Unable to find parameter: " + parameter.Name);
+    #endregion
 
-		Inputs[index + inputsStart].Name = parameter.Name;
-	}
 
-	internal void OnNewMethodParameter(NodeClassMethodParameter newParameter)
-	{
-		Inputs.Add(new Connection(newParameter.Name, this, newParameter.ParameterType));
-	}
+    private MethodInvoker? MethodInvoker;
+    public override void PreprocessBeforeExecution()
+    {
+        base.PreprocessBeforeExecution();
 
-	internal Connection OnMethodParameterTypeChanged(NodeClassMethodParameter parameter)
-	{
-		if (TargetMethod == null)
-			throw new Exception("TargetMethod cannot be null here");
+        Preprocessed_NbOutParameters = TargetMethod?.GetParameters().Count(x => x.IsOut) ?? 0;
 
-		var inputsStart = !TargetMethod.IsStatic ? 2 : 1; // exec + target : exec
+        if (TargetMethod is RealMethodInfo real)
+            MethodInvoker = MethodInvoker.Create(real.CreateMethodInfo());
+    }
 
-		var index = TargetMethod.GetParameters().ToList().IndexOf(parameter);
-		if (index == -1)
-			throw new Exception("Unable to find parameter: " + parameter.Name);
+    protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state)
+    {
+        if (TargetMethod == null)
+            throw new Exception("Target method is not set");
 
-		var connection = Inputs[index + inputsStart];
-		connection.UpdateType(parameter.ParameterType);
+        if (TargetMethod is NodeClassMethod nodeClassMethod)
+        {
+            var childExecutor = new GraphExecutor(nodeClassMethod.Graph, executor.Root);
 
-		return connection;
-	}
+            if (Project.IsLiveDebuggingEnabled)
+            {
+                // Store the child executor in the parent executor
+                executor.ChildrenExecutors[GraphIndex] = childExecutor;
 
-	#endregion
+                childExecutor.Execute(inputs[0] ?? self, inputs[1..], outputs);
+            }
+            else
+            {
+                using (childExecutor)
+                    childExecutor.Execute(inputs[0] ?? self, inputs[1..], outputs);
+            }
 
-	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state)
-	{
-		if (TargetMethod == null)
-			throw new Exception("Target method is not set");
+        }
+        else
+        {
+            var target = TargetMethod.IsStatic ? null : inputs[0];
 
-		if (TargetMethod is NodeClassMethod nodeClassMethod)
-		{
-			var childExecutor = new GraphExecutor(nodeClassMethod.Graph, executor.Root);
+            object? result;
+            if(Preprocessed_NbOutParameters == 0)
+                result = MethodInvoker!.Invoke(target, inputs[(TargetMethod.IsStatic ? 1 : 2)..]);
+            else
+            {
+                // create an uninitialized array
+                var array = ArrayPool<object?>.Shared.Rent(inputs.Length + Preprocessed_NbOutParameters);
 
-			if (Project.IsLiveDebuggingEnabled)
-			{
-				// Store the child executor in the parent executor
-				executor.ChildrenExecutors[GraphIndex] = childExecutor;
+                try
+                {
+                    int indexInput = 0, indexArray = 0;
 
-				childExecutor.Execute(inputs[0] ?? self, inputs[1..], outputs);
-			}
-			else
-			{
-				using (childExecutor)
-					childExecutor.Execute(inputs[0] ?? self, inputs[1..], outputs);
-			}
+                    var parameters = TargetMethod.GetParameters();
+                    foreach (var parameter in parameters)
+                    {
+                        if (!parameter.IsOut)
+                            array[indexArray] = inputs[TargetMethod.IsStatic ? 1 : 2 + (indexInput++)];
 
-		}
-		else
-		{
-			var realMethod = (RealMethodInfo)TargetMethod;
+                        ++indexArray;
+                    }
 
-			var target = TargetMethod.IsStatic ? null : inputs[0];
+                    // Actual invoke of the method
+                    result = MethodInvoker!.Invoke(target, array.AsSpan(0, inputs.Length + Preprocessed_NbOutParameters));
 
-			var result = realMethod.CreateMethodInfo().Invoke(target, inputs[(TargetMethod.IsStatic ? 1 : 2)..].ToArray());
+                    // output the out parameters
+                    indexInput = 0;
+                    indexArray = 0;
+                    foreach (var parameter in parameters)
+                    {
+                        if (parameter.IsOut)
+                            outputs[indexInput++] = array[indexArray];
 
-			if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void), null))
-				outputs[^1] = result;
-		}
-	}
+                        ++indexArray;
+                    }
+                }
+                finally
+                {
+                    ArrayPool<object?>.Shared.Return(array);
+                }
+            }
+
+            Expression<Action<int>> a = x => Console.WriteLine(x);
+
+            if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void), null))
+                outputs[^1] = result;
+        }
+    }
 
 }

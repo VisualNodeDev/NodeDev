@@ -51,4 +51,6 @@ public class RealMethodParameterInfo : IMethodParameterInfo
 			return TypeFactory.Get(ParameterInfo.ParameterType, null);
 		}
 	}
+
+    public bool IsOut => ParameterInfo.IsOut;
 }
