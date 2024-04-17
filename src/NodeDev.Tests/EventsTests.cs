@@ -9,6 +9,14 @@ namespace NodeDev.Tests;
 public class EventsTests
 {
 	[Fact]
+	public void Test()
+	{
+		var generator = new GraphExpressionGenerator(null);
+
+		generator.GenerateExpression();
+	}
+
+	[Fact]
 	public void TestPropertyRenameAndTypeChange()
 	{
 		var project = new Project(Guid.NewGuid());

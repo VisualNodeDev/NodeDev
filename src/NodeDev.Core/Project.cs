@@ -83,11 +83,14 @@ public class Project
 		NodeClassTypeCreator.CreateProjectClassesAndAssembly(this);
 
 		// Before we start executing the project we need to preprocess every graph everywhere
+		var expressionGenerator = new GraphExpressionGenerator();
 		foreach (var nodeClass in Classes)
 		{
 			foreach (var method in nodeClass.Methods)
 			{
 				method.Graph.PreprocessGraph();
+
+				expressionGenerator.GenerateExpression(method.Graph);
 			}
 		}
 

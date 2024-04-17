@@ -37,6 +37,8 @@ namespace NodeDev.Core.Class
 
 		public TypeBase DeclaringType => Class.ClassTypeBase;
 
+		public int ProjectExecution_MethodDelegateId { get; set; }
+
 		public void Rename(string newName)
 		{
 			if (string.IsNullOrWhiteSpace(newName))
@@ -50,9 +52,9 @@ namespace NodeDev.Core.Class
 		public void AddDefaultParameter()
 		{
 			string name = "NewParameter";
-			int i = 2;
+			int i = 1;
 			while (Parameters.Any(x => x.Name == name))
-                name = $"NewParameter_{i++}";
+                name = $"NewParameter_{++i}";
 			var newParameter = new NodeClassMethodParameter(name, Class.TypeFactory.Get<int>(), this);
 
 			Parameters.Add(newParameter);

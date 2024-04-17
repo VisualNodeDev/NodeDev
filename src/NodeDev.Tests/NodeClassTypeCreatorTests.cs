@@ -18,6 +18,10 @@ public class NodeClassTypeCreatorTests
 
 		myClass.Properties.Add(new(myClass, "MyProp", project.TypeFactory.Get<float>()));
 
+		var main = new NodeClassMethod(myClass, "Main", project.TypeFactory.Get<float>(), new Graph());
+        myClass.Methods.Add(main);
+		main.Parameters.Add(new("A", project.TypeFactory.Get<float>(), main));
+
 		var creator = new NodeClassTypeCreator();
 
 		var assembly = creator.CreateProjectClassesAndAssembly(project);
