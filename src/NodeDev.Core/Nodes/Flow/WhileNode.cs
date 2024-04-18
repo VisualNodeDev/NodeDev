@@ -13,6 +13,8 @@ namespace NodeDev.Core.Nodes.Flow
 
 		public override bool IsFlowNode => true;
 
+		public override bool AllowRemergingExecConnections => false;
+
 		public WhileNode(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "While";

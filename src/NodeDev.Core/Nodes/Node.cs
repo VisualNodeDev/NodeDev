@@ -45,6 +45,14 @@ namespace NodeDev.Core.Nodes
         public virtual bool ReOrderExecInputsAndOutputs => true;
 
         /// <summary>
+        /// True to allow remerging exec connection together later in the graph.
+        /// This is used by nodes that have multiple exec outputs such as Branch, Loop, etc.
+        /// If the value is false, such as for Loop, each exec output has to be a separate path.
+        /// Ex, for ForEach node the value is false since "Loop Exec" path cannot have shared path with the "ExecOut" path.
+        /// </summary>
+        public virtual bool AllowRemergingExecConnections => true;
+
+        /// <summary>
         /// Global index of this node in the graph. Each node in a graph has a unique index.
         /// </summary>
         public int GraphIndex { get; set; } = -1;

@@ -16,6 +16,8 @@ namespace NodeDev.Core.Nodes.Flow
 
 		public override bool ReOrderExecInputsAndOutputs => false;
 
+		public override bool AllowRemergingExecConnections => false;
+
 		public ForeachNode(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Foreach";
@@ -26,7 +28,7 @@ namespace NodeDev.Core.Nodes.Flow
 			Inputs.Add(new("IEnumerable", this, TypeFactory.Get(typeof(IEnumerable<>), [t])));
 
 			Outputs.Add(new("ExecLoop", this, TypeFactory.ExecType));
-			Outputs.Add(new("Item", this, t));
+			Outputs.Add(new("Item", this, t, linkedExec: Outputs[0]));
 			Outputs.Add(new("ExecOut", this, TypeFactory.ExecType));
 		}
 

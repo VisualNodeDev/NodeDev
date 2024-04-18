@@ -39,23 +39,30 @@ namespace NodeDev.Core.Connections
 		/// </summary>
 		public int GraphIndex { get; set; } = -1;
 
-		public Connection(string name, Node parent, TypeBase type, string? id = null)
+		/// <summary>
+		/// LinkedExec can be used to make sure a connection can only ever be used while on a path inside the linked exec connection.
+		/// Ex. during a 'foreach' loop, the 'Item' connection can only be used inside the 'Loop Exec' connection.
+		/// </summary>
+		public Connection? LinkedExec { get; }
+
+		public Connection(string name, Node parent, TypeBase type, string? id = null, Connection? linkedExec = null)
 		{
 			Id = id ?? Guid.NewGuid().ToString();
 			Name = name;
 			Parent = parent;
 			Type = type;
+			LinkedExec = linkedExec;
 		}
 
 		#region Serialization
 
 		private record class SerializedConnectionVertex(float X, float Y);
-		private record SerializedConnection(string Id, string Name, string SerializedType, List<string> Connections, string? TextboxValue, List<SerializedConnectionVertex>? Vertices);
+		private record SerializedConnection(string Id, string Name, string SerializedType, List<string> Connections, string? TextboxValue, List<SerializedConnectionVertex>? Vertices, string? LinkedExec);
 		internal string Serialize()
 		{
 			var connections = Connections.ToList();
 
-			var serializedConnection = new SerializedConnection(Id, Name, Type.SerializeWithFullTypeName(), Connections.Select(x => x.Id).ToList(), TextboxValue, Vertices.Select(x => new SerializedConnectionVertex(x.X, x.Y)).ToList());
+			var serializedConnection = new SerializedConnection(Id, Name, Type.SerializeWithFullTypeName(), Connections.Select(x => x.Id).ToList(), TextboxValue, Vertices.Select(x => new SerializedConnectionVertex(x.X, x.Y)).ToList(), LinkedExec?.Id);
 
 			return JsonSerializer.Serialize(serializedConnection);
 		}
@@ -63,8 +70,14 @@ namespace NodeDev.Core.Connections
 		internal static Connection Deserialize(Node parent, string serializedConnection, bool isInput)
 		{
 			var serializedConnectionObj = JsonSerializer.Deserialize<SerializedConnection>(serializedConnection) ?? throw new Exception($"Unable to deserialize connection");
+
+			// Find the LinkedExec connection, if any
+			Connection? linkedExec = null;
+			if(linkedExec != null)
+				linkedExec = parent.Graph.Nodes.SelectMany(x => x.Value.InputsAndOutputs).FirstOrDefault(x => x.Id == serializedConnectionObj.LinkedExec);
+
 			var type = TypeBase.Deserialize(parent.TypeFactory, serializedConnectionObj.SerializedType);
-			var connection = new Connection(serializedConnectionObj.Name, parent, type, serializedConnectionObj.Id);
+			var connection = new Connection(serializedConnectionObj.Name, parent, type, serializedConnectionObj.Id, linkedExec);
 
 			connection.TextboxValue = serializedConnectionObj.TextboxValue;
 			if (connection.TextboxValue != null && isInput)

@@ -16,6 +16,8 @@ namespace NodeDev.Core.Nodes.Flow
 
 		public override bool ReOrderExecInputsAndOutputs => false;
 
+		public override bool AllowRemergingExecConnections => false;
+
 		public ForNode(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "For";
