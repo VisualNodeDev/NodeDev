@@ -23,6 +23,13 @@ namespace NodeDev.Core.Nodes.Flow
 			Outputs.Add(new("IfFalse", this, TypeFactory.ExecType));
 		}
 
+		public override string GetExecOutputPathId(string pathId, Connection execOutput)
+		{
+			return pathId + "-" + execOutput.Id; // every path is unique
+		}
+
+		public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => false;
+
 		public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
 		{
 			alterExecutionStackOnPop = false;

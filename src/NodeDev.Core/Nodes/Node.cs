@@ -12,154 +12,260 @@ using System.Threading.Tasks;
 namespace NodeDev.Core.Nodes
 {
 	[System.Diagnostics.DebuggerDisplay("{Name}. Inputs: {Inputs.Count}. Outputs: {Outputs.Count}")]
-    public abstract class Node
+	public abstract class Node
 	{
-        public Node(Graph graph, string? id = null)
-        {
-            Graph = graph;
-            Id = id ?? (Guid.NewGuid().ToString());
-        }
+		public Node(Graph graph, string? id = null)
+		{
+			Graph = graph;
+			Id = id ?? (Guid.NewGuid().ToString());
+		}
 
-        public string Id { get; }
+		public string Id { get; }
 
-        public virtual string Name { get; set; } = "";
+		public virtual string Name { get; set; } = "";
 
-        public Graph Graph { get; }
+		public Graph Graph { get; }
 
-        public abstract string TitleColor { get; }
+		public abstract string TitleColor { get; }
 
-        public List<Connection> Inputs { get; } = new();
+		public List<Connection> Inputs { get; } = new();
 
-        public List<Connection> Outputs { get; } = new();
+		public List<Connection> Outputs { get; } = new();
 
-        public IEnumerable<Connection> InputsAndOutputs => Inputs.Concat(Outputs);
+		public IEnumerable<Connection> InputsAndOutputs => Inputs.Concat(Outputs);
 
-        public abstract bool IsFlowNode { get; }
+		public abstract bool IsFlowNode { get; }
 
-        public TypeFactory TypeFactory => Project.TypeFactory;
+		public TypeFactory TypeFactory => Project.TypeFactory;
 
-        public Project Project => Graph.SelfClass.Project;
+		public Project Project => Graph.SelfClass.Project;
 
-        public virtual bool FetchState => false;
+		public virtual bool FetchState => false;
 
-        public virtual bool ReOrderExecInputsAndOutputs => true;
+		public virtual bool ReOrderExecInputsAndOutputs => true;
 
-        /// <summary>
-        /// True to allow remerging exec connection together later in the graph.
-        /// This is used by nodes that have multiple exec outputs such as Branch, Loop, etc.
-        /// If the value is false, such as for Loop, each exec output has to be a separate path.
-        /// Ex, for ForEach node the value is false since "Loop Exec" path cannot have shared path with the "ExecOut" path.
-        /// </summary>
-        public virtual bool AllowRemergingExecConnections => true;
+		/// <summary>
+		/// True to allow remerging exec connection together later in the graph.
+		/// This is used by nodes that have multiple exec outputs such as Branch, Loop, etc.
+		/// If the value is false, such as for Loop, each exec output has to be a separate path.
+		/// Ex, for ForEach node the value is false since "Loop Exec" path cannot have shared path with the "ExecOut" path.
+		/// </summary>
+		public virtual bool AllowRemergingExecConnections => true;
 
-        /// <summary>
-        /// Global index of this node in the graph. Each node in a graph has a unique index.
-        /// </summary>
-        public int GraphIndex { get; set; } = -1;
+		/// <summary>
+		/// Global index of this node in the graph. Each node in a graph has a unique index.
+		/// </summary>
+		public int GraphIndex { get; set; } = -1;
 
-        public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
+		public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
 
-        public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
-        public virtual IEnumerable<AlternateOverload> AlternatesOverloads => Enumerable.Empty<AlternateOverload>();
+		public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
+		public virtual IEnumerable<AlternateOverload> AlternatesOverloads => Enumerable.Empty<AlternateOverload>();
 
-        /// <summary>
-        /// returns a list of changed connections, if any
-        /// </summary>
-        /// <param name="connection">The connection that was generic, it is not generic anymore</param>
-        public virtual List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase baseType)
-        {
-            return new();
-        }
+		/// <summary>
+		/// returns a list of changed connections, if any
+		/// </summary>
+		/// <param name="connection">The connection that was generic, it is not generic anymore</param>
+		public virtual List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase baseType)
+		{
+			return new();
+		}
 
-        /// <summary>
-        /// Returns the next node to execute. The connection is on the current node, must look at what it's connected to
-        /// </summary>
-        public abstract Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop);
+		/// <summary>
+		/// Returns the next node to execute. The connection is on the current node, must look at what it's connected to
+		/// </summary>
+		public abstract Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop);
 
-        public virtual void PreprocessBeforeExecution() { }
+		public virtual void PreprocessBeforeExecution() { }
 
-        public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
-        {
-            throw new NotImplementedException();
-        }
-        #region Decorations
+		public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
+		{
+			throw new NotImplementedException();
+		}
 
-        public Dictionary<Type, INodeDecoration> Decorations { get; init; } = new();
+		#region Path merging / Crossing examinations
 
-        public void AddDecoration<T>(T attribute) where T : INodeDecoration => Decorations[typeof(T)] = attribute;
+		public abstract string GetExecOutputPathId(string pathId, Connection execOutput);
 
-        public T GetOrAddDecoration<T>(Func<T> creator) where T : INodeDecoration
-        {
-            if (Decorations.TryGetValue(typeof(T), out var decoration))
-                return (T)decoration;
+		public abstract bool DoesOutputPathAllowDeadEnd(Connection execOutput);
 
-            var v = creator();
-            Decorations[typeof(T)] = v;
+		public class InfiniteLoopException(Node node) : Exception
+		{
+			public Node Node { get; } = node;
+		}
 
-            return v;
-        }
+		/// <summary>
+		/// Returns a list of all the possible execution path
+		/// The List of list represent each possible path. Can be understood better seeing it as List<Paths>
+		/// </summary>
+		public List<List<Connection>> SearchAllExecPaths(HashSet<Node> nodesBefore)
+		{
+			if (nodesBefore.Contains(this))
+				throw new InfiniteLoopException(this);
 
-        #endregion
+			var execOutputs = Outputs.Where(x => x.Type.IsExec).ToList();
+			if (execOutputs.Count == 0)
+				return [];
 
-        #region Serialization
+			// Prevent any children path from looping back to us
+			nodesBefore.Add(this);
 
-        public record SerializedNode(string Type, string Id, string Name, List<string> Inputs, List<string> Outputs, Dictionary<string, string> Decorations);
-        internal string Serialize()
-        {
-            var serializedNode = new SerializedNode(GetType().FullName!, Id, Name, Inputs.Select(x => x.Serialize()).ToList(), Outputs.Select(x => x.Serialize()).ToList(), Decorations.ToDictionary(x => x.Key.FullName!, x => x.Value.Serialize()));
+			var allPaths = new List<List<Connection>>();
 
-            return JsonSerializer.Serialize(serializedNode);
-        }
+			foreach (var execOutput in execOutputs)
+			{
+				// Create a copy of the nodes already used since each execOutput can possibly hit the same nodes without it being an issue
+				var nodesBefore_local = new HashSet<Node>(nodesBefore);
+
+				var subPaths = SearchAllExecPaths(execOutput, nodesBefore_local);
+
+				if (subPaths.Count != 0)
+				{
+					foreach (var subPath in subPaths)
+						subPath.Insert(0, execOutput);
+				}
+				else
+					subPaths.Add([execOutput]);
+
+				allPaths.AddRange(subPaths);
+			}
+
+			return allPaths;
+		}
+
+		/// <summary>
+		/// List all the possible path taken from the output exec connection.
+		/// The List of list represent each possible path. Can be understood better seeing it as List<Paths>
+		/// </summary>
+		/// <param name="outputExec"></param>
+		/// <param name="pathId"></param>
+		/// <returns></returns>
+		public List<List<Connection>> SearchAllExecPaths(Connection outputExec, HashSet<Node> alreadySeenNodes)
+		{
+			if (outputExec.Connections.Count == 0)
+				return []; // we're connected to nothing
+
+			// If we are going through NormalFlowNodes, we can simply accumulate the connections one after the other
+			// Then, we multiple paths offers, we can search those paths and Prepend the straightConnections to them
+			var straightConnections = new List<Connection>();
+
+			var inputExec = outputExec.Connections.FirstOrDefault();
+			while (inputExec != null)
+			{
+				var otherNode = inputExec.Parent;
+
+				if (otherNode is NormalFlowNode)
+				{
+					alreadySeenNodes.Add(otherNode); // prevent any children path from looping back to us
+
+					var otherExec = otherNode.Outputs.Single(x => x.Type.IsExec);
+					straightConnections.Add(otherExec);
+
+					inputExec = otherExec.Connections.FirstOrDefault();
+				}
+				else
+				{
+					// We've hit a possible separation in the paths we can follow
+					// We can recursively start a search again.
+					// There is no need to add the current node to the alreadySeenNodes since the SearchAllExecPaths will do it for us
+					var allSubPaths = otherNode.SearchAllExecPaths(alreadySeenNodes);
+
+					// Append each path returned to the straightConnections
+					foreach (var subPath in allSubPaths)
+						subPath.InsertRange(0, straightConnections);
+
+					return allSubPaths;
+				}
+			}
+
+			// if we're here, it means we never hit any branching of paths, we can return a single path possible
+			if (straightConnections.Count == 0)
+				return []; // we're connected to nothing
+			else
+				return [straightConnections];
+		}
 
 
-        public static Node Deserialize(Graph graph, string serializedNode)
-        {
-            var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
+		#endregion
 
-            var type = graph.SelfClass.TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
-            var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
+		#region Decorations
 
-            foreach (var decoration in serializedNodeObj.Decorations)
-            {
-                var decorationType = graph.SelfClass.TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
+		public Dictionary<Type, INodeDecoration> Decorations { get; init; } = new();
 
-                var method = decorationType.GetMethod(nameof(INodeDecoration.Deserialize), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+		public void AddDecoration<T>(T attribute) where T : INodeDecoration => Decorations[typeof(T)] = attribute;
 
-                if (method == null)
-                    throw new Exception($"Unable to find Deserialize method on type: {decoration.Key}");
+		public T GetOrAddDecoration<T>(Func<T> creator) where T : INodeDecoration
+		{
+			if (Decorations.TryGetValue(typeof(T), out var decoration))
+				return (T)decoration;
 
-                var decorationObj = method.Invoke(null, new object[] { graph.SelfClass.TypeFactory, decoration.Value }) as INodeDecoration;
+			var v = creator();
+			Decorations[typeof(T)] = v;
 
-                if (decorationObj == null)
-                    throw new Exception($"Unable to deserialize decoration: {decoration.Key}");
+			return v;
+		}
 
-                node.Decorations[decorationType] = decorationObj;
-            }
+		#endregion
 
-            node.Deserialize(serializedNodeObj);
+		#region Serialization
 
-            return node;
-        }
+		public record SerializedNode(string Type, string Id, string Name, List<string> Inputs, List<string> Outputs, Dictionary<string, string> Decorations);
+		internal string Serialize()
+		{
+			var serializedNode = new SerializedNode(GetType().FullName!, Id, Name, Inputs.Select(x => x.Serialize()).ToList(), Outputs.Select(x => x.Serialize()).ToList(), Decorations.ToDictionary(x => x.Key.FullName!, x => x.Value.Serialize()));
 
-        protected virtual void Deserialize(SerializedNode serializedNodeObj)
-        {
-            Inputs.Clear();
-            Outputs.Clear();
+			return JsonSerializer.Serialize(serializedNode);
+		}
 
-            Name = serializedNodeObj.Name;
-            foreach (var input in serializedNodeObj.Inputs)
-            {
-                var connection = Connection.Deserialize(this, input, true);
-                Inputs.Add(connection);
-            }
 
-            foreach (var output in serializedNodeObj.Outputs)
-            {
-                var connection = Connection.Deserialize(this, output, false);
-                Outputs.Add(connection);
-            }
-        }
+		public static Node Deserialize(Graph graph, string serializedNode)
+		{
+			var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
 
-        #endregion
-    }
+			var type = graph.SelfClass.TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
+			var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
+
+			foreach (var decoration in serializedNodeObj.Decorations)
+			{
+				var decorationType = graph.SelfClass.TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
+
+				var method = decorationType.GetMethod(nameof(INodeDecoration.Deserialize), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+
+				if (method == null)
+					throw new Exception($"Unable to find Deserialize method on type: {decoration.Key}");
+
+				var decorationObj = method.Invoke(null, new object[] { graph.SelfClass.TypeFactory, decoration.Value }) as INodeDecoration;
+
+				if (decorationObj == null)
+					throw new Exception($"Unable to deserialize decoration: {decoration.Key}");
+
+				node.Decorations[decorationType] = decorationObj;
+			}
+
+			node.Deserialize(serializedNodeObj);
+
+			return node;
+		}
+
+		protected virtual void Deserialize(SerializedNode serializedNodeObj)
+		{
+			Inputs.Clear();
+			Outputs.Clear();
+
+			Name = serializedNodeObj.Name;
+			foreach (var input in serializedNodeObj.Inputs)
+			{
+				var connection = Connection.Deserialize(this, input, true);
+				Inputs.Add(connection);
+			}
+
+			foreach (var output in serializedNodeObj.Outputs)
+			{
+				var connection = Connection.Deserialize(this, output, false);
+				Outputs.Add(connection);
+			}
+		}
+
+		#endregion
+	}
 }

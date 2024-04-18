@@ -26,6 +26,16 @@ namespace NodeDev.Core.Nodes.Flow
 			Outputs.Add(new("ExecOut", this, TypeFactory.ExecType));
 		}
 
+		public override string GetExecOutputPathId(string pathId, Connection execOutput)
+		{
+			if (execOutput == Outputs[0])
+				return pathId + "-" + execOutput.Id;
+			else
+				return pathId;
+		}
+
+		public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => execOutput == Outputs[0]; // Loop has to be a dead end
+
 		public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
 		{
 			if (inputs[1] is bool b && b == true)

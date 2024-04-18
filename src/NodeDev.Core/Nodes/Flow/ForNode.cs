@@ -27,9 +27,21 @@ namespace NodeDev.Core.Nodes.Flow
 			Inputs.Add(new("End (Exclude)", this, TypeFactory.Get<int>()));
 
 			Outputs.Add(new("ExecLoop", this, TypeFactory.ExecType));
-			Outputs.Add(new("Index", this, TypeFactory.Get<int>()));
+			Outputs.Add(new("Index", this, TypeFactory.Get<int>(), linkedExec: Outputs[0]));
 			Outputs.Add(new("ExecOut", this, TypeFactory.ExecType));
 		}
+
+		public override string GetExecOutputPathId(string pathId, Connection execOutput)
+		{
+			if (execOutput == Outputs[0])
+				return pathId + "-" + execOutput.Id;
+			else if (execOutput == Outputs[2])
+				return pathId;
+			else
+				throw new Exception("Invalid exec output");
+		}
+
+		public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => execOutput == Outputs[0]; // The loop exec path must be a dead end (or a breaking node, such as return, continue, break)
 
 		public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
 		{

@@ -18,7 +18,17 @@ namespace NodeDev.Core.Nodes
 
         public override bool IsFlowNode => true;
 
-        protected NormalFlowNode(Graph graph, string? id = null) : base(graph, id)
+		public override string GetExecOutputPathId(string pathId, Connection execOutput)
+		{
+            if(execOutput != Outputs[0])
+				throw new InvalidOperationException("Invalid exec output connection.");
+
+            return pathId; // no need to change the pathId, we're just flowing through like a->b->c
+		}
+
+        public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => false; // A normal flow node should not allow dead ends, unless a parent allowed it.
+
+		protected NormalFlowNode(Graph graph, string? id = null) : base(graph, id)
         {
             Inputs.Add(new("Exec", this, TypeFactory.ExecType));
             Outputs.Add(new("Exec", this, TypeFactory.ExecType));

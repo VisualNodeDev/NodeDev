@@ -32,6 +32,21 @@ namespace NodeDev.Core.Nodes.Flow
 			Outputs.Add(new("ExecOut", this, TypeFactory.ExecType));
 		}
 
+		public override string GetExecOutputPathId(string pathId, Connection execOutput)
+		{
+            if (execOutput == Outputs[0])
+            {
+				return pathId + "-" + execOutput.Id;
+			}
+			else if (execOutput == Outputs[2])
+				return pathId;
+
+			throw new Exception("Unable to find execOutput");
+        }
+
+		public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => execOutput == Outputs[0]; // The loop exec path must be a dead end (or a breaking node, such as return, continue, break)
+
+
 		public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
 		{
 			if (Inputs[1].Type.HasUndefinedGenerics)
