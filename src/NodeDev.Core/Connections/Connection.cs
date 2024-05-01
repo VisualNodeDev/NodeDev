@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Connections
 {
-	[System.Diagnostics.DebuggerDisplay("{Name} : {Type}, {Connections.Count}")]
+	[System.Diagnostics.DebuggerDisplay("{Parent.Name}:{Name} - {Type}, {Connections.Count}")]
 	public class Connection
 	{
 		public string Id { get; }

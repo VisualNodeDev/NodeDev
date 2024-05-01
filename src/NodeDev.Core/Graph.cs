@@ -37,7 +37,7 @@ public class Graph
 	/// "e" would be added in the next chunk, along with anything else after it
 	/// Only one of the two values is set at once, either <paramref name="Outputs"/> or <paramref name="SubChunk"/>
 	/// </summary>
-	private record class NodePathChunkPart(Connection? Output, Dictionary<Connection, NodePathChunks>? SubChunk);
+	internal record class NodePathChunkPart(Connection? Output, Dictionary<Connection, NodePathChunks>? SubChunk);
 
 	/// <summary>
 	/// Contains the starting point of the path, the chunks of the path and the merging point of the path.
@@ -47,7 +47,7 @@ public class Graph
 	/// <param name="Chunks">List of all the chunks inside the path.</param>
 	/// <param name="InputMergePoint">Merging point at the end of the path. Null if the path was a dead end or a breaking such as "Return".</param>
 	/// <param name="DeadEndInputs">If the path was a dead end, this is the inputs that led to the dead end. Ex if both side of a branch ends in dead end, they will both indicate their last input.</param>
-	private record class NodePathChunks(Connection OutputStartPoint, List<NodePathChunkPart> Chunks, Connection? InputMergePoint, List<Connection>? DeadEndInputs);
+	internal record class NodePathChunks(Connection OutputStartPoint, List<NodePathChunkPart> Chunks, Connection? InputMergePoint, List<Connection>? DeadEndInputs);
 
 	/// <summary>
 	/// Get the chunk of a path until the next merging point. In the following example, we would chunk something like "a, (b.c, b.d), e":
@@ -56,19 +56,16 @@ public class Graph
 	///         -> d
 	/// if "e" was to be merging with another path, we'd stop at "e" and return it as a merging point.
 	/// </summary>
-	private NodePathChunks GetChunks(Connection execOutput, bool allowDeadEnd)
+	internal NodePathChunks GetChunks(Connection execOutput, bool allowDeadEnd)
 	{
 		var chunks = new List<NodePathChunkPart>();
 
-		var currentInput = execOutput.Parent.Inputs.FirstOrDefault(x => x.Type.IsExec);
+		var currentInput = execOutput.Connections.FirstOrDefault();
 		if (currentInput == null)
 			return new NodePathChunks(execOutput, chunks, null, null); // the path led nowhere
 
 		while (true)
 		{
-			if (currentInput.Connections.Count != 1)
-				break; // we reached a merging point, leave the otherInput there so it's marked as InputMergePoint
-
 			if (currentInput.Parent.Outputs.Count(x => x.Type.IsExec) == 1) // we can keep adding to the straight path
 			{
 				// find the next output node to follow
@@ -76,12 +73,21 @@ public class Graph
 				var nextInput = output.Connections.FirstOrDefault();
 
 				if (nextInput == null)
+				{
+					// We've reached a dead end, let's check if we were allowed to in the first place
+					if (!allowDeadEnd)
+						throw new DeadEndNotAllowed([currentInput]);
+
 					return new NodePathChunks(execOutput, chunks, null, [currentInput]); // we reached a dead end
+				}
 
                 // add the current node to the chunks, after we know we can keep going
                 chunks.Add(new NodePathChunkPart(output, null));
 
 				currentInput = nextInput; // we can keep going
+
+				if (currentInput.Connections.Count != 1)
+					return new NodePathChunks(execOutput, chunks, currentInput, null); // we reached a merging point
 			}
 			else // we have a subchunk
 			{
@@ -123,8 +129,6 @@ public class Graph
                 }
 			}
 		}
-
-		return new NodePathChunks(execOutput, chunks, currentInput, null); // we reached a merging point
 	}
 
     /// <summary>
@@ -147,12 +151,15 @@ public class Graph
 			chunks[output] = chunk;
 		}
 
+		if(chunks.Count == 0) // it's a dead end because the node doesn't even have an exec output
+			return chunks;
+
 		// Validate that the dead ends are allowed. They are either allowed if the parent path allows it or if they are breaking nodes like "Return"
 		if (!allowDeadEnd)
 		{
 			var hasInvalidDeadEnd = chunks
 				.Where(x => !node.DoesOutputPathAllowDeadEnd(x.Key) && (x.Value.DeadEndInputs != null || x.Value.InputMergePoint == null)) // x.Value.InputMergePoint == null is a dead end because the output connection was not connected to anything
-				.Where(x => x.Value.DeadEndInputs?.All(y => y!.Parent.BreaksDeadEnd) ?? true) // ?? true because any dead end by "no connection" is automatically an invalid dead end
+				.Where(x => x.Value.DeadEndInputs?.All(y => !y!.Parent.BreaksDeadEnd) ?? true) // ?? true because any dead end by "no connection" is automatically an invalid dead end
 				.ToList();
 
 			if (hasInvalidDeadEnd.Count != 0)
@@ -171,8 +178,8 @@ public class Graph
 		}
 
         // validate that all the chunks have the same merging point. If not, the path that don't merge at the same place must be dead ends
-        var allSameMergePoint = chunks.Values.Where(x => x.InputMergePoint != null).Select(x => x.InputMergePoint).Distinct().Count() == 1;
-        if (!allSameMergePoint)
+        var nbDifferentMergePoint = chunks.Values.Where(x => x.InputMergePoint != null).Select(x => x.InputMergePoint).Distinct().Count();
+        if (nbDifferentMergePoint > 1) // all the same or none is fine, but more than one is not
             throw new BadMergeException(chunks.Values.First(x => x.InputMergePoint != null).InputMergePoint!); // we can throw any of the inputs, they all have different merging points
 
         return chunks;

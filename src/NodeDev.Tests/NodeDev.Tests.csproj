@@ -23,7 +23,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\NodeDev.Blazor\NodeDev.Blazor.csproj" />
     <ProjectReference Include="..\NodeDev.Core\NodeDev.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="TestProjects\**\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
