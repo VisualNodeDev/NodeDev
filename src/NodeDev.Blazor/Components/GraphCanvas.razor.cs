@@ -600,19 +600,24 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 	{
 		var nodeModel = Diagram.Nodes.FirstOrDefault(x => x.Selected) as GraphNodeModel;
 
-		var path = nodeModel?.Node.SearchAllExecPaths(new());
-
-		foreach (var otherNodeModel in Diagram.Nodes.OfType<GraphNodeModel>())
+		try
 		{
-			foreach (var connection in otherNodeModel.Node.Outputs)
-			{
-				if (path != null && path.Any(x => x.Contains(connection)))
-					otherNodeModel.OnConnectionPathHighlighted(connection);
-				else
-					otherNodeModel.OnConnectionPathUnhighlighted(connection);
-			}
+			var path = nodeModel?.Node.SearchAllExecPaths([]);
 
+			foreach (var otherNodeModel in Diagram.Nodes.OfType<GraphNodeModel>())
+			{
+				foreach (var connection in otherNodeModel.Node.Outputs)
+				{
+					if (path != null && path.Contains(connection))
+						otherNodeModel.OnConnectionPathHighlighted(connection);
+					else
+						otherNodeModel.OnConnectionPathUnhighlighted(connection);
+				}
+
+			}
 		}
+		catch (Node.InfiniteLoopException)
+		{ }
 	}
 
 	#endregion

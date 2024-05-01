@@ -89,28 +89,34 @@ namespace NodeDev.Core.Nodes
 
 		public abstract bool DoesOutputPathAllowDeadEnd(Connection execOutput);
 
+		/// <summary>
+		/// Returns true if this node breaks a dead end. These are usually "Return", "Break", "Continue", etc.
+		/// This will allow a dead end in places where it shouldn't be allowed, such as a "Branch" node.
+		/// </summary>
+		public virtual bool BreaksDeadEnd => false;
+
 		public class InfiniteLoopException(Node node) : Exception
 		{
 			public Node Node { get; } = node;
 		}
 
 		/// <summary>
-		/// Returns a list of all the possible execution path
-		/// The List of list represent each possible path. Can be understood better seeing it as List<Paths>
+		/// Returns all the possible execution path from this node.
+		/// I know, I know. All of this is slow.
 		/// </summary>
-		public List<List<Connection>> SearchAllExecPaths(HashSet<Node> nodesBefore)
+		public NodePaths SearchAllExecPaths(HashSet<Node> nodesBefore)
 		{
 			if (nodesBefore.Contains(this))
 				throw new InfiniteLoopException(this);
 
 			var execOutputs = Outputs.Where(x => x.Type.IsExec).ToList();
 			if (execOutputs.Count == 0)
-				return [];
+				return new();
 
 			// Prevent any children path from looping back to us
 			nodesBefore.Add(this);
 
-			var allPaths = new List<List<Connection>>();
+			var allPaths = new NodePaths();
 
 			foreach (var execOutput in execOutputs)
 			{
@@ -119,15 +125,15 @@ namespace NodeDev.Core.Nodes
 
 				var subPaths = SearchAllExecPaths(execOutput, nodesBefore_local);
 
-				if (subPaths.Count != 0)
+				if (subPaths.CountPossiblePaths != 0) // it led somewhere
 				{
-					foreach (var subPath in subPaths)
-						subPath.Insert(0, execOutput);
+					// Add the execOutput to the beginning of each path
+					subPaths.PrependPath(new([execOutput]));
 				}
-				else
-					subPaths.Add([execOutput]);
+				else // it led nowhere, the path is just the execOutput and that's it
+					subPaths.AddNewIndependantBranch(new NodePath([execOutput]));
 
-				allPaths.AddRange(subPaths);
+				allPaths.AddNewIndependantBranch(subPaths);
 			}
 
 			return allPaths;
@@ -135,19 +141,15 @@ namespace NodeDev.Core.Nodes
 
 		/// <summary>
 		/// List all the possible path taken from the output exec connection.
-		/// The List of list represent each possible path. Can be understood better seeing it as List<Paths>
 		/// </summary>
-		/// <param name="outputExec"></param>
-		/// <param name="pathId"></param>
-		/// <returns></returns>
-		public List<List<Connection>> SearchAllExecPaths(Connection outputExec, HashSet<Node> alreadySeenNodes)
+		private static NodePaths SearchAllExecPaths(Connection outputExec, HashSet<Node> alreadySeenNodes)
 		{
 			if (outputExec.Connections.Count == 0)
-				return []; // we're connected to nothing
+				return new(); // we're connected to nothing
 
 			// If we are going through NormalFlowNodes, we can simply accumulate the connections one after the other
 			// Then, we multiple paths offers, we can search those paths and Prepend the straightConnections to them
-			var straightConnections = new List<Connection>();
+			var straightConnections = new NodePath();
 
 			var inputExec = outputExec.Connections.FirstOrDefault();
 			while (inputExec != null)
@@ -156,10 +158,10 @@ namespace NodeDev.Core.Nodes
 
 				if (otherNode is NormalFlowNode)
 				{
-					alreadySeenNodes.Add(otherNode); // prevent any children path from looping back to us
+					alreadySeenNodes.Add(otherNode); // used to prevent any children path from looping back to us
 
 					var otherExec = otherNode.Outputs.Single(x => x.Type.IsExec);
-					straightConnections.Add(otherExec);
+					straightConnections.AppendPath(otherExec);
 
 					inputExec = otherExec.Connections.FirstOrDefault();
 				}
@@ -171,18 +173,17 @@ namespace NodeDev.Core.Nodes
 					var allSubPaths = otherNode.SearchAllExecPaths(alreadySeenNodes);
 
 					// Append each path returned to the straightConnections
-					foreach (var subPath in allSubPaths)
-						subPath.InsertRange(0, straightConnections);
+					allSubPaths.PrependPath(straightConnections);
 
 					return allSubPaths;
 				}
 			}
 
 			// if we're here, it means we never hit any branching of paths, we can return a single path possible
-			if (straightConnections.Count == 0)
-				return []; // we're connected to nothing
+			if (straightConnections.Length == 0)
+				return new(); // we're connected to nothing
 			else
-				return [straightConnections];
+				return new NodePaths(straightConnections);
 		}
 
 

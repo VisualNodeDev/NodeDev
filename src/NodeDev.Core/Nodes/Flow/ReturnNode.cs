@@ -12,6 +12,8 @@ namespace NodeDev.Core.Nodes.Flow
 	{
 		public override string TitleColor => "red";
 
+		public override bool BreaksDeadEnd => true;
+
 		public ReturnNode(Graph graph, string? id = null) : base(graph, id)
 		{
 			Name = "Return";
