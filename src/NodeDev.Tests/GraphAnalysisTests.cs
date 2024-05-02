@@ -133,4 +133,40 @@ public class GraphAnalysisTests
 		Assert.Equal("List<Int32>.Add", chunks.DeadEndInputs[1]!.Parent.Name);
         Assert.Equal("Return", chunks.DeadEndInputs[2]!.Parent.Name);
     }
+
+	[Fact]
+	public void GraphGetChunks_Branch_Remerging_ShouldHaveTwoChunk()
+    {
+        var graph = GetMain("Branch_Remerging");
+
+        var chunks = graph.GetChunks(GetEntryExec(graph), false);
+
+        Assert.Equal(2, chunks.Chunks.Count);
+        Assert.NotNull(chunks.DeadEndInputs);
+        Assert.Single(chunks.DeadEndInputs);
+        Assert.Equal("Return", chunks.DeadEndInputs[0]!.Parent.Name);
+
+        // The first chunk is the branch
+        Assert.NotNull(chunks.Chunks[0].SubChunk);
+        Assert.Equal(2, chunks.Chunks[0].SubChunk!.Count);
+        // First path of the branch has two Console.WriteLine
+        Assert.Equal("Console.WriteLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.Chunks[0].Output!.Parent.Name);
+        Assert.Equal("Console.WriteLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.Chunks[1].Output!.Parent.Name);
+        // Second path has the List<Int32>.Add
+        Assert.Equal("List<Int32>.Add", chunks.Chunks[0].SubChunk!.ElementAt(1).Value.Chunks[0].Output!.Parent.Name);
+        // The branch remerge with the Console.ReadLine
+        Assert.Equal("Console.ReadLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.InputMergePoint!.Parent.Name);
+        Assert.Equal("Console.ReadLine", chunks.Chunks[0].SubChunk!.ElementAt(1).Value.InputMergePoint!.Parent.Name);
+
+        // Second chunk is the Console.ReadLine with Return as dead end
+        Assert.Equal("Console.ReadLine", chunks.Chunks[1].Output!.Parent.Name);
+    }
+
+	[Fact]
+	public void GraphGetChunks_Branch_InvalidRemerging_Throws()
+    {
+        var graph = GetMain("Branch_InvalidRemerging");
+
+        Assert.Throws<Graph.BadMergeException>(() => graph.GetChunks(GetEntryExec(graph), false));
+    }
 }
