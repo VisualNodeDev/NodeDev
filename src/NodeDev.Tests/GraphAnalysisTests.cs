@@ -169,4 +169,33 @@ public class GraphAnalysisTests
 
         Assert.Throws<Graph.BadMergeException>(() => graph.GetChunks(GetEntryExec(graph), false));
     }
+
+	[Fact]
+	public void GraphGetChunks_Foreach_LoopMerge_Throws()
+    {
+        var graph = GetMain("ForEach_LoopMerge");
+
+        Assert.Throws<Graph.BadMergeException>(() => graph.GetChunks(GetEntryExec(graph), false));
+    }
+
+	[Fact]
+	public void GraphGetChunks_ForEach_WithInnerBranchMerge_DoesntThrow()
+	{
+        var graph = GetMain("ForEach_WithInnerBranchMerge");
+
+        var chunks = graph.GetChunks(GetEntryExec(graph), false);
+
+        Assert.Single(chunks.Chunks);
+        Assert.NotNull(chunks.DeadEndInputs);
+        Assert.Equal(2, chunks.DeadEndInputs.Count);
+        Assert.Equal("Console.WriteLine", chunks.DeadEndInputs[0]!.Parent.Name);
+        Assert.Equal("Return", chunks.DeadEndInputs[1]!.Parent.Name);
+
+        // The loop chunk contains a subchunk for the branch
+        Assert.NotNull(chunks.Chunks[0].SubChunk);
+        Assert.Equal(2, chunks.Chunks[0].SubChunk!.Count);
+        Assert.NotNull(chunks.Chunks[0].SubChunk!.ElementAt(0).Value.DeadEndInputs);
+        Assert.Single(chunks.Chunks[0].SubChunk!.ElementAt(0).Value.DeadEndInputs!);
+        Assert.Equal("Console.WriteLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.DeadEndInputs![0].Parent.Name);
+    }
 }

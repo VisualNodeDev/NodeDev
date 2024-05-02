@@ -25,7 +25,9 @@ namespace NodeDev.Core.Nodes.Flow
 
 		public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => false;
 
-		public override string GetExecOutputPathId(string pathId, Connection execOutput) => throw new NotImplementedException();
+        public override bool DoesOutputPathAllowMerge(Connection execOutput) => throw new NotImplementedException(); // only one exec, doesn't make sense to talk about merging.
+
+        public override string GetExecOutputPathId(string pathId, Connection execOutput) => throw new NotImplementedException();
 
 		public override bool IsFlowNode => true;
 

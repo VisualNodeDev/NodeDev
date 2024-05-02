@@ -18,7 +18,9 @@ namespace NodeDev.Core.Nodes
 
 		public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => throw new NotImplementedException();
 
-		public NoFlowNode(Graph graph, string? id = null) : base(graph, id)
+        public override bool DoesOutputPathAllowMerge(Connection execOutput) => throw new NotImplementedException();
+
+        public NoFlowNode(Graph graph, string? id = null) : base(graph, id)
         {
         }
 

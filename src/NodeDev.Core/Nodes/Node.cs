@@ -89,11 +89,13 @@ namespace NodeDev.Core.Nodes
 
 		public abstract bool DoesOutputPathAllowDeadEnd(Connection execOutput);
 
-		/// <summary>
-		/// Returns true if this node breaks a dead end. These are usually "Return", "Break", "Continue", etc.
-		/// This will allow a dead end in places where it shouldn't be allowed, such as a "Branch" node.
-		/// </summary>
-		public virtual bool BreaksDeadEnd => false;
+		public abstract bool DoesOutputPathAllowMerge(Connection execOutput);
+
+        /// <summary>
+        /// Returns true if this node breaks a dead end. These are usually "Return", "Break", "Continue", etc.
+        /// This will allow a dead end in places where it shouldn't be allowed, such as a "Branch" node.
+        /// </summary>
+        public virtual bool BreaksDeadEnd => false;
 
 		public class InfiniteLoopException(Node node) : Exception
 		{

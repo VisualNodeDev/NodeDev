@@ -27,7 +27,9 @@ namespace NodeDev.Core.Nodes.Flow
 
 		public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => true; // Return by definition bypasses any dead-end restrictions
 
-		public override Connection? Execute(GraphExecutor executor, object? self, Connection? execInput, Span<object?> inputs, Span<object?> outputs, ref object? state, out bool alterExecutionStackOnPop)
+        public override bool DoesOutputPathAllowMerge(Connection execOutput) => throw new NotImplementedException();
+
+        public override Connection? Execute(GraphExecutor executor, object? self, Connection? execInput, Span<object?> inputs, Span<object?> outputs, ref object? state, out bool alterExecutionStackOnPop)
 		{
 			alterExecutionStackOnPop = false;
 			return null;

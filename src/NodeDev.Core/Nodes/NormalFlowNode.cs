@@ -28,7 +28,9 @@ namespace NodeDev.Core.Nodes
 
         public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => false; // A normal flow node should not allow dead ends, unless a parent allowed it.
 
-		protected NormalFlowNode(Graph graph, string? id = null) : base(graph, id)
+        public override bool DoesOutputPathAllowMerge(Connection execOutput) => throw new NotImplementedException(); // Since there is only one exec, it doesn't make sense to talk about merging, nothing to merge after all.
+
+        protected NormalFlowNode(Graph graph, string? id = null) : base(graph, id)
         {
             Inputs.Add(new("Exec", this, TypeFactory.ExecType));
             Outputs.Add(new("Exec", this, TypeFactory.ExecType));

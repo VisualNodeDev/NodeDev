@@ -149,7 +149,11 @@ public class Graph
 			// Cases like a "branch" inside a loop can be a dead end, even though branch doesn't allow it, because the loop does.
 			var chunk = GetChunks(output, allowDeadEnd || node.DoesOutputPathAllowDeadEnd(output));
 			chunks[output] = chunk;
-		}
+
+            // Validate if the chunk is a merge and if it is allowed
+            if (chunk.InputMergePoint != null && !node.DoesOutputPathAllowMerge(output))
+                throw new BadMergeException(output);
+        }
 
 		if(chunks.Count == 0) // it's a dead end because the node doesn't even have an exec output
 			return chunks;

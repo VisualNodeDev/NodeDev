@@ -46,8 +46,9 @@ namespace NodeDev.Core.Nodes.Flow
 
 		public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => execOutput == Outputs[0]; // The loop exec path must be a dead end (or a breaking node, such as return, continue, break)
 
+        public override bool DoesOutputPathAllowMerge(Connection execOutput) => execOutput == Outputs[2]; // The ExecOut path allows merging but not the loop. The loop is always a dead end.
 
-		public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
+        public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
 		{
 			if (Inputs[1].Type.HasUndefinedGenerics)
 			{

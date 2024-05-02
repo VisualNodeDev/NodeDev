@@ -36,7 +36,9 @@ namespace NodeDev.Core.Nodes.Flow
 
 		public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => execOutput == Outputs[0]; // Loop has to be a dead end
 
-		public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
+		public override bool DoesOutputPathAllowMerge(Connection execOutput) => execOutput == Outputs[1]; // Only the ExecOut path can merge. The loop path can never merge and always ends in a dead end.
+
+        public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
 		{
 			if (inputs[1] is bool b && b == true)
 			{
