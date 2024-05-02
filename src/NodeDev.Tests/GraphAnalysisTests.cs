@@ -79,4 +79,58 @@ public class GraphAnalysisTests
 		Assert.Equal("Return", chunks.DeadEndInputs[0]!.Parent.Name);
 		Assert.Equal("Return", chunks.DeadEndInputs[1]!.Parent.Name);
 	}
+
+	[Fact]
+	public void GraphGetChunks_ForEach_Simple_AllowDeadEnd()
+	{
+        var graph = GetMain("ForEach_Simple");
+
+        var chunks = graph.GetChunks(GetEntryExec(graph), true);
+
+        Assert.Single(chunks.Chunks);
+
+		// Foreach as two exec outputs
+		Assert.NotNull(chunks.Chunks[0].SubChunk);
+		Assert.Equal(2, chunks.Chunks[0].SubChunk!.Count);
+
+        // First one ends with a dead end on Console.WriteLine, second one with a Return
+		Assert.Equal("Console.WriteLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.DeadEndInputs![0].Parent.Name);
+        Assert.Equal("Return", chunks.Chunks[0].SubChunk!.ElementAt(1).Value.DeadEndInputs![0].Parent.Name);
+
+        // The global dead end should contain both
+        Assert.NotNull(chunks.DeadEndInputs);
+        Assert.Equal(2, chunks.DeadEndInputs.Count);
+        Assert.Equal("Console.WriteLine", chunks.DeadEndInputs[0]!.Parent.Name);
+        Assert.Equal("Return", chunks.DeadEndInputs[1]!.Parent.Name);
+    }
+
+    [Fact]
+	public void GraphGetChunks_ForEach_WithInnerBranch_HasSubChunkInLoopExec()
+	{
+        var graph = GetMain("ForEach_WithInnerBranch");
+
+        var chunks = graph.GetChunks(GetEntryExec(graph), false);
+
+		// one big chunk with everything in it
+        Assert.Single(chunks.Chunks);
+
+        // Foreach as two exec outputs
+        Assert.NotNull(chunks.Chunks[0].SubChunk);
+        Assert.Equal(2, chunks.Chunks[0].SubChunk!.Count);
+
+        // First one ends with a dead end on Console.WriteLine, second one with a Return
+        Assert.Equal("Console.WriteLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.DeadEndInputs![0].Parent.Name);
+        Assert.Equal("Return", chunks.Chunks[0].SubChunk!.ElementAt(1).Value.DeadEndInputs![0].Parent.Name);
+
+        // Loop has a subchunk with the branch
+        Assert.NotNull(chunks.Chunks[0].SubChunk!.ElementAt(0).Value.Chunks[0].SubChunk);
+        Assert.Equal(2, chunks.Chunks[0].SubChunk!.ElementAt(0).Value.Chunks[0].SubChunk!.Count);
+
+        // The global dead end should contain the return and both path of the Branch
+        Assert.NotNull(chunks.DeadEndInputs);
+        Assert.Equal(3, chunks.DeadEndInputs.Count);
+        Assert.Equal("Console.WriteLine", chunks.DeadEndInputs[0]!.Parent.Name);
+		Assert.Equal("List<Int32>.Add", chunks.DeadEndInputs[1]!.Parent.Name);
+        Assert.Equal("Return", chunks.DeadEndInputs[2]!.Parent.Name);
+    }
 }
