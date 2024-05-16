@@ -198,4 +198,20 @@ public class GraphAnalysisTests
         Assert.Single(chunks.Chunks[0].SubChunk!.ElementAt(0).Value.DeadEndInputs!);
         Assert.Equal("Console.WriteLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.DeadEndInputs![0].Parent.Name);
     }
+
+	[Fact]
+	public void GraphGetChunks_Branch_Multiple_Remerging_Allowed()
+	{
+        var graph = GetMain("Branch_Multiple_Remerging");
+
+        var chunks = graph.GetChunks(GetEntryExec(graph), false);
+
+		Assert.Equal(2, chunks.Chunks.Count);
+		// After the big first chunk, we have the Console.ReadLine
+		Assert.Equal("Console.ReadLine", chunks.Chunks[1].Output!.Parent.Name);
+
+		// It ends with a Return
+		Assert.NotNull(chunks.DeadEndInputs);
+		Assert.Equal("Return", chunks.DeadEndInputs[0]!.Parent.Name);
+    }
 }
