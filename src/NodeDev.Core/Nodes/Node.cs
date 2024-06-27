@@ -5,6 +5,7 @@ using NodeDev.Core.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -81,6 +82,29 @@ namespace NodeDev.Core.Nodes
 		public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
 		{
 			throw new NotImplementedException();
+		}
+
+		internal abstract Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info);
+
+		/// <summary>
+		/// Create an Expression node that can be used in the graph.
+		/// Ie, the "Add" node will have two local variables, one for each input, and one output local variable.
+		/// In C#, that would look like doing : 
+		/// var input1 = ..., input2 = ...; // ... would be replaced by the output local variable of the previous node
+		/// var output = input1 + input2;
+		/// 
+		/// This will ignore the exec connections.
+		/// </summary>
+		internal virtual IEnumerable<(Connection Connection, Expression LocalVariable)> CreateLocalVariableExpressionsForEachInputOutput()
+		{
+			foreach (var inputOrOutput in InputsAndOutputs)
+			{
+				if (inputOrOutput.Type.IsExec)
+					continue;
+
+				var variable = Expression.Variable(inputOrOutput.Type.MakeRealType(), inputOrOutput.Name);
+				yield return (inputOrOutput, variable);
+			}
 		}
 
 		#region Path merging / Crossing examinations
@@ -268,6 +292,7 @@ namespace NodeDev.Core.Nodes
 				Outputs.Add(connection);
 			}
 		}
+
 
 		#endregion
 	}

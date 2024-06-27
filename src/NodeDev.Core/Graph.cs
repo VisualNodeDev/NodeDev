@@ -3,6 +3,7 @@ using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 
@@ -22,7 +23,7 @@ public class Graph
 		NodeProvider.Initialize();
 	}
 
-	#region Compile
+	#region GetChunks
 
 	public class BadMergeException(Connection input) : Exception($"Error merging path to {input.Name} of tool {input.Parent.Name}") { }
 	public class DeadEndNotAllowed(List<Connection> inputs) : Exception(inputs.Count == 1 ? $"Dead end not allowed in {inputs[0].Name} of tool {inputs[0].Parent.Name}" : $"Dead end not allowed in {inputs.Count} tools") { }
@@ -92,7 +93,12 @@ public class Graph
 
 		var currentInput = execOutput.Connections.FirstOrDefault();
 		if (currentInput == null)
+		{
+			if (!allowDeadEnd)
+				throw new DeadEndNotAllowed([]);
+
 			return new NodePathChunks(execOutput, chunks, null, null); // the path led nowhere
+		}
 
 		while (true)
 		{
@@ -221,6 +227,73 @@ public class Graph
 			throw new BadMergeException(chunks.Values.First(x => x.InputMergePoint != null).InputMergePoint!); // we can throw any of the inputs, they all have different merging points
 
 		return chunks;
+	}
+
+	#endregion
+
+	#region BuildExpression
+
+	public Expression BuildExpression(BuildExpressionOptions options)
+	{
+		var entry = (Nodes.Values.FirstOrDefault(x => x is EntryNode)?.Outputs.FirstOrDefault()) ?? throw new Exception($"No entry node found in graph {SelfMethod.Name}");
+		var returnLabelTarget = SelfMethod.ReturnType == Project.TypeFactory.Void ? Expression.Label("ReturnLabel") : Expression.Label(SelfMethod.ReturnType.MakeRealType(), "ReturnLabel");
+
+		var info = new BuildExpressionInfo(returnLabelTarget, options, SelfMethod.IsStatic ? null : Expression.Parameter(SelfClass.ClassTypeBase.MakeRealType(), "this"));
+
+		// Create a variable for each output parameter
+		foreach (var parameter in SelfMethod.Parameters)
+		{
+			if (parameter.ParameterType.IsExec)
+				continue;
+
+			var type = parameter.ParameterType.MakeRealType();
+			var variable = Expression.Parameter(type, parameter.Name);
+			info.MethodParametersExpression[parameter.Name] = variable;
+		}
+
+		// Create a variable for each node input and output
+		foreach (var node in Nodes.Values)
+		{
+			// normal nodes each have their own local variable for every input and output
+			foreach ((var connection, var variable) in node.CreateLocalVariableExpressionsForEachInputOutput())
+				info.LocalVariables[connection] = variable;
+		}
+
+		var chunks = GetChunks(entry, false);
+
+		var expressions = BuildExpression(chunks, info);
+
+		var expressionBlock = Expression.Block(expressions.Append(Expression.Label(returnLabelTarget)));
+
+		return expressionBlock;
+	}
+
+	internal static Expression[] BuildExpression(NodePathChunks chunks, BuildExpressionInfo info)
+	{
+		var expressions = new Expression[chunks.Chunks.Count];
+
+		for (int i = 0; i < chunks.Chunks.Count; ++i)
+		{
+			var chunk = chunks.Chunks[i];
+
+			if (chunk.Output != null)
+			{
+				expressions[i] = chunk.Output.Parent.BuildExpression(null, info);
+			}
+			else if (chunk.SubChunk != null)
+			{
+				// Each sub chunk has the key of the output connection of that node
+				// Therefor, the parent of that output connection is the node itself that we're trying to build
+				// such as the "Branch" node with 2 outputs. There will be 2 sub chunks
+				var node = chunk.SubChunk.First().Key.Parent;
+
+				expressions[i] = node.BuildExpression(chunk.SubChunk, info);
+			}
+			else
+				throw new Exception("Invalid chunk data, either Output or SubChunk must be set");
+		}
+
+		return expressions;
 	}
 
 	#endregion

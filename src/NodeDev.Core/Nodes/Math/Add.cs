@@ -1,28 +1,30 @@
 ﻿using NodeDev.Core.Connections;
-using NodeDev.Core.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Linq.Expressions;
 
-namespace NodeDev.Core.Nodes.Math
+namespace NodeDev.Core.Nodes.Math;
+
+public class Add : TwoOperationMath
 {
-	public class Add: TwoOperationMath
+	protected override string OperatorName => "Addition";
+
+	public Add(Graph graph, string? id = null) : base(graph, id)
 	{
-		protected override string OperatorName => "Addition";
+		Name = "Add";
+	}
 
-		public Add(Graph graph, string? id = null) : base(graph, id)
-		{
-			Name = "Add";
-		}
+	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
+	{
+		if (subChunks != null)
+			throw new Exception("TwoOperationMath nodes should not have subchunks");
 
-		protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)
-		{
-			dynamic? a = inputs[0];
-			dynamic? b = inputs[1];
+		return Expression.Assign(info.LocalVariables[Outputs[0]], Expression.Add(info.LocalVariables[Inputs[0]], info.LocalVariables[Inputs[1]]));
+	}
 
-			outputs[0] = a + b;
-        }
-    }
+	protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)
+	{
+		dynamic? a = inputs[0];
+		dynamic? b = inputs[1];
+
+		outputs[0] = a + b;
+	}
 }

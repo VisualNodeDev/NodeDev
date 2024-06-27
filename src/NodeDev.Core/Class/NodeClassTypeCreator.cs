@@ -35,6 +35,12 @@ public class NodeClassTypeCreator
 			ILGenerator ctor0IL = ctor0.GetILGenerator();
 			ctor0IL.Emit(OpCodes.Ret);
 
+			foreach(var method in nodeClass.Methods)
+			{
+				// create the method
+
+			}
+
 			foreach (var property in nodeClass.Properties)
 			{
 
@@ -91,7 +97,7 @@ public class NodeClassTypeCreator
 					$"set_{property.Name}",
 					getSetAttr,
 					null,
-					new Type[] { propertyType });
+					[propertyType]);
 
 				var numberSetIL = mbNumberSetAccessor.GetILGenerator();
 				// Load the instance and then the numeric argument, then store the

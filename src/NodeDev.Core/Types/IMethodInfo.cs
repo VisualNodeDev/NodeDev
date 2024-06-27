@@ -1,5 +1,6 @@
 ﻿using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
+using System.Reflection;
 
 namespace NodeDev.Core.Types;
 
@@ -16,6 +17,13 @@ public interface IMethodInfo
     public IEnumerable<IMethodParameterInfo> GetParameters();
 
     public Node.AlternateOverload AlternateOverload() => new(ReturnType, GetParameters().ToList());
+
+    /// <summary>
+    /// Create MethodInfo for the current method.
+    /// If this is called on a NodeClassMethod, this assumes the project has already generated the classes types.
+    /// </summary>
+    /// <returns></returns>
+	public MethodInfo CreateMethodInfo();
 }
 
 public interface IMethodParameterInfo

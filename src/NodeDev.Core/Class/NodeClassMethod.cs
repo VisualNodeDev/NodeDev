@@ -79,6 +79,18 @@ namespace NodeDev.Core.Class
 			return Parameters;
 		}
 
+		public MethodInfo CreateMethodInfo()
+		{
+			var classType = Class.ClassTypeBase.MakeRealType();
+
+			var method = classType.GetMethod(Name, GetParameters().Select(x => x.ParameterType.MakeRealType()).ToArray());
+
+			if(method == null)
+				throw new Exception("Unable to find method: " + Name);
+
+			return method;
+		}
+
 		#region Serialization
 
 		private SerializedNodeClassMethod? SavedDataDuringDeserializationStep1 { get; set; }
