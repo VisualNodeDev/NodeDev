@@ -11,7 +11,16 @@ namespace NodeDev.Core.Nodes
     {
 		public override string TitleColor => "lightgreen";
 
-		public NoFlowNode(Graph graph, string? id = null) : base(graph, id)
+		public override string GetExecOutputPathId(string pathId, Connection execOutput)
+		{
+			throw new NotImplementedException();
+		}
+
+		public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => throw new NotImplementedException();
+
+        public override bool DoesOutputPathAllowMerge(Connection execOutput) => throw new NotImplementedException();
+
+        public NoFlowNode(Graph graph, string? id = null) : base(graph, id)
         {
         }
 

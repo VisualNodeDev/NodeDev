@@ -30,6 +30,8 @@ public class NodeClassProperty : IMemberInfo
 
 	public bool CanSet => true;
 
+	public bool IsField => false;
+
 	#region UI Actions
 
 	public void Rename(string newName)

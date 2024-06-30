@@ -13,4 +13,8 @@ public interface IMemberInfo
 	public bool CanGet { get; }
 
 	public bool CanSet { get; }
+
+	public bool IsField { get; }
+
+	public bool IsProperty => !IsField;
 }

@@ -55,4 +55,6 @@ public class RealMemberInfo : IMemberInfo
 		PropertyInfo property => property.CanWrite,
 		_ => throw new Exception("Invalid member type")
 	};
+
+	public bool IsField => MemberInfo is FieldInfo;
 }

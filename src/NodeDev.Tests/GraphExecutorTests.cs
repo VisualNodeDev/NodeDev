@@ -14,6 +14,7 @@ public class GraphExecutorTests
 
 		var graph = new Graph();
 		var method = new NodeClassMethod(nodeClass, "Main", nodeClass.TypeFactory.Get<TOut>(), graph);
+		method.IsStatic = true;
 		nodeClass.Methods.Add(method);
 		graph.SelfMethod = nodeClass.Methods.First();
 

@@ -137,7 +137,7 @@
         padding: 0px;
     }
 
-g.diagram-link path {
+g.diagram-link path{
     transition: 2s linear stroke;
 }
 
@@ -145,6 +145,12 @@ g.diagram-link.executing path {
     animation: dash .1s linear infinite !important;
     stroke: red !important;
     transition: 0.1s linear all;
+    stroke-width: 5px;
+}
+
+g.diagram-link.highlighted path {
+    transition: none;
+    stroke: blue !important;
     stroke-width: 5px;
 }
 
