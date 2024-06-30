@@ -81,11 +81,8 @@ public class GetPropertyOrField : NoFlowNode
 		Outputs.Add(new Connection("Value", this, TargetMember.MemberType));
 	}
 
-	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
+	internal override void BuildInlineExpression(BuildExpressionInfo info)
 	{
-		if(TargetMember == null)
-			throw new Exception($"Target member is not set in GetPropertyOrField {Name}");
-
 		var type = TargetMember.DeclaringType.MakeRealType();
 
 		var binding = BindingFlags.Public | BindingFlags.NonPublic | (TargetMember.IsStatic ? BindingFlags.Static : BindingFlags.Instance);
@@ -94,13 +91,13 @@ public class GetPropertyOrField : NoFlowNode
 		{
 			var field = type.GetField(TargetMember.Name, binding | BindingFlags.GetField) ?? throw new Exception($"Unable to find field: {TargetMember.Name}");
 
-			return Expression.Field(TargetMember.IsStatic ? null : info.LocalVariables[Inputs[0]], field);
+			info.LocalVariables[Outputs[0]] = Expression.Field(TargetMember.IsStatic ? null : info.LocalVariables[Inputs[0]], field);
 		}
 		else
 		{
 			var property = type.GetProperty(TargetMember.Name, binding | BindingFlags.GetProperty) ?? throw new Exception($"Unable to find property: {TargetMember.Name}");
 
-			return Expression.Property(TargetMember.IsStatic ? null : info.LocalVariables[Inputs[0]], property);
+			info.LocalVariables[Outputs[0]] = Expression.Property(TargetMember.IsStatic ? null : info.LocalVariables[Inputs[0]], property);
 		}
 	}
 

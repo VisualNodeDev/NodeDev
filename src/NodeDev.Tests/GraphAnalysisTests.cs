@@ -30,8 +30,17 @@ public class GraphAnalysisTests
 
 		var chunks = graph.GetChunks(GetEntryExec(graph), false);
 
-		Assert.True(chunks.Chunks.All(x => x.SubChunk == null && x.Output != null));
-		Assert.Equal(2, chunks.Chunks.Count);
+		Assert.Equal(3, chunks.Chunks.Count);
+		Assert.True(chunks.Chunks.Take(2).All(x => x.SubChunk == null && x.Output != null));
+
+		// Last chunk is the return
+		Assert.Null(chunks.Chunks[2].SubChunk);
+		Assert.Null(chunks.Chunks[2].Output);
+
+		// The dead end should be the return
+		Assert.NotNull(chunks.DeadEndInputs);
+		Assert.Single(chunks.DeadEndInputs);
+		Assert.Equal("Return", chunks.DeadEndInputs[0]!.Parent.Name);
 	}
 
 	[Fact]
@@ -49,7 +58,7 @@ public class GraphAnalysisTests
 
 		var chunks = graph.GetChunks(GetEntryExec(graph), false);
 
-		Assert.Equal(2, chunks.Chunks.Count);
+		Assert.Equal(3, chunks.Chunks.Count);
 		Assert.NotNull(chunks.Chunks[0].SubChunk);
 		Assert.Equal(2, chunks.Chunks[0].SubChunk!.Count);
 
@@ -64,6 +73,7 @@ public class GraphAnalysisTests
 		// the dead end should be the Return
 		Assert.NotNull(chunks.DeadEndInputs);
 		Assert.Equal("Return", chunks.DeadEndInputs[0]!.Parent.Name);
+		Assert.Equal("Return", chunks.Chunks[2]!.Input.Parent.Name);
 	}
 
 	[Fact]
@@ -141,13 +151,14 @@ public class GraphAnalysisTests
 
         var chunks = graph.GetChunks(GetEntryExec(graph), false);
 
-        Assert.Equal(2, chunks.Chunks.Count);
+        Assert.Equal(3, chunks.Chunks.Count);
         Assert.NotNull(chunks.DeadEndInputs);
         Assert.Single(chunks.DeadEndInputs);
         Assert.Equal("Return", chunks.DeadEndInputs[0]!.Parent.Name);
+        Assert.Equal("Return", chunks.Chunks[2]!.Input.Parent.Name);
 
-        // The first chunk is the branch
-        Assert.NotNull(chunks.Chunks[0].SubChunk);
+		// The first chunk is the branch
+		Assert.NotNull(chunks.Chunks[0].SubChunk);
         Assert.Equal(2, chunks.Chunks[0].SubChunk!.Count);
         // First path of the branch has two Console.WriteLine
         Assert.Equal("Console.WriteLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.Chunks[0].Output!.Parent.Name);
@@ -206,12 +217,13 @@ public class GraphAnalysisTests
 
         var chunks = graph.GetChunks(GetEntryExec(graph), false);
 
-		Assert.Equal(2, chunks.Chunks.Count);
+		Assert.Equal(3, chunks.Chunks.Count);
 		// After the big first chunk, we have the Console.ReadLine
 		Assert.Equal("Console.ReadLine", chunks.Chunks[1].Output!.Parent.Name);
 
 		// It ends with a Return
 		Assert.NotNull(chunks.DeadEndInputs);
 		Assert.Equal("Return", chunks.DeadEndInputs[0]!.Parent.Name);
-    }
+		Assert.Equal("Return", chunks.Chunks[2]!.Input.Parent.Name);
+	}
 }

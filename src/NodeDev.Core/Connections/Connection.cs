@@ -21,7 +21,7 @@ namespace NodeDev.Core.Connections
 
 		public TypeBase Type { get; private set; }
 
-		public readonly ICollection<Connection> Connections = [];
+		public readonly List<Connection> Connections = [];
 
 		/// <summary>
 		/// Vertices of the connection. Used for drawing connections with multiple segments.

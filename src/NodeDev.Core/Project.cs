@@ -6,6 +6,7 @@ using NodeDev.Core.Types;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Reflection.Emit;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("NodeDev.Tests")]
 
@@ -23,7 +24,7 @@ public class Project
 
 	public readonly TypeFactory TypeFactory;
 
-	public NodeClassTypeCreator? NodeClassTypeCreator { get; private set; }
+	public NodeClassTypeCreator? NodeClassTypeCreator { get; internal set; }
 
 	public GraphExecutor? GraphExecutor { get; set; }
 
@@ -129,8 +130,8 @@ public class Project
 		if (NodeClassTypeCreator == null)
 			throw new Exception("NodeClassTypeCreator is null, is the project currently being run?");
 
-		if (NodeClassTypeCreator.GeneratedTypes.TryGetValue(GetNodeClassType(nodeClass), out var type))
-			return type;
+		if (NodeClassTypeCreator.GeneratedTypes.TryGetValue(GetNodeClassType(nodeClass), out var generatedType))
+			return generatedType.Type;
 
 		throw new Exception("Unable to get generated node class for provided class: " + nodeClass.Name);
 	}

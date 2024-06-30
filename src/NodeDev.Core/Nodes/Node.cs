@@ -9,6 +9,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace NodeDev.Core.Nodes
 {
@@ -44,6 +45,8 @@ namespace NodeDev.Core.Nodes
 		public virtual bool FetchState => false;
 
 		public virtual bool ReOrderExecInputsAndOutputs => true;
+
+		public bool CanBeInlined => !InputsAndOutputs.Any(x => x.Type.IsExec);
 
 		/// <summary>
 		/// True to allow remerging exec connection together later in the graph.
@@ -84,7 +87,9 @@ namespace NodeDev.Core.Nodes
 			throw new NotImplementedException();
 		}
 
-		internal abstract Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info);
+		internal virtual Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info) => throw new NotImplementedException();
+
+		internal virtual void BuildInlineExpression(BuildExpressionInfo info) => throw new NotImplementedException();
 
 		/// <summary>
 		/// Create an Expression node that can be used in the graph.
@@ -95,15 +100,15 @@ namespace NodeDev.Core.Nodes
 		/// 
 		/// This will ignore the exec connections.
 		/// </summary>
-		internal virtual IEnumerable<(Connection Connection, Expression LocalVariable)> CreateLocalVariableExpressionsForEachInputOutput()
+		internal virtual IEnumerable<(Connection Connection, ParameterExpression LocalVariable)> CreateOutputsLocalVariableExpressions(BuildExpressionInfo info)
 		{
-			foreach (var inputOrOutput in InputsAndOutputs)
+			foreach (var output in Outputs)
 			{
-				if (inputOrOutput.Type.IsExec)
+				if (output.Type.IsExec)
 					continue;
 
-				var variable = Expression.Variable(inputOrOutput.Type.MakeRealType(), inputOrOutput.Name);
-				yield return (inputOrOutput, variable);
+				var variable = Expression.Variable(output.Type.MakeRealType(), $"{Name}_{output.Name}".Replace(" ", string.Empty).Replace(".", string.Empty));
+				yield return (output, variable);
 			}
 		}
 

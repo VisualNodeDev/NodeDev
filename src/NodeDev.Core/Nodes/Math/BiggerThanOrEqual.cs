@@ -16,11 +16,9 @@ public class BiggerThanOrEqual : NoFlowNode
 		Outputs.Add(new("c", this, TypeFactory.Get<bool>()));
 	}
 
-	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
+	internal override void BuildInlineExpression(BuildExpressionInfo info)
 	{
-		if (subChunks != null)
-			throw new Exception("TwoOperationMath nodes should not have subchunks");
-		return Expression.Assign(info.LocalVariables[Outputs[0]], Expression.GreaterThanOrEqual(info.LocalVariables[Inputs[0]], info.LocalVariables[Inputs[1]]));
+		info.LocalVariables[Outputs[0]] = Expression.GreaterThanOrEqual(info.LocalVariables[Inputs[0]], info.LocalVariables[Inputs[1]]);
 	}
 
 	protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)

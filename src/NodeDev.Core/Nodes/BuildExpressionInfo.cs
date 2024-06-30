@@ -13,7 +13,7 @@ internal class BuildExpressionInfo
 		ThisExpression = thisExpression;
 	}
 
-	public Dictionary<string, Expression> MethodParametersExpression { get; } = [];
+	public Dictionary<string, ParameterExpression> MethodParametersExpression { get; } = [];
 
 	public Dictionary<Connection, Expression> LocalVariables { get; } = [];
 
@@ -25,4 +25,10 @@ internal class BuildExpressionInfo
 	/// Represent 'this', if the method being built is not static
 	/// </summary>
 	public ParameterExpression? ThisExpression { get; }
+
+	/// <summary>
+	/// Used to track which nodes was already inlined.
+	/// There is no need to calculate the outputs of inlined nodes multiple times even if they are referenced many times.
+	/// </summary>
+	public HashSet<Node> InlinedNodes { get; } = [];
 }

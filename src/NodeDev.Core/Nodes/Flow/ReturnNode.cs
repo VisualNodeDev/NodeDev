@@ -50,7 +50,7 @@ public class ReturnNode : FlowNode
 		}
 
 		if (HasReturnValue)
-			return Expression.Return(info.ReturnLabel, info.LocalVariables[inputs[^1]]);
+			return Expression.Return(info.ReturnLabel, info.LocalVariables[Inputs[^1]]);
 		else
 			return Expression.Return(info.ReturnLabel);
 	}

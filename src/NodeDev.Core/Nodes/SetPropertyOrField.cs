@@ -69,8 +69,8 @@ public class SetPropertyOrField : NormalFlowNode
 			member = Expression.Property(TargetMember.IsStatic ? null : info.LocalVariables[Inputs[0]], property);
 		}
 
-		var assign = Expression.Assign(member, info.LocalVariables[Inputs[1]]);
-		var assignOutput = Expression.Assign(info.LocalVariables[Outputs[0]], assign); // "output = (field = value)". This allows returning one expression for both assignations
+		var assign = Expression.Assign(member, info.LocalVariables[Inputs[^1]]);
+		var assignOutput = Expression.Assign(info.LocalVariables[Outputs[1]], assign); // "output = (field = value)". This allows returning one expression for both assignations
 
 		return assignOutput;
 	}

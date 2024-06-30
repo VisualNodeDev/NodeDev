@@ -33,9 +33,11 @@ namespace NodeDev.Core.Class
 
 		public Graph Graph { get; }
 
-		public bool IsStatic => false; // not supported yet
+		public bool IsStatic { get; set; }
 
 		public TypeBase DeclaringType => Class.ClassTypeBase;
+
+		public bool HasReturnValue => ReturnType != Class.TypeFactory.Void;
 
 		public void Rename(string newName)
 		{

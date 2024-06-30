@@ -12,15 +12,12 @@ public class Self : NoFlowNode
 		Outputs.Add(new("self", this, Project.GetNodeClassType(graph.SelfClass)));
 	}
 
-	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
+	internal override void BuildInlineExpression(BuildExpressionInfo info)
 	{
-		if (subChunks != null)
-			throw new Exception("Self node should not have subchunks");
-
-		if(info.ThisExpression == null)
+		if (info.ThisExpression == null)
 			throw new Exception("Self node should not be used outside of a non static graph");
 
-		return info.ThisExpression;
+		info.LocalVariables[Outputs[0]] = info.ThisExpression;
 	}
 
 	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)

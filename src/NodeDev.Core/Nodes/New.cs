@@ -66,7 +66,7 @@ public class New : NormalFlowNode
 			throw new Exception($"Constructor not found: {Outputs[1].Type.FriendlyName}");
 
 		var arguments = Inputs.Skip(1).Select(x => info.LocalVariables[x]).ToArray();
-		return Expression.New(constructor, arguments);
+		return Expression.Assign(info.LocalVariables[Outputs[1]], Expression.New(constructor, arguments));
 	}
 
 	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state)

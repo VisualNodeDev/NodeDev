@@ -30,15 +30,16 @@ public class Graph
 
 
 	/// <summary>
-	/// Contains either the straight path betweeh two lines of connections (such as a simple a -> b -> c) or a subchunk of paths.
+	/// Contains either the straight path between two lines of connections (such as a simple a -> b -> c) or a subchunk of paths.
 	/// The subchunk is used to group an entire chunk such as. It would contain "c" and "d" in the following example: 
 	///         -> c
 	/// a -> b |     -> e
 	///         -> d
 	/// "e" would be added in the next chunk, along with anything else after it
 	/// Only one of the two values is set at once, either <paramref name="Outputs"/> or <paramref name="SubChunk"/>
+	/// Both <paramref name="Output"/> and <paramref name="SubChunk"/> can be null, in that case it means that chunk part is a dead end.
 	/// </summary>
-	internal record class NodePathChunkPart(Connection? Output, Dictionary<Connection, NodePathChunks>? SubChunk)
+	internal record class NodePathChunkPart(Connection Input, Connection? Output, Dictionary<Connection, NodePathChunks>? SubChunk)
 	{
 		internal bool ContainOutput(Connection output)
 		{
@@ -102,23 +103,25 @@ public class Graph
 
 		while (true)
 		{
-			if (currentInput.Parent.Outputs.Count(x => x.Type.IsExec) == 1) // we can keep adding to the straight path
+			if (currentInput.Parent.Outputs.Count(x => x.Type.IsExec) <= 1) // we can keep adding to the straight path. It's either a dead end or the path keeps going
 			{
 				// find the next output node to follow
-				var output = currentInput.Parent.Outputs.Single(x => x.Type.IsExec && x != execOutput);
-				var nextInput = output.Connections.FirstOrDefault();
+				var output = currentInput.Parent.Outputs.FirstOrDefault(x => x.Type.IsExec && x != execOutput);
+				var nextInput = output?.Connections.FirstOrDefault(); // get the next input, there's either 1 or none
 
 				if (nextInput == null)
 				{
 					// We've reached a dead end, let's check if we were allowed to in the first place
-					if (!allowDeadEnd)
+					// Some nodes like "Return" are allowed to be dead ends, so we check the parent of that last node see if it's allowed
+					if (!allowDeadEnd && !currentInput.Parent.BreaksDeadEnd)
 						throw new DeadEndNotAllowed([currentInput]);
 
+					chunks.Add(new NodePathChunkPart(currentInput, null, null));
 					return new NodePathChunks(execOutput, chunks, null, [currentInput]); // we reached a dead end
 				}
 
 				// add the current node to the chunks, after we know we can keep going
-				chunks.Add(new NodePathChunkPart(output, null));
+				chunks.Add(new NodePathChunkPart(currentInput, output, null));
 
 				currentInput = nextInput; // we can keep going
 
@@ -134,7 +137,7 @@ public class Graph
 					return new NodePathChunks(execOutput, chunks, null, [currentInput]); // we reached a dead end
 
 				// We had some actual path, add it to the chunks
-				var part = new NodePathChunkPart(null, subChunk);
+				var part = new NodePathChunkPart(currentInput, null, subChunk);
 				chunks.Add(part);
 
 				// get the merge point, it should be either null if it's all dead end, or all the same merge point. No need to validate, as GetChunks already did
@@ -233,10 +236,10 @@ public class Graph
 
 	#region BuildExpression
 
-	public Expression BuildExpression(BuildExpressionOptions options)
+	public LambdaExpression BuildExpression(BuildExpressionOptions options)
 	{
 		var entry = (Nodes.Values.FirstOrDefault(x => x is EntryNode)?.Outputs.FirstOrDefault()) ?? throw new Exception($"No entry node found in graph {SelfMethod.Name}");
-		var returnLabelTarget = SelfMethod.ReturnType == Project.TypeFactory.Void ? Expression.Label("ReturnLabel") : Expression.Label(SelfMethod.ReturnType.MakeRealType(), "ReturnLabel");
+		var returnLabelTarget = !SelfMethod.HasReturnValue ? Expression.Label("ReturnLabel") : Expression.Label(SelfMethod.ReturnType.MakeRealType(), "ReturnLabel");
 
 		var info = new BuildExpressionInfo(returnLabelTarget, options, SelfMethod.IsStatic ? null : Expression.Parameter(SelfClass.ClassTypeBase.MakeRealType(), "this"));
 
@@ -254,8 +257,12 @@ public class Graph
 		// Create a variable for each node input and output
 		foreach (var node in Nodes.Values)
 		{
-			// normal nodes each have their own local variable for every input and output
-			foreach ((var connection, var variable) in node.CreateLocalVariableExpressionsForEachInputOutput())
+			if (node.CanBeInlined)
+				continue; // this can be inlined, no need to create local variables for stuff such as "a + b"
+
+			// normal execution nodes each have their own local variable for every output
+			// Their input connections will be inlined or point to another local variable of someone else's output
+			foreach ((var connection, var variable) in node.CreateOutputsLocalVariableExpressions(info))
 				info.LocalVariables[connection] = variable;
 		}
 
@@ -263,9 +270,19 @@ public class Graph
 
 		var expressions = BuildExpression(chunks, info);
 
-		var expressionBlock = Expression.Block(expressions.Append(Expression.Label(returnLabelTarget)));
+		// Create the return label with its default return value (if needed)
+		var returnLabel = SelfMethod.HasReturnValue ? Expression.Label(returnLabelTarget, Expression.Default(returnLabelTarget.Type)) : Expression.Label(returnLabelTarget);
+		// create a list of all the local variables that were used in the entire method
+		var localVariables = info.LocalVariables.Values
+			.OfType<ParameterExpression>()
+			.Distinct() // lots of inputs use the same variable as another node's output, make sure we only declare them once
+			.Except(info.MethodParametersExpression.Values); // Remove the method parameters as they are declared later and not here
+		var expressionBlock = Expression.Block(localVariables, expressions.Append(Expression.Label(returnLabelTarget, Expression.Default(returnLabelTarget.Type))));
 
-		return expressionBlock;
+		var parameters = SelfMethod.IsStatic ? info.MethodParametersExpression.Values : info.MethodParametersExpression.Values.Prepend(info.ThisExpression!);
+		var lambdaExpression = Expression.Lambda(expressionBlock, parameters);
+
+		return lambdaExpression;
 	}
 
 	internal static Expression[] BuildExpression(NodePathChunks chunks, BuildExpressionInfo info)
@@ -276,24 +293,58 @@ public class Graph
 		{
 			var chunk = chunks.Chunks[i];
 
-			if (chunk.Output != null)
-			{
-				expressions[i] = chunk.Output.Parent.BuildExpression(null, info);
-			}
-			else if (chunk.SubChunk != null)
-			{
-				// Each sub chunk has the key of the output connection of that node
-				// Therefor, the parent of that output connection is the node itself that we're trying to build
-				// such as the "Branch" node with 2 outputs. There will be 2 sub chunks
-				var node = chunk.SubChunk.First().Key.Parent;
+			// connect all the inputs to it's inputs
+			foreach (var input in chunk.Input.Parent.Inputs)
+				ConnectInputExpression(input, info);
 
-				expressions[i] = node.BuildExpression(chunk.SubChunk, info);
-			}
-			else
-				throw new Exception("Invalid chunk data, either Output or SubChunk must be set");
+			var expression = chunk.Input.Parent.BuildExpression(chunk.SubChunk, info);
+
+			expressions[i] = expression;
 		}
 
 		return expressions;
+	}
+
+	private static void BuildInlineExpression(Node node, BuildExpressionInfo info)
+	{
+		if (info.InlinedNodes.Contains(node))
+			return;
+
+		if (!node.CanBeInlined)
+			throw new Exception($"{nameof(BuildInlineExpression)} can only be called on nodes that can be inlined: {node.Name}");
+
+		foreach (var input in node.Inputs)
+		{
+			ConnectInputExpression(input, info);
+		}
+
+		// now that all our dependencies are built, we can build the node itself
+		node.BuildInlineExpression(info);
+
+		info.InlinedNodes.Add(node);
+	}
+
+	private static void ConnectInputExpression(Connection input, BuildExpressionInfo info)
+	{
+		if (input.Type.IsExec)
+			return;
+
+		if (input.Connections.Count == 0)
+		{
+			if (!input.Type.AllowTextboxEdit || input.TextboxValue == null)
+				info.LocalVariables[input] = Expression.Default(input.Type.MakeRealType());
+			else
+				info.LocalVariables[input] = Expression.Constant(input.TextboxValue, input.Type.MakeRealType());
+		}
+		else
+		{
+			var otherNode = input.Connections[0].Parent;
+			if (otherNode.CanBeInlined)
+				BuildInlineExpression(otherNode, info);
+
+			// Get the local variable or expression associated with that input and use it as that input's expression
+			info.LocalVariables[input] = info.LocalVariables[input.Connections[0]];
+		}
 	}
 
 	#endregion

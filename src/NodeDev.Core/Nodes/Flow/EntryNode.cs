@@ -67,12 +67,11 @@ public class EntryNode : FlowNode
 			throw new NotImplementedException();
 		}
 
-		internal override IEnumerable<(Connection Connection, Expression LocalVariable)> CreateLocalVariableExpressionsForEachInputOutput()
+		internal override IEnumerable<(Connection Connection, ParameterExpression LocalVariable)> CreateOutputsLocalVariableExpressions(BuildExpressionInfo info)
 		{
 			foreach (var output in Outputs.Skip(1))
 			{
-				var localVariable = Expression.Parameter(output.Type.MakeRealType(), output.Name);
-				yield return (output, localVariable);
+				yield return (output, info.MethodParametersExpression[output.Name]);
 			}
 		}
 	}
