@@ -6,7 +6,7 @@ namespace NodeDev.Tests;
 
 public class GraphExecutorTests
 {
-	public static Graph CreateSimpleAddGraph<TIn, TOut>(out Core.Nodes.Flow.EntryNode entryNode, out Core.Nodes.Flow.ReturnNode returnNode, out Core.Nodes.Math.Add addNode)
+	public static Graph CreateSimpleAddGraph<TIn, TOut>(out Core.Nodes.Flow.EntryNode entryNode, out Core.Nodes.Flow.ReturnNode returnNode, out Core.Nodes.Math.Add addNode, bool isStatic = true)
 	{
 		var project = new Project(Guid.NewGuid());
 		var nodeClass = new NodeClass("Program", "Test", project);
@@ -14,7 +14,7 @@ public class GraphExecutorTests
 
 		var graph = new Graph();
 		var method = new NodeClassMethod(nodeClass, "Main", nodeClass.TypeFactory.Get<TOut>(), graph);
-		method.IsStatic = true;
+		method.IsStatic = isStatic;
 		nodeClass.Methods.Add(method);
 		graph.SelfMethod = nodeClass.Methods.First();
 
@@ -42,15 +42,6 @@ public class GraphExecutorTests
 		graph.Connect(entryNode.Outputs[2], addNode.Inputs[1]);
 		graph.Connect(addNode.Outputs[0], returnNode.Inputs[1]);
 
-		// preprocess every graph everywhere
-		foreach (var node in project.Classes)
-		{
-			foreach (var m in nodeClass.Methods)
-			{
-				m.Graph.PreprocessGraph();
-			}
-		}
-
 		return graph;
 	}
 
@@ -59,12 +50,9 @@ public class GraphExecutorTests
 	{
 		var graph = CreateSimpleAddGraph<int, int>(out _, out _, out _);
 
-		var executor = new Core.GraphExecutor(graph, null);
+		var output = graph.Project.Run([1, 2]);
 
-		var outputs = new object?[2];
-		executor.Execute(null, new object?[] { null, 1, 2 }, outputs);
-
-		Assert.Equal(3, outputs[1]);
+		Assert.Equal(3, output);
 	}
 
 	[Fact]
@@ -72,12 +60,9 @@ public class GraphExecutorTests
 	{
 		var graph = CreateSimpleAddGraph<float, float>(out _, out _, out _);
 
-		var executor = new Core.GraphExecutor(graph, null);
+		var output = graph.Project.Run([1.5f, 2f]);
 
-		var outputs = new object?[2];
-		executor.Execute(null, new object?[] { null, 1.5f, 2f }, outputs);
-
-		Assert.Equal(3.5f, outputs[1]);
+		Assert.Equal(3.5f, output);
 	}
 
 	[Fact]
@@ -108,16 +93,11 @@ public class GraphExecutorTests
 		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0]);
 		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0]);
 
-		graph.PreprocessGraph();
+		var output = graph.Project.Run([1, 2]);
+		Assert.Equal(0, output);
 
-		var executor = new Core.GraphExecutor(graph, null);
-
-		var outputs = new object?[2];
-		executor.Execute(null, new object?[] { null, 1.5f, 2f }, outputs);
-		Assert.Equal(0, outputs[1]);
-
-		executor.Execute(null, new object?[] { null, -1.5f, -2f }, outputs);
-		Assert.Equal(1, outputs[1]);
+		output = graph.Project.Run([1, -2]);
+		Assert.Equal(1, output);
 	}
 
 	[Fact]
@@ -148,11 +128,11 @@ public class GraphExecutorTests
 		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0]);
 		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0]);
 
-		var outputs = graph.SelfClass.Project.Run(new object?[] { null, 1.5f, 2f });
+		var output = graph.SelfClass.Project.Run([1, 2]);
 
-		Assert.Equal(0, outputs);
+		Assert.Equal(0, output);
 
-		outputs = graph.SelfClass.Project.Run(new object?[] { null, -1.5f, -2f });
-		Assert.Equal(1, outputs);
+		output = graph.SelfClass.Project.Run([-1, -2]);
+		Assert.Equal(1, output);
 	}
 }

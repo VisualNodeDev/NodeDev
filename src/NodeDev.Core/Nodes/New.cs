@@ -68,17 +68,4 @@ public class New : NormalFlowNode
 		var arguments = Inputs.Skip(1).Select(x => info.LocalVariables[x]).ToArray();
 		return Expression.Assign(info.LocalVariables[Outputs[1]], Expression.New(constructor, arguments));
 	}
-
-	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state)
-	{
-		if (Outputs[1].Type is UndefinedGenericType)
-			throw new InvalidOperationException("Output type is not defined");
-
-		if (Outputs[1].Type is RealType realType)
-			outputs[1] = Activator.CreateInstance(realType.MakeRealType(), inputs[1..].ToArray());
-		else if (Outputs[1].Type is NodeClassType nodeClassType)
-			outputs[1] = Activator.CreateInstance(Graph.SelfClass.Project.GetCreatedClassType(nodeClassType.NodeClass), inputs[1..].ToArray());
-		else
-			throw new Exception("Unknown type:" + Outputs[1].Name);
-	}
 }

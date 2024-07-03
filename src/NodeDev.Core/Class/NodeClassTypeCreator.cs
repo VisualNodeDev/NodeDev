@@ -12,7 +12,7 @@ public class NodeClassTypeCreator
 	public Dictionary<TypeBase, GeneratedType> GeneratedTypes = [];
 
 	public static string HiddenName(string name) => $"_hidden_{name}";
-	private static GeneratedType CreateGeneratedType(ModuleBuilder mb, string name) => new(mb.DefineType(name, TypeAttributes.Public | TypeAttributes.Class), mb.DefineType(HiddenName(name), TypeAttributes.Public | TypeAttributes.Class | TypeAttributes.Sealed), []);
+	private static GeneratedType CreateGeneratedType(ModuleBuilder mb, string name) => new(mb.DefineType(name, TypeAttributes.Public | TypeAttributes.Class), mb.DefineType(HiddenName(name), TypeAttributes.NotPublic | TypeAttributes.Class | TypeAttributes.Sealed), []);
 
 	public Assembly CreateProjectClassesAndAssembly(Project project)
 	{

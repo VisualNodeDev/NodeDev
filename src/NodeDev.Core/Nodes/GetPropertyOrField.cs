@@ -100,42 +100,4 @@ public class GetPropertyOrField : NoFlowNode
 			info.LocalVariables[Outputs[0]] = Expression.Property(TargetMember.IsStatic ? null : info.LocalVariables[Inputs[0]], property);
 		}
 	}
-
-	protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)
-	{
-		if (TargetMember == null)
-			throw new Exception($"Target member is not set in GetPropertyOrField {Name}");
-
-		if (TargetMember is RealMemberInfo realMemberInfo)
-		{
-			if (realMemberInfo.MemberInfo.MemberType == MemberTypes.Field)
-			{
-				var field = (FieldInfo)realMemberInfo.MemberInfo;
-				object? target = field.IsStatic ? null : inputs[0];
-				var result = field.GetValue(target);
-				outputs[0] = result;
-				return;
-			}
-			else if (realMemberInfo.MemberInfo.MemberType == MemberTypes.Property)
-			{
-				var property = (PropertyInfo)realMemberInfo.MemberInfo;
-				object? target = property.GetMethod!.IsStatic ? null : inputs[0];
-				var result = property.GetValue(target);
-				outputs[0] = result;
-				return;
-			}
-		}
-		else
-		{
-			Type t;
-			if (Inputs[0].Type is RealType r)
-				t = r.BackendType;
-			else
-				t = Project.GetCreatedClassType(((NodeClassType)Inputs[0].Type).NodeClass);
-
-			var property = t.GetProperty(TargetMember.Name, BindingFlags.Public | BindingFlags.Instance) ?? throw new Exception("unable to get property: " + TargetMember.Name);
-			var result = property.GetValue(inputs[0] ?? self);
-			outputs[0] = result;
-		}
-	}
 }

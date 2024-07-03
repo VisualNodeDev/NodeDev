@@ -25,16 +25,5 @@ namespace NodeDev.Core.Nodes
         }
 
         public override bool IsFlowNode => false;
-
-        public override Connection? Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs, ref object? state, out bool alterExecutionStackOnPop)
-		{
-            alterExecutionStackOnPop = false;
-
-            ExecuteInternal(executor, self, inputs, outputs);
-
-            return null;
-        }
-
-        protected abstract void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs);
     }
 }

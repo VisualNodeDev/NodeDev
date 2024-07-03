@@ -24,9 +24,4 @@ public class WriteLine : NormalFlowNode
 
 		return Expression.Call(null, method, info.LocalVariables[Inputs[1]]);
 	}
-
-	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state)
-	{
-		Console.WriteLine(inputs[1]);
-	}
 }

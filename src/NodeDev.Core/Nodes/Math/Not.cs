@@ -14,11 +14,4 @@ public class Not : BinaryOperationMath
 	{
 		info.LocalVariables[Outputs[0]] = Expression.Not(info.LocalVariables[Inputs[0]]);
 	}
-
-	protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)
-	{
-		dynamic? a = inputs[0];
-
-		outputs[0] = !a;
-	}
 }

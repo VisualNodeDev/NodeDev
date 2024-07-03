@@ -30,21 +30,21 @@ public class ForeachNode : FlowNode
 
 	public override string GetExecOutputPathId(string pathId, Connection execOutput)
 	{
-            if (execOutput == Outputs[0])
-            {
+		if (execOutput == Outputs[0])
+		{
 			return pathId + "-" + execOutput.Id;
 		}
 		else if (execOutput == Outputs[2])
 			return pathId;
 
 		throw new Exception("Unable to find execOutput");
-        }
+	}
 
 	public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => execOutput == Outputs[0]; // The loop exec path must be a dead end (or a breaking node, such as return, continue, break)
 
-        public override bool DoesOutputPathAllowMerge(Connection execOutput) => execOutput == Outputs[2]; // The ExecOut path allows merging but not the loop. The loop is always a dead end.
+	public override bool DoesOutputPathAllowMerge(Connection execOutput) => execOutput == Outputs[2]; // The ExecOut path allows merging but not the loop. The loop is always a dead end.
 
-        public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
+	public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
 	{
 		if (Inputs[1].Type.HasUndefinedGenerics)
 		{
@@ -62,9 +62,9 @@ public class ForeachNode : FlowNode
 		ArgumentNullException.ThrowIfNull(subChunks);
 
 		var getEnumerator = Inputs[1].Type.MakeRealType().GetMethod(nameof(IEnumerable<int>.GetEnumerator), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-		if(getEnumerator == null)
+		if (getEnumerator == null)
 			throw new Exception($"Unable to find GetEnumerator method on input parameter type: {Inputs[1].Type.FriendlyName}");
-		
+
 		var moveNext = getEnumerator.DeclaringType!.GetMethod(nameof(IEnumerator<int>.MoveNext), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 		if (moveNext == null)
 			throw new Exception($"Unable to find MoveNext method on input parameter type: {getEnumerator.DeclaringType!.Name}");
@@ -98,27 +98,5 @@ public class ForeachNode : FlowNode
 		// while(enumerator.MoveNext())
 		// after loop...
 		return Expression.Block([enumeratorVariable], assignEnumerator, loop, afterLoop);
-	}
-
-	public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
-	{
-		// check if we're looping of we're starting a new loop
-		IEnumerator<object?> enumeratorState;
-		if (connectionBeingExecuted == Inputs[0]) // start the loop
-			state = enumeratorState = ((IEnumerable<object?>)inputs[1]!).GetEnumerator();
-		else // continue the loop
-			enumeratorState = (IEnumerator<object?>)state!;
-
-		// get the next item
-		if (!enumeratorState.MoveNext())
-		{
-			alterExecutionStackOnPop = false;
-			nodeOutputs[1] = null;
-			return Outputs[2];
-		}
-
-		nodeOutputs[1] = enumeratorState.Current;
-		alterExecutionStackOnPop = true;
-		return Outputs[0];
 	}
 }

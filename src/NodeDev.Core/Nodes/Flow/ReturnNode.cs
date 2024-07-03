@@ -22,17 +22,11 @@ public class ReturnNode : FlowNode
 
 	public override bool IsFlowNode => throw new NotImplementedException();
 
-	public override string GetExecOutputPathId(string pathId, Connection execOutput)  => throw new NotImplementedException();
+	public override string GetExecOutputPathId(string pathId, Connection execOutput) => throw new NotImplementedException();
 
 	public override bool DoesOutputPathAllowDeadEnd(Connection execOutput) => true; // Return by definition bypasses any dead-end restrictions
 
-        public override bool DoesOutputPathAllowMerge(Connection execOutput) => throw new NotImplementedException();
-
-        public override Connection? Execute(GraphExecutor executor, object? self, Connection? execInput, Span<object?> inputs, Span<object?> outputs, ref object? state, out bool alterExecutionStackOnPop)
-	{
-		alterExecutionStackOnPop = false;
-		return null;
-	}
+	public override bool DoesOutputPathAllowMerge(Connection execOutput) => throw new NotImplementedException();
 
 	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
 	{
@@ -40,7 +34,7 @@ public class ReturnNode : FlowNode
 		var inputs = CollectionsMarshal.AsSpan(Inputs)[1..^(HasReturnValue ? 1 : 0)];
 		var assigns = new List<Expression>(inputs.Length);
 
-		foreach(var input in inputs)
+		foreach (var input in inputs)
 		{
 			var valueExpression = info.LocalVariables[input];
 
@@ -56,16 +50,16 @@ public class ReturnNode : FlowNode
 	}
 
 	internal void Refresh()
-        {
+	{
 		var removedConnections = Inputs.Skip(1).ToList(); // everything except exec
-            var newConnections = Graph.SelfMethod.Parameters.Where(x => x.IsOut).Select(x => new Connection(x.Name, this, x.ParameterType)).ToList();
+		var newConnections = Graph.SelfMethod.Parameters.Where(x => x.IsOut).Select(x => new Connection(x.Name, this, x.ParameterType)).ToList();
 
 		if (HasReturnValue)
 			newConnections.Add(new Connection("Return", this, Graph.SelfMethod.ReturnType));
 
 		Inputs.RemoveRange(1, Inputs.Count - 1);
-            Inputs.AddRange(newConnections);
+		Inputs.AddRange(newConnections);
 
-            Graph.MergedRemovedConnectionsWithNewConnections(newConnections, removedConnections);
-        }
+		Graph.MergedRemovedConnectionsWithNewConnections(newConnections, removedConnections);
+	}
 }

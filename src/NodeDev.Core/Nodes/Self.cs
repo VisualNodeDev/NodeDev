@@ -19,9 +19,4 @@ public class Self : NoFlowNode
 
 		info.LocalVariables[Outputs[0]] = info.ThisExpression;
 	}
-
-	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs)
-	{
-		outputs[0] = self;
-	}
 }

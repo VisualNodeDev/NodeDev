@@ -20,18 +20,4 @@ public class Or : NoFlowNode
 	{
 		info.LocalVariables[Outputs[0]] = Expression.Or(info.LocalVariables[Inputs[0]], info.LocalVariables[Inputs[1]]);
 	}
-
-	protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)
-	{
-		if (inputs[0] == null || inputs[1] == null)
-		{
-			outputs[0] = null;
-			return;
-		}
-
-		var a = (bool)inputs[0]!;
-		var b = (bool)inputs[1]!;
-
-		outputs[0] = a || b;
-	}
 }

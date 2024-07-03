@@ -331,10 +331,10 @@ public class Graph
 
 		if (input.Connections.Count == 0)
 		{
-			if (!input.Type.AllowTextboxEdit || input.TextboxValue == null)
+			if (!input.Type.AllowTextboxEdit || input.ParsedTextboxValue == null)
 				info.LocalVariables[input] = Expression.Default(input.Type.MakeRealType());
 			else
-				info.LocalVariables[input] = Expression.Constant(input.TextboxValue, input.Type.MakeRealType());
+				info.LocalVariables[input] = Expression.Constant(input.ParsedTextboxValue, input.Type.MakeRealType());
 		}
 		else
 		{
@@ -344,26 +344,6 @@ public class Graph
 
 			// Get the local variable or expression associated with that input and use it as that input's expression
 			info.LocalVariables[input] = info.LocalVariables[input.Connections[0]];
-		}
-	}
-
-	#endregion
-
-	#region PreprocessGraph
-
-	public int NbConnections { get; private set; }
-
-	internal void PreprocessGraph()
-	{
-		NbConnections = 0;
-		int nodeIndex = 0;
-		foreach (var node in Nodes.Values)
-		{
-			node.GraphIndex = nodeIndex++;
-			foreach (var connection in node.InputsAndOutputs)
-				connection.GraphIndex = NbConnections++;
-
-			node.PreprocessBeforeExecution();
 		}
 	}
 

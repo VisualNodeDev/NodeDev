@@ -78,39 +78,19 @@ public class Project
 
 	#region Run
 
-	public object? Run(object?[] inputs)
+	public object? Run(params object?[] inputs)
 	{
-		NodeClassTypeCreator = new();
-		NodeClassTypeCreator.CreateProjectClassesAndAssembly(this);
-
-		// Before we start executing the project we need to preprocess every graph everywhere
-		foreach (var nodeClass in Classes)
-		{
-			foreach (var method in nodeClass.Methods)
-			{
-				method.Graph.PreprocessGraph();
-			}
-		}
-
-		// Find the main method
-		var program = Classes.Single(x => x.Name == "Program");
-
-		// Find the main method in the program class
-		var main = program.Methods.Single(x => x.Name == "Main");
-
-		// Create a new graph executor for the main method
-		GraphExecutor = new GraphExecutor(main.Graph, null);
-
 		try
 		{
+			NodeClassTypeCreator = new();
+			var assembly = NodeClassTypeCreator.CreateProjectClassesAndAssembly(this);
+
+			var program = assembly.CreateInstance("Program")!;
+
 			GraphExecutionChangedSubject.OnNext(true);
 
-			// Execute the main method
-			var outputs = new object[main.ReturnType == TypeFactory.Get(typeof(void), null) ? 1 : 2]; // 1 for the exec, 2 for exec + the actual return value
-			GraphExecutor.Execute(null, inputs, outputs);
-
-			// Return the last output
-			return outputs[^1];
+			var main = program.GetType().GetMethod("Main")!;
+			return main.Invoke(program, inputs);
 		}
 		finally
 		{

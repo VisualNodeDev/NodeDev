@@ -38,18 +38,4 @@ public class WhileNode : FlowNode
 	{
 		throw new NotImplementedException();
 	}
-
-	public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
-	{
-		if (inputs[1] is bool b && b == true)
-		{
-			alterExecutionStackOnPop = true; // re-execute the 'while' when this line is done
-			return Outputs[0];
-		}
-		else
-		{
-			alterExecutionStackOnPop = false;
-			return Outputs[1];
-		}
-	}
 }

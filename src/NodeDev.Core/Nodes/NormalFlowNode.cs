@@ -35,16 +35,5 @@ namespace NodeDev.Core.Nodes
             Inputs.Add(new("Exec", this, TypeFactory.ExecType));
             Outputs.Add(new("Exec", this, TypeFactory.ExecType));
         }
-
-        public override Connection Execute(GraphExecutor executor, object? self, Connection? inputExec, Span<object?> inputs, Span<object?> outputs, ref object? state, out bool alterExecutionStackOnPop)
-		{
-            alterExecutionStackOnPop = false;
-
-			ExecuteInternal(executor, self, inputs, outputs, ref state);
-
-            return Outputs[0];
-        }
-
-        protected abstract void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state);
     }
 }

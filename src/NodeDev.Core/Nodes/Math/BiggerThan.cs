@@ -20,12 +20,4 @@ public class BiggerThan : NoFlowNode
 	{
 		info.LocalVariables[Outputs[0]] = Expression.GreaterThan(info.LocalVariables[Inputs[0]], info.LocalVariables[Inputs[1]]);
 	}
-
-	protected override void ExecuteInternal(GraphExecutor graphExecutor, object? self, Span<object?> inputs, Span<object?> outputs)
-	{
-		dynamic? a = inputs[0];
-		dynamic? b = inputs[1];
-
-		outputs[0] = a > b;
-	}
 }

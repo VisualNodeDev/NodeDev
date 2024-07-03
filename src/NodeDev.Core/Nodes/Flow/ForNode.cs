@@ -45,31 +45,4 @@ public class ForNode : FlowNode
 	{
 		throw new NotImplementedException();
 	}
-
-	public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
-	{
-		// check if we're looping of we're starting a new loop
-		int i;
-		if (connectionBeingExecuted == Inputs[0]) // start the loop
-		{
-			i = (int)inputs[1]!; // start at the beginning of the loop
-			state = i; // start at the beginning of the loop
-		}
-		else // continue the loop
-		{
-			i = (int)state! + 1; // move to the next item in the loop
-			state = i;
-		}
-
-		// check if we're done
-		if (i >= (int)inputs[2]!) // if we're done
-		{
-			alterExecutionStackOnPop = false;
-			return Outputs[2]; // execute the ExecOut
-		}
-
-		nodeOutputs[1] = i; // output the current index
-		alterExecutionStackOnPop = true;
-		return Outputs[0]; // execute the ExecLoop
-	}
 }

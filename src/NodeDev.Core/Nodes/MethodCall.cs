@@ -53,12 +53,6 @@ public class MethodCall : NormalFlowNode
 		set { }
 	}
 
-	/// <summary>
-	/// This is computed during preprocessing before the project is executed.
-	/// It indicates if the method has any out parameters, that way we don't need to check it every time the method is executed.
-	/// </summary>
-	private int Preprocessed_NbOutParameters;
-
 	public override IEnumerable<AlternateOverload> AlternatesOverloads
 	{
 		get
@@ -170,18 +164,6 @@ public class MethodCall : NormalFlowNode
 
 	#endregion
 
-
-	private MethodInvoker? MethodInvoker;
-	public override void PreprocessBeforeExecution()
-	{
-		base.PreprocessBeforeExecution();
-
-		Preprocessed_NbOutParameters = TargetMethod?.GetParameters().Count(x => x.IsOut) ?? 0;
-
-		if (TargetMethod is RealMethodInfo real)
-			MethodInvoker = MethodInvoker.Create(real.CreateMethodInfo());
-	}
-
 	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
 	{
 		if (subChunks != null)
@@ -205,78 +187,4 @@ public class MethodCall : NormalFlowNode
 		// This will create an expression that will do both the assignation and the call.
 		return Expression.Assign(info.LocalVariables[Outputs[^1]], call);
 	}
-
-	protected override void ExecuteInternal(GraphExecutor executor, object? self, Span<object?> inputs, Span<object?> outputs, ref object? state)
-	{
-		if (TargetMethod == null)
-			throw new Exception("Target method is not set");
-
-		if (TargetMethod is NodeClassMethod nodeClassMethod)
-		{
-			var childExecutor = new GraphExecutor(nodeClassMethod.Graph, executor.Root);
-
-			if (Project.IsLiveDebuggingEnabled)
-			{
-				// Store the child executor in the parent executor
-				executor.ChildrenExecutors[GraphIndex] = childExecutor;
-
-				childExecutor.Execute(inputs[0] ?? self, inputs[1..], outputs);
-			}
-			else
-			{
-				using (childExecutor)
-					childExecutor.Execute(inputs[0] ?? self, inputs[1..], outputs);
-			}
-
-		}
-		else
-		{
-			var target = TargetMethod.IsStatic ? null : inputs[0];
-
-			object? result;
-			if (Preprocessed_NbOutParameters == 0)
-				result = MethodInvoker!.Invoke(target, inputs[(TargetMethod.IsStatic ? 1 : 2)..]);
-			else
-			{
-				// create an uninitialized array
-				var array = ArrayPool<object?>.Shared.Rent(inputs.Length + Preprocessed_NbOutParameters);
-
-				try
-				{
-					int indexInput = 0, indexArray = 0;
-
-					var parameters = TargetMethod.GetParameters();
-					foreach (var parameter in parameters)
-					{
-						if (!parameter.IsOut)
-							array[indexArray] = inputs[TargetMethod.IsStatic ? 1 : 2 + (indexInput++)];
-
-						++indexArray;
-					}
-
-					// Actual invoke of the method
-					result = MethodInvoker!.Invoke(target, array.AsSpan(0, inputs.Length + Preprocessed_NbOutParameters));
-
-					// output the out parameters
-					indexInput = 0;
-					indexArray = 0;
-					foreach (var parameter in parameters)
-					{
-						if (parameter.IsOut)
-							outputs[indexInput++] = array[indexArray];
-
-						++indexArray;
-					}
-				}
-				finally
-				{
-					ArrayPool<object?>.Shared.Return(array);
-				}
-			}
-
-			if (TargetMethod.ReturnType != TypeFactory.Get(typeof(void), null))
-				outputs[^1] = result;
-		}
-	}
-
 }

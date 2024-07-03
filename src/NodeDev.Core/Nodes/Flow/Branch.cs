@@ -39,14 +39,4 @@ public class Branch : FlowNode
 
 		return ifThenElse;
 	}
-
-	public override Connection? Execute(GraphExecutor executor, object? self, Connection? connectionBeingExecuted, Span<object?> inputs, Span<object?> nodeOutputs, ref object? state, out bool alterExecutionStackOnPop)
-	{
-		alterExecutionStackOnPop = false;
-
-		if (inputs[1] is bool b && b == true)
-			return Outputs[0];
-		else
-			return Outputs[1];
-	}
 }

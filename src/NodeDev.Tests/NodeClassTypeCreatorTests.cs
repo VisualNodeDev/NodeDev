@@ -22,7 +22,7 @@ public class NodeClassTypeCreatorTests
 
 		var assembly = creator.CreateProjectClassesAndAssembly(project);
 
-		Assert.Single(assembly.DefinedTypes);
+		Assert.Single(assembly.DefinedTypes.Where(x => x.IsVisible));
 		Assert.Contains(assembly.DefinedTypes, x => x.Name == "TestClass");
 
 		var instance = assembly.CreateInstance(myClass.Name);
@@ -62,6 +62,7 @@ public class NodeClassTypeCreatorTests
 
 		var graph = new Graph();
 		var method = new NodeClassMethod(myClass, "Main", myClass.TypeFactory.Get<int>(), graph);
+		method.IsStatic = true;
 		myClass.Methods.Add(method);
 		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method));
 
@@ -96,7 +97,7 @@ public class NodeClassTypeCreatorTests
 		graph.Connect(newNode.Outputs[1], getProp.Inputs[0]);
 		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1]);
 
-		var result = project.Run(new object?[] { null, 10 });
+		var result = project.Run([10]);
 
 		Assert.Equal(10, result);
 	}
