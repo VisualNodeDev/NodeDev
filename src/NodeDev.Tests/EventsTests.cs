@@ -39,11 +39,11 @@ public class EventsTests
 		var getProp = new GetPropertyOrField(graph);
 		getProp.SetMemberTarget(prop);
 
-		graph.AddNode(entryNode);
-		graph.AddNode(returnNode);
-		graph.AddNode(newNode);
-		graph.AddNode(getProp);
-		graph.AddNode(setProp);
+		graph.AddNode(entryNode, false);
+		graph.AddNode(returnNode, false);
+		graph.AddNode(newNode, false);
+		graph.AddNode(getProp, false);
+		graph.AddNode(setProp, false);
 
 		// link the execution path
 		graph.Connect(entryNode.Outputs[0], newNode.Inputs[0], false);

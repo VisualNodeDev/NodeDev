@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="BlazorMonaco" Version="3.2.0" />
+    <PackageReference Include="CodeBeam.MudBlazor.Extensions" Version="6.9.2" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.6" />
     <PackageReference Include="MudBlazor" Version="6.21.0" />
   </ItemGroup>

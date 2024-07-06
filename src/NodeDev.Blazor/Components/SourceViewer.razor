@@ -6,23 +6,23 @@
 @using BlazorMonaco.Editor
 @using BlazorMonaco.Languages
 
-<div class="h100 ma-2" style="width: 500px">
 
-    @if (Method == null || Code == null)
-    {
-        <MudText Typo="Typo.caption">Open a method to view its generated source code</MudText>
-    }
-    else
-    {
-        var id = Code.GetHashCode().ToString();
-        <StandaloneCodeEditor @key="id" Id="@id" ConstructionOptions="EditorConstructionOptions" CssClass="h100" />
-    }
-
-</div>
+@if (Method == null || Code == null)
+{
+    <MudText Typo="Typo.caption">Open a method to view its generated source code</MudText>
+}
+else
+{
+    var id = Code.GetHashCode().ToString();
+    <StandaloneCodeEditor @key="id" Id="@id" ConstructionOptions="EditorConstructionOptions" CssClass="wh100" />
+}
 
 @code {
     [Parameter]
     public NodeClassMethod? Method { get; set; }
+
+    [Parameter]
+    public bool IsVisible { get; set; }
 
     private NodeClassMethod? PreviousMethod { get; set; }
 
@@ -39,7 +39,6 @@
                 ReadOnly = true,
                 Value = Code,
                 Language = "csharp",
-
                 AutomaticLayout = true
             };
     }
@@ -48,7 +47,11 @@
     {
         base.OnParametersSet();
 
-        if (Method != PreviousMethod)
+        if (!IsVisible)
+            return;
+
+        // Either the target method changed or it previously failed to compile
+        if (Method != PreviousMethod || Creator == null)
         {
             if (Method?.Graph.Project != PreviousMethod?.Graph.Project)
             {
@@ -81,8 +84,14 @@
             Code = Creator.GetBodyAsCsCode(Method);
             StateHasChanged();
         }
-        catch (Exception)
+        catch (BuildError buildError)
         {
+            Code = $"/* Error during code generation of node {buildError.Node.Name}: {System.Environment.NewLine}{buildError.Message}{System.Environment.NewLine}";
+
+            if(buildError.InnerException != null)
+                Code += $"{System.Environment.NewLine}Inner exception:{System.Environment.NewLine}{buildError.InnerException}";
+
+            Code += $"{System.Environment.NewLine}*/";
         }
     }
 

@@ -33,9 +33,9 @@ public class GraphExecutorTests
 		addNode.Inputs[1].UpdateType(nodeClass.TypeFactory.Get<TIn>());
 		addNode.Outputs[0].UpdateType(nodeClass.TypeFactory.Get<TOut>());
 
-		graph.AddNode(entryNode);
-		graph.AddNode(addNode);
-		graph.AddNode(returnNode);
+		graph.AddNode(entryNode, false);
+		graph.AddNode(addNode, false);
+		graph.AddNode(returnNode, false);
 
 		graph.Connect(entryNode.Outputs[0], returnNode.Inputs[0], false);
 
@@ -83,18 +83,18 @@ public class GraphExecutorTests
 		smallerThan.Inputs[0].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateTextboxText("0");
-		graph.AddNode(smallerThan);
+		graph.AddNode(smallerThan, false);
 		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0], false);
 
 		var returnNode2 = new Core.Nodes.Flow.ReturnNode(graph);
 		returnNode2.Inputs.Add(new("Result", entryNode, graph.SelfClass.TypeFactory.Get<int>()));
 		returnNode2.Inputs[1].UpdateTextboxText("0");
-		graph.AddNode(returnNode2);
+		graph.AddNode(returnNode2, false);
 
 		var branchNode = new Core.Nodes.Flow.Branch(graph);
 		graph.Connect(entryNode.Outputs[0], branchNode.Inputs[0], false);
 		graph.Connect(smallerThan.Outputs[0], branchNode.Inputs[1], false);
-		graph.AddNode(branchNode);
+		graph.AddNode(branchNode, false);
 
 		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0], false);
 		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0], false);
@@ -116,19 +116,19 @@ public class GraphExecutorTests
 		returnNode1.Inputs[1].UpdateTextboxText("1");
 
 		var smallerThan = new Core.Nodes.Math.SmallerThan(graph);
-		graph.AddNode(smallerThan);
+		graph.AddNode(smallerThan, false);
 		smallerThan.Inputs[0].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateTextboxText("0");
 		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0], false);
 
 		var returnNode2 = new Core.Nodes.Flow.ReturnNode(graph);
-		graph.AddNode(returnNode2);
+		graph.AddNode(returnNode2, false);
 		returnNode2.Inputs.Add(new("Result", entryNode, graph.SelfClass.TypeFactory.Get<int>()));
 		returnNode2.Inputs[1].UpdateTextboxText("0");
 
 		var branchNode = new Core.Nodes.Flow.Branch(graph);
-		graph.AddNode(branchNode);
+		graph.AddNode(branchNode, false);
 		graph.Connect(entryNode.Outputs[0], branchNode.Inputs[0], false);
 		graph.Connect(smallerThan.Outputs[0], branchNode.Inputs[1], false);
 

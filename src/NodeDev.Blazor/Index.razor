@@ -15,48 +15,64 @@
     </MudAppBar>
     <MudMainContent Style="width: 100%; height: 100%">
 
-        <MudStack Row="true" Class="h100 pa-1">
+        <MudExtensions.MudSplitter EnableSlide="true" Sensitivity="0.01" @bind-Dimension="GraphPercentage" OnDoubleClicked="@(_ => GraphPercentage = 100)" Class="h100 overflow-hidden" Style="overflow-y: hidden">
+            <StartContent>
+                <MudStack Row="true" Class="wh100 pa-1 relative">
 
 
-            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 h100" KeepPanelsAlive="true" Style="width: 25%; height: 100%">
-                <MudTabPanel Text="Project">
-                    <ProjectExplorer Project="Project" @bind-SelectedClass="SelectedClass"></ProjectExplorer>
-                </MudTabPanel>
-                <MudTabPanel Text="Class">
-                    @if (SelectedClass != null)
-                    {
-                        <ClassExplorer @key="SelectedClass" Class="SelectedClass" SelectedMethodChanged="OpenMethod"></ClassExplorer>
-                    }
-                </MudTabPanel>
-            </MudTabs>
-
-            @* The 'relative' div is used to control the "Open/Close" icon for the debugger console panel *@
-            <div class="w100 relative flex-1">
-
-                <MudStack Row="false" Class="wh100">
-
-                    <DebuggedPathView OpenMethod="OpenMethodFromDebuggedPath" />
-
-                    <CascadingValue Value="this" IsFixed="true">
-                        <MudTabs @ref="Tabs" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" @bind-ActivePanelIndex="ActivePanelIndex">
-                            @foreach (var method in OpenedMethods)
+                    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 h100" KeepPanelsAlive="true" Style="width: 25%; height: 100%">
+                        <MudTabPanel Text="Project">
+                            <ProjectExplorer Project="Project" @bind-SelectedClass="SelectedClass"></ProjectExplorer>
+                        </MudTabPanel>
+                        <MudTabPanel Text="Class">
+                            @if (SelectedClass != null)
                             {
-                                <MudTabPanel ID="method" @key="method" Text="@method.Name">
-                                    <GraphCanvas @key="method.Graph" Graph="method.Graph"></GraphCanvas>
-                                </MudTabPanel>
+                                <ClassExplorer @key="SelectedClass" Class="SelectedClass" SelectedMethodChanged="OpenMethod"></ClassExplorer>
                             }
-                        </MudTabs>
-                    </CascadingValue>
+                        </MudTabPanel>
+                    </MudTabs>
 
-                    <DebuggerConsolePanel Project="Project" />
+                    @* The 'relative' div is used to control the "Open/Close" icon for the debugger console panel as well as the source viewer open icon *@
+                    <div class="w100 relative flex-1">
+
+                        <MudStack Row="false" Class="wh100">
+
+                            <DebuggedPathView OpenMethod="OpenMethodFromDebuggedPath" />
+
+                            <CascadingValue Value="this" IsFixed="true">
+                                <MudTabs @ref="Tabs" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" @bind-ActivePanelIndex="ActivePanelIndex">
+                                    @foreach (var method in OpenedMethods)
+                                    {
+                                        <MudTabPanel ID="method" @key="method" Text="@method.Name">
+                                            <GraphCanvas @key="method.Graph" Graph="method.Graph"></GraphCanvas>
+                                        </MudTabPanel>
+                                    }
+                                </MudTabs>
+                            </CascadingValue>
+
+                            <DebuggerConsolePanel Project="Project" />
+
+                        </MudStack>
+
+                    </div>
+
+                    <div class="h100 absolute d-flex" style="right: 0px">
+                        @{
+                            var close = GraphPercentage <= 75;
+                            var icon = close ? Icons.Material.Filled.ArrowRight : Icons.Material.Filled.ArrowLeft;
+                        }
+                        <MudIconButton Icon="@icon" OnClick="@(() => GraphPercentage = close ? 100 : 75)" Style="margin-top: auto; margin-bottom: auto" />
+                    </div>
 
                 </MudStack>
 
-            </div>
+            </StartContent>
 
-            <SourceViewer Method="@(OpenedMethods.Count > 0 ? OpenedMethods[ActivePanelIndex] : null)" />
+            <EndContent>
+                <SourceViewer Method="@(OpenedMethods.Count > 0 ? OpenedMethods[ActivePanelIndex] : null)" IsVisible="@(GraphPercentage != 100)" />
+            </EndContent>
 
-        </MudStack>
+        </MudExtensions.MudSplitter>
     </MudMainContent>
 </MudLayout>
 
@@ -71,6 +87,8 @@
     private MudTabs Tabs { get; set; } = null!;
 
     private int ActivePanelIndex = 0;
+
+    private double GraphPercentage = 100;
 
     protected override void OnInitialized()
     {

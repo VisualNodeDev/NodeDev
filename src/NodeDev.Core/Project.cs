@@ -28,7 +28,7 @@ public class Project
 
 	public GraphExecutor? GraphExecutor { get; set; }
 
-	internal Subject<(Graph Graph, bool FromCode)> GraphChangedSubject { get; } = new();
+	internal Subject<(Graph Graph, bool RequireUIRefresh)> GraphChangedSubject { get; } = new();
 
 	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutingSubject { get; } = new();
 	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutedSubject { get; } = new();
@@ -65,8 +65,8 @@ public class Project
 
 		var main = new Class.NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void), null), new Graph());
 
-		main.Graph.AddNode(new EntryNode(main.Graph));
-		main.Graph.AddNode(new ReturnNode(main.Graph));
+		main.Graph.AddNode(new EntryNode(main.Graph), false);
+		main.Graph.AddNode(new ReturnNode(main.Graph), false);
 		programClass.Methods.Add(main);
 
 		project.Classes.Add(programClass);

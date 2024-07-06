@@ -259,11 +259,11 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
             {
                 if (source.Connection.Type.IsAssignableTo(destination.Connection.Type, out var newTypes) && newTypes.Count != 0)
                 {
-                    PropagateNewGeneric(source.Connection.Parent, newTypes);
+                    PropagateNewGeneric(source.Connection.Parent, newTypes, false);
                 }
             }
             else if (destination.Connection.Type is UndefinedGenericType destinationType && source.Connection.Type is not UndefinedGenericType)
-                PropagateNewGeneric(destination.Connection.Parent, new Dictionary<UndefinedGenericType, TypeBase>() { [destinationType] = source.Connection.Type });
+                PropagateNewGeneric(destination.Connection.Parent, new Dictionary<UndefinedGenericType, TypeBase>() { [destinationType] = source.Connection.Type }, false);
 
             // we have to remove the textbox ?
             if (destination.Connection.Connections.Count == 1 && destination.Connection.Type.AllowTextboxEdit)
@@ -277,12 +277,14 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
                 if (source.Connection.Type.IsExec && source.Connection.Connections.Count > 1 && link.Target.Model is GraphPortModel target)
                 {
                     Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source.Connection && (x.Target.Model as GraphPortModel)?.Connection != target.Connection));
-                    Graph.Disconnect(source.Connection, source.Connection.Connections.First(x => x != target.Connection), true);
+                    Graph.Disconnect(source.Connection, source.Connection.Connections.First(x => x != target.Connection), false);
                 }
 
             }
 
             UpdateVerticesInConnection(source.Connection, destination.Connection, baseLinkModel);
+
+            Graph.RaiseGraphChanged(true);
         });
     }
 
@@ -422,7 +424,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
     private void OnNewNodeTypeSelected(NodeProvider.NodeSearchResult searchResult)
     {
-        var node = Graph.AddNode(searchResult);
+        var node = Graph.AddNode(searchResult, false);
         node.AddDecoration(new NodeDecorationPosition(new(PopupNodePosition.X, PopupNodePosition.Y)));
 
         Diagram.Batch(() =>
@@ -452,7 +454,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
                 // if we found a connection, connect them together
                 if (destination != null)
                 {
-                    Graph.Connect(PopupNodeConnection, destination, true);
+                    Graph.Connect(PopupNodeConnection, destination, false);
 
                     if (destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit)
                         UpdateConnectionType(destination);
@@ -465,15 +467,15 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
                     // check if we need to propagate some generic
                     if (!destination.Type.IsExec && source.Type.IsAssignableTo(target.Type, out var changedGenerics))
                     {
-                        PropagateNewGeneric(node, changedGenerics);
-                        PropagateNewGeneric(destination.Parent, changedGenerics);
+                        PropagateNewGeneric(node, changedGenerics, false);
+                        PropagateNewGeneric(destination.Parent, changedGenerics, false);
                     }
                     else if (source.Type.IsExec && source.Connections.Count > 1) // check if we have to disconnect the previously connected exec
                     {
                         Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source && (x.Target.Model as GraphPortModel)?.Connection != target));
                         var toRemove = source.Connections.FirstOrDefault(x => x != target);
                         if (toRemove != null)
-                            Graph.Disconnect(source, toRemove, true);
+                            Graph.Disconnect(source, toRemove, false);
                     }
                 }
             }
@@ -482,7 +484,10 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
             CreateGraphNodeModel(node);
             AddNodeLinks(node, false);
+
+            UpdateNodes(Graph.Nodes.Values.ToList());
         });
+
     }
 
     #endregion
@@ -535,14 +540,15 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
         if (PopupNode == null || GenericTypeSelectionMenuGeneric == null)
             return;
 
-        PropagateNewGeneric(PopupNode, new Dictionary<UndefinedGenericType, TypeBase>() { [GenericTypeSelectionMenuGeneric] = type });
+        PropagateNewGeneric(PopupNode, new Dictionary<UndefinedGenericType, TypeBase>() { [GenericTypeSelectionMenuGeneric] = type }, false);
 
+        // Prefer updating the nodes directly instead of calling Graph.RaiseGraphChanged(true) to be sure it is called as soon as possible
         UpdateNodes(Graph.Nodes.Values.ToList());
 
         CancelPopup();
     }
 
-    private void PropagateNewGeneric(Node node, IReadOnlyDictionary<UndefinedGenericType, TypeBase> changedGenerics)
+    private void PropagateNewGeneric(Node node, IReadOnlyDictionary<UndefinedGenericType, TypeBase> changedGenerics, bool requireUIRefresh)
     {
         foreach (var port in node.InputsAndOutputs) // check if any of the ports have the generic we just solved
         {
@@ -560,14 +566,14 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
                     var source = isPortInput ? other : port;
                     var target = isPortInput ? port : other;
                     if (source.Type.IsAssignableTo(target.Type, out var changedGenerics2) && changedGenerics2.Count != 0)
-                        PropagateNewGeneric(other.Parent, changedGenerics2);
+                        PropagateNewGeneric(other.Parent, changedGenerics2, requireUIRefresh);
                     else if ((changedGenerics2?.Count ?? 0) != 0)// damn, looks like changing the generic made it so we can't link to this connection anymore
                         Graph.Disconnect(port, other, false); // no need to refresh UI here as it'll already be refresh at the end of this method
                 }
             }
         }
 
-        Graph.RaiseGraphChanged(true);
+        Graph.RaiseGraphChanged(requireUIRefresh);
     }
 
     #endregion

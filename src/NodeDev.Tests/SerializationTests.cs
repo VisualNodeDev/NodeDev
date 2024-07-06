@@ -51,9 +51,9 @@ public class SerializationTests
 		returnNode.Inputs.Add(new("Result", entryNode, project.TypeFactory.Get<int>()));
 
 
-		testMethodGraph.AddNode(entryNode);
-		testMethodGraph.AddNode(methodCall);
-		testMethodGraph.AddNode(returnNode);
+		testMethodGraph.AddNode(entryNode, false);
+		testMethodGraph.AddNode(methodCall, false);
+		testMethodGraph.AddNode(returnNode, false);
 
 		testMethodGraph.Connect(entryNode.Outputs[0], methodCall.Inputs[0], false);// exec from entry to method call
 		testMethodGraph.Connect(entryNode.Outputs[1], methodCall.Inputs[2], false); // A to A
