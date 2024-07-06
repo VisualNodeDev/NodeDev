@@ -9,6 +9,7 @@ Check out the [roadmap](https://github.com/orgs/VisualNodeDev/projects/2/views/1
 # What we do
 NodeDev is an alpha tool allowing you to create entire software using a visual flow-base interface instead of the usual written code style.
 It is still in very early alpha and full of bugs but it's improving fast! Check out a recent demo clip
+(Note that any debugging capabilities such as visually seeing the execution of nodes (connections/links flashing red as they are executed) and being able to mouse over connections to see values is completely gone since July 2024. We are in the process of adding back debugging capabilities now that the execution of nodes is done natively)
 
 https://github.com/VisualNodeDev/NodeDev/assets/39806655/f4a8e7fd-08a1-4f37-8cae-0b7a7c2d4759
 
