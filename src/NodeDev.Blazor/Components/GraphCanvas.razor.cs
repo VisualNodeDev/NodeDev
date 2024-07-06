@@ -39,6 +39,8 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 	private Connection? PopupNodeConnection;
 	private Node? PopupNode;
 
+	private GraphNodeModel? SelectedNodeModel { get; set; }
+
 	private BlazorDiagram Diagram { get; set; } = null!;
 
 	#region OnInitialized
@@ -68,6 +70,7 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 		Diagram.Nodes.Removed += OnNodeRemoved;
 		Diagram.Links.Added += x => OnConnectionAdded(x, false);
 		Diagram.Links.Removed += OnConnectionRemoved;
+		Diagram.SelectionChanged += SelectionChanged;
 
 	}
 
@@ -587,6 +590,34 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
 
 			DebuggedPathService.EnterExecutor(node);
 		}
+	}
+
+	#endregion
+
+	#region SelectionChanged
+
+	private void SelectionChanged(SelectableModel obj)
+	{
+		var nodeModel = Diagram.Nodes.FirstOrDefault(x => x.Selected) as GraphNodeModel;
+
+		try
+		{
+			var path = nodeModel?.Node.SearchAllExecPaths([]);
+
+			foreach (var otherNodeModel in Diagram.Nodes.OfType<GraphNodeModel>())
+			{
+				foreach (var connection in otherNodeModel.Node.Outputs)
+				{
+					if (path != null && path.Contains(connection))
+						otherNodeModel.OnConnectionPathHighlighted(connection);
+					else
+						otherNodeModel.OnConnectionPathUnhighlighted(connection);
+				}
+
+			}
+		}
+		catch (Node.InfiniteLoopException)
+		{ }
 	}
 
 	#endregion

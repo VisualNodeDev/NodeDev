@@ -6,6 +6,7 @@ using NodeDev.Core.Types;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Reflection.Emit;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("NodeDev.Tests")]
 
@@ -23,7 +24,7 @@ public class Project
 
 	public readonly TypeFactory TypeFactory;
 
-	public NodeClassTypeCreator? NodeClassTypeCreator { get; private set; }
+	public NodeClassTypeCreator? NodeClassTypeCreator { get; internal set; }
 
 	public GraphExecutor? GraphExecutor { get; set; }
 
@@ -77,39 +78,19 @@ public class Project
 
 	#region Run
 
-	public object? Run(object?[] inputs)
+	public object? Run(params object?[] inputs)
 	{
-		NodeClassTypeCreator = new();
-		NodeClassTypeCreator.CreateProjectClassesAndAssembly(this);
-
-		// Before we start executing the project we need to preprocess every graph everywhere
-		foreach (var nodeClass in Classes)
-		{
-			foreach (var method in nodeClass.Methods)
-			{
-				method.Graph.PreprocessGraph();
-			}
-		}
-
-		// Find the main method
-		var program = Classes.Single(x => x.Name == "Program");
-
-		// Find the main method in the program class
-		var main = program.Methods.Single(x => x.Name == "Main");
-
-		// Create a new graph executor for the main method
-		GraphExecutor = new GraphExecutor(main.Graph, null);
-
 		try
 		{
+			NodeClassTypeCreator = new();
+			var assembly = NodeClassTypeCreator.CreateProjectClassesAndAssembly(this);
+
+			var program = assembly.CreateInstance("Program")!;
+
 			GraphExecutionChangedSubject.OnNext(true);
 
-			// Execute the main method
-			var outputs = new object[main.ReturnType == TypeFactory.Get(typeof(void), null) ? 1 : 2]; // 1 for the exec, 2 for exec + the actual return value
-			GraphExecutor.Execute(null, inputs, outputs);
-
-			// Return the last output
-			return outputs[^1];
+			var main = program.GetType().GetMethod("Main")!;
+			return main.Invoke(program, inputs);
 		}
 		finally
 		{
@@ -129,8 +110,8 @@ public class Project
 		if (NodeClassTypeCreator == null)
 			throw new Exception("NodeClassTypeCreator is null, is the project currently being run?");
 
-		if (NodeClassTypeCreator.GeneratedTypes.TryGetValue(GetNodeClassType(nodeClass), out var type))
-			return type;
+		if (NodeClassTypeCreator.GeneratedTypes.TryGetValue(GetNodeClassType(nodeClass), out var generatedType))
+			return generatedType.Type;
 
 		throw new Exception("Unable to get generated node class for provided class: " + nodeClass.Name);
 	}

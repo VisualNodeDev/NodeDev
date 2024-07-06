@@ -33,9 +33,11 @@ namespace NodeDev.Core.Class
 
 		public Graph Graph { get; }
 
-		public bool IsStatic => false; // not supported yet
+		public bool IsStatic { get; set; }
 
 		public TypeBase DeclaringType => Class.ClassTypeBase;
+
+		public bool HasReturnValue => ReturnType != Class.TypeFactory.Void;
 
 		public void Rename(string newName)
 		{
@@ -77,6 +79,18 @@ namespace NodeDev.Core.Class
 		public IEnumerable<IMethodParameterInfo> GetParameters()
 		{
 			return Parameters;
+		}
+
+		public MethodInfo CreateMethodInfo()
+		{
+			var classType = Class.ClassTypeBase.MakeRealType();
+
+			var method = classType.GetMethod(Name, GetParameters().Select(x => x.ParameterType.MakeRealType()).ToArray());
+
+			if(method == null)
+				throw new Exception("Unable to find method: " + Name);
+
+			return method;
 		}
 
 		#region Serialization

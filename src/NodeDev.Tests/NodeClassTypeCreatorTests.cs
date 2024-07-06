@@ -22,12 +22,12 @@ public class NodeClassTypeCreatorTests
 
 		var assembly = creator.CreateProjectClassesAndAssembly(project);
 
-		Assert.Single(assembly.DefinedTypes);
+		Assert.Single(assembly.DefinedTypes.Where(x => x.IsVisible));
 		Assert.Contains(assembly.DefinedTypes, x => x.Name == "TestClass");
 
 		var instance = assembly.CreateInstance(myClass.Name);
 
-		Assert.IsType(creator.GeneratedTypes[project.GetNodeClassType(myClass)], instance);
+		Assert.IsType(creator.GeneratedTypes[project.GetNodeClassType(myClass)].Type, instance);
 	}
 
 	[Fact]
@@ -37,7 +37,18 @@ public class NodeClassTypeCreatorTests
 
 		Assert.Equal(graph.SelfClass, graph.SelfClass.Project.Classes.First());
 	}
-	
+
+
+	[Fact]
+	public void SimpleAddGenerationTest()
+	{
+		var graph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
+
+		graph.SelfClass.Project.NodeClassTypeCreator = new();
+		var assembly = graph.SelfClass.Project.NodeClassTypeCreator.CreateProjectClassesAndAssembly(graph.SelfClass.Project);
+
+	}
+
 	[Fact]
 	public void TestNewGetSet()
 	{
@@ -51,12 +62,13 @@ public class NodeClassTypeCreatorTests
 
 		var graph = new Graph();
 		var method = new NodeClassMethod(myClass, "Main", myClass.TypeFactory.Get<int>(), graph);
+		method.IsStatic = true;
 		myClass.Methods.Add(method);
 		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method));
 
-		var entryNode = new Core.Nodes.Flow.EntryNode(graph);
+		var entryNode = new EntryNode(graph);
 
-		var returnNode = new Core.Nodes.Flow.ReturnNode(graph);
+		var returnNode = new ReturnNode(graph);
 		returnNode.Inputs.Add(new("Result", entryNode, myClass.TypeFactory.Get<int>()));
 
 		var newNode = new New(graph);
@@ -85,7 +97,7 @@ public class NodeClassTypeCreatorTests
 		graph.Connect(newNode.Outputs[1], getProp.Inputs[0]);
 		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1]);
 
-		var result = project.Run(new object?[] { null, 10 });
+		var result = project.Run([10]);
 
 		Assert.Equal(10, result);
 	}

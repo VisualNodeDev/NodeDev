@@ -34,13 +34,39 @@ namespace NodeDev.Blazor.DiagramsModels
 
 		}
 
+        internal void OnConnectionPathHighlighted(Connection connection)
+		{
+			var port = GetPort(connection);
+
+			foreach (var link in port.Links.OfType<LinkModel>())
+			{
+				if (!link.Classes.Contains("highlighted"))
+					link.Classes += " highlighted";
+
+				link.Refresh();
+			}
+		}
+
+        internal void OnConnectionPathUnhighlighted(Connection connection)
+		{
+			var port = GetPort(connection);
+
+			foreach (var link in port.Links.OfType<LinkModel>())
+			{
+				link.Classes = link.Classes.Replace(" highlighted", "");
+				link.Refresh();
+			}
+		}
+
 		internal async Task OnNodeExecuting(Connection exec)
 		{
             var port = GetPort(exec);
 
             foreach (var link in port.Links.OfType<LinkModel>())
             {
-                link.Classes = "executing";
+                if(!link.Classes.Contains("executing"))
+                    link.Classes += " executing";
+
                 link.Refresh();
             }
 
@@ -50,7 +76,7 @@ namespace NodeDev.Blazor.DiagramsModels
             {
                 foreach (var link in port.Links.OfType<LinkModel>())
                 {
-                    link.Classes = "";
+                    link.Classes = link.Classes.Replace(" executing", "");
 					link.Refresh();
 				}
 			}

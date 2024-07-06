@@ -44,7 +44,7 @@ namespace NodeDev.Core
 		{
 			Graph = graph;
 
-			Connections = new object[graph.NbConnections];
+			Connections = new object[10];
 			NodeStates = new State[graph.Nodes.Count];
 			ChildrenExecutors = new GraphExecutor[graph.Nodes.Count];
 
@@ -76,6 +76,7 @@ namespace NodeDev.Core
 
 		public void Execute(object? self, Span<object?> inputs, Span<object?> outputs)
 		{
+			/*
 			var node = FindEntryNode();
 
 			var execConnection = node.Execute(this, self, null, inputs, inputs, ref DiscardedState.Value, out var _);
@@ -135,6 +136,7 @@ namespace NodeDev.Core
 				if (execConnection != null && alterExecutionStackOnPop)
 					stack.Push(execConnection);
 			}
+			*/
 		}
 
 		private Span<object?> GetNodeInputs(object? self, Node node)
@@ -156,6 +158,8 @@ namespace NodeDev.Core
 
 		private object? CrawlBackInputs(object? self, Connection inputConnection)
 		{
+			return null;
+			/*
 			var other = inputConnection.Connections.FirstOrDefault();
 			if (other == null)
 				return inputConnection.ParsedTextboxValue;
@@ -174,7 +178,7 @@ namespace NodeDev.Core
 
 			other.Parent.Execute(this, self, null, inputs, outputs, ref DiscardedState.Value, out var _);
 
-			return Connections[other.GraphIndex];
+			return Connections[other.GraphIndex];*/
 		}
 
 		public void Dispose()
