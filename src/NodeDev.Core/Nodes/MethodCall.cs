@@ -154,17 +154,19 @@ public class MethodCall : NormalFlowNode
 
 		connection.Name = parameter.Name;
 
-		Graph.Project.GraphChangedSubject.OnNext(Graph);
+		Graph.RaiseGraphChanged(true);
 	}
 
 	internal void OnNewMethodParameter(NodeClassMethodParameter newParameter)
 	{
 		Inputs.Add(new Connection(newParameter.Name, this, newParameter.ParameterType));
-	}
 
-	#endregion
+        Graph.RaiseGraphChanged(true);
+    }
 
-	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
+    #endregion
+
+    internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
 	{
 		if (subChunks != null)
 			throw new Exception("MethodCall.BuildExpression: subChunks should be null as MethodCall never has multiple output paths");

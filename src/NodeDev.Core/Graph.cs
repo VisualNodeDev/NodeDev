@@ -23,9 +23,11 @@ public class Graph
 		NodeProvider.Initialize();
 	}
 
-	#region GetChunks
+	public void RaiseGraphChanged(bool fromCode) => Project.GraphChangedSubject.OnNext((this, fromCode));
 
-	public class BadMergeException(Connection input) : Exception($"Error merging path to {input.Name} of tool {input.Parent.Name}") { }
+    #region GetChunks
+
+    public class BadMergeException(Connection input) : Exception($"Error merging path to {input.Name} of tool {input.Parent.Name}") { }
 	public class DeadEndNotAllowed(List<Connection> inputs) : Exception(inputs.Count == 1 ? $"Dead end not allowed in {inputs[0].Name} of tool {inputs[0].Parent.Name}" : $"Dead end not allowed in {inputs.Count} tools") { }
 
 
@@ -277,7 +279,7 @@ public class Graph
 			.OfType<ParameterExpression>()
 			.Distinct() // lots of inputs use the same variable as another node's output, make sure we only declare them once
 			.Except(info.MethodParametersExpression.Values); // Remove the method parameters as they are declared later and not here
-		var expressionBlock = Expression.Block(localVariables, expressions.Append(Expression.Label(returnLabelTarget, Expression.Default(returnLabelTarget.Type))));
+		var expressionBlock = Expression.Block(localVariables, expressions);
 
 		var parameters = SelfMethod.IsStatic ? info.MethodParametersExpression.Values : info.MethodParametersExpression.Values.Prepend(info.ThisExpression!);
 		var lambdaExpression = Expression.Lambda(expressionBlock, parameters);
@@ -378,7 +380,7 @@ public class Graph
 			// if we found a new connection, connect them together and remove the old connection
 			foreach (var oldLink in removedConnection.Connections)
 			{
-				oldLink.Connections.Remove(removedConnection); // cleanup the old connection
+				oldLink._Connections.Remove(removedConnection); // cleanup the old connection
 
 				if (newConnection != null)
 				{
@@ -387,29 +389,33 @@ public class Graph
 					{
 						// we can safely reconnect the new connection to the old link
 						// Either newConnection is an input and removedConnection is an output or vice versa
-						newConnection.Connections.Add(oldLink);
-						oldLink.Connections.Add(newConnection);
+						newConnection._Connections.Add(oldLink);
+						oldLink._Connections.Add(newConnection);
 					}
 				}
 			}
 		}
 
-		Project.GraphChangedSubject.OnNext(this);
+		RaiseGraphChanged(true); // this always require refreshing the UI as this is custom behavior that needs to be replicated by the UI
 	}
 
-	public void Connect(Connection connection1, Connection connection2)
+	public void Connect(Connection connection1, Connection connection2, bool requireUIRefresh)
 	{
-		if (!connection1.Connections.Contains(connection2))
-			connection1.Connections.Add(connection2);
-		if (!connection2.Connections.Contains(connection1))
-			connection2.Connections.Add(connection1);
-	}
+		if (!connection1._Connections.Contains(connection2))
+			connection1._Connections.Add(connection2);
+		if (!connection2._Connections.Contains(connection1))
+			connection2._Connections.Add(connection1);
 
-	public void Disconnect(Connection connection1, Connection connection2)
+		RaiseGraphChanged(requireUIRefresh);
+    }
+
+	public void Disconnect(Connection connection1, Connection connection2, bool requireUIRefresh)
 	{
-		connection1.Connections.Remove(connection2);
-		connection2.Connections.Remove(connection1);
-	}
+		connection1._Connections.Remove(connection2);
+		connection2._Connections.Remove(connection1);
+
+		RaiseGraphChanged(requireUIRefresh);
+    }
 
 	#endregion
 
@@ -418,12 +424,15 @@ public class Graph
 	public void AddNode(Node node)
 	{
 		((IDictionary<string, Node>)Nodes)[node.Id] = node;
-	}
 
-	public Node AddNode(NodeProvider.NodeSearchResult searchResult)
+        RaiseGraphChanged(true); // Always refresh the UI as the canvas never directly add nodes, it's always through code
+    }
+
+    public Node AddNode(NodeProvider.NodeSearchResult searchResult)
 	{
 		var node = (Node)Activator.CreateInstance(searchResult.Type, this, null)!;
 		AddNode(node);
+
 		if (searchResult is NodeProvider.MethodCallNode methodCall && node is MethodCall methodCallNode)
 			methodCallNode.SetMethodTarget(methodCall.MethodInfo);
 		else if (searchResult is NodeProvider.GetPropertyOrFieldNode getPropertyOrField && node is GetPropertyOrField getPropertyOrFieldNode)
@@ -438,10 +447,12 @@ public class Graph
 
 	#region RemoveNode
 
-	public void RemoveNode(Node node)
+	public void RemoveNode(Node node, bool requireUIRefresh)
 	{
 		((IDictionary<string, Node>)Nodes).Remove(node.Id);
-	}
+
+		RaiseGraphChanged(requireUIRefresh);
+    }
 
 	#endregion
 

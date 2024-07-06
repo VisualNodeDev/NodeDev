@@ -10,125 +10,119 @@ using System.Threading.Tasks;
 
 namespace NodeDev.Core.Class
 {
-	public class NodeClassMethod : IMethodInfo
-	{
-		public record class SerializedNodeClassMethod(string Name, string ReturnType, List<string> Parameters, string Graph);
-		public NodeClassMethod(NodeClass ownerClass, string name, TypeBase returnType, Graph graph)
-		{
-			Class = ownerClass;
-			Name = name;
-			ReturnType = returnType;
-			Graph = graph;
+    public class NodeClassMethod : IMethodInfo
+    {
+        public record class SerializedNodeClassMethod(string Name, string ReturnType, List<string> Parameters, string Graph);
+        public NodeClassMethod(NodeClass ownerClass, string name, TypeBase returnType, Graph graph)
+        {
+            Class = ownerClass;
+            Name = name;
+            ReturnType = returnType;
+            Graph = graph;
 
-			Graph.SelfMethod = this;
-		}
+            Graph.SelfMethod = this;
+        }
 
-		public NodeClass Class { get; }
+        public NodeClass Class { get; }
 
-		public string Name { get; private set; }
+        public string Name { get; private set; }
 
-		public TypeBase ReturnType { get; }
+        public TypeBase ReturnType { get; }
 
-		public List<NodeClassMethodParameter> Parameters { get; } = new();
+        public List<NodeClassMethodParameter> Parameters { get; } = new();
 
-		public Graph Graph { get; }
+        public Graph Graph { get; }
 
-		public bool IsStatic { get; set; }
+        public bool IsStatic { get; set; }
 
-		public TypeBase DeclaringType => Class.ClassTypeBase;
+        public TypeBase DeclaringType => Class.ClassTypeBase;
 
-		public bool HasReturnValue => ReturnType != Class.TypeFactory.Void;
+        public bool HasReturnValue => ReturnType != Class.TypeFactory.Void;
 
-		public void Rename(string newName)
-		{
-			if (string.IsNullOrWhiteSpace(newName))
-				return;
+        public void Rename(string newName)
+        {
+            if (string.IsNullOrWhiteSpace(newName))
+                return;
 
-			Name = newName;
+            Name = newName;
 
-			Class.Project.GraphChangedSubject.OnNext(Graph);
-		}
+            Graph.RaiseGraphChanged(true);
+        }
 
-		public void AddDefaultParameter()
-		{
-			string name = "NewParameter";
-			int i = 2;
-			while (Parameters.Any(x => x.Name == name))
+        public void AddDefaultParameter()
+        {
+            string name = "NewParameter";
+            int i = 2;
+            while (Parameters.Any(x => x.Name == name))
                 name = $"NewParameter_{i++}";
-			var newParameter = new NodeClassMethodParameter(name, Class.TypeFactory.Get<int>(), this);
+            var newParameter = new NodeClassMethodParameter(name, Class.TypeFactory.Get<int>(), this);
 
-			Parameters.Add(newParameter);
+            Parameters.Add(newParameter);
 
-			foreach (var methodCall in Class.Project.GetNodes<MethodCall>())
-			{
-				if (methodCall.TargetMethod == this)
-				{
-					methodCall.OnNewMethodParameter(newParameter);
-					Class.Project.GraphChangedSubject.OnNext(methodCall.Graph);
-				}
-			}
+            foreach (var methodCall in Class.Project.GetNodes<MethodCall>())
+            {
+                if (methodCall.TargetMethod == this)
+                    methodCall.OnNewMethodParameter(newParameter);
+            }
 
-			var entry = Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
-			if(entry != null)
-			{
-				entry.AddNewParameter(newParameter);
-				Class.Project.GraphChangedSubject.OnNext(Graph);
-			}
-		}
+            var entry = Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
+            if (entry != null)
+                entry.AddNewParameter(newParameter);
+        }
 
-		public IEnumerable<IMethodParameterInfo> GetParameters()
-		{
-			return Parameters;
-		}
+        public IEnumerable<IMethodParameterInfo> GetParameters()
+        {
+            return Parameters;
+        }
 
-		public MethodInfo CreateMethodInfo()
-		{
-			var classType = Class.ClassTypeBase.MakeRealType();
+        public MethodInfo CreateMethodInfo()
+        {
+            var classType = Class.ClassTypeBase.MakeRealType();
 
-			var method = classType.GetMethod(Name, GetParameters().Select(x => x.ParameterType.MakeRealType()).ToArray());
+            var method = classType.GetMethod(Name, GetParameters().Select(x => x.ParameterType.MakeRealType()).ToArray());
 
-			if(method == null)
-				throw new Exception("Unable to find method: " + Name);
+            if (method == null)
+                throw new Exception("Unable to find method: " + Name);
 
-			return method;
-		}
+            return method;
+        }
 
-		#region Serialization
+        #region Serialization
 
-		private SerializedNodeClassMethod? SavedDataDuringDeserializationStep1 { get; set; }
-		public static NodeClassMethod Deserialize(NodeClass owner, string serialized)
-		{
-			var serializedNodeClassMethod = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethod>(serialized) ?? throw new Exception("Unable to deserialize node class method");
+        private SerializedNodeClassMethod? SavedDataDuringDeserializationStep1 { get; set; }
+        public static NodeClassMethod Deserialize(NodeClass owner, string serialized)
+        {
+            var serializedNodeClassMethod = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethod>(serialized) ?? throw new Exception("Unable to deserialize node class method");
 
-			var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassMethod.ReturnType);
-			var graph = new Graph();
-			var nodeClassMethod = new NodeClassMethod(owner, serializedNodeClassMethod.Name, returnType, graph);
-			graph.SelfMethod = nodeClassMethod; // a bit / really ugly
+            var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassMethod.ReturnType);
+            var graph = new Graph();
+            var nodeClassMethod = new NodeClassMethod(owner, serializedNodeClassMethod.Name, returnType, graph);
+            graph.SelfMethod = nodeClassMethod; // a bit / really ugly
 
-			foreach (var parameter in serializedNodeClassMethod.Parameters)
-				nodeClassMethod.Parameters.Add(NodeClassMethodParameter.Deserialize(owner.Project.TypeFactory, parameter, nodeClassMethod));
+            foreach (var parameter in serializedNodeClassMethod.Parameters)
+                nodeClassMethod.Parameters.Add(NodeClassMethodParameter.Deserialize(owner.Project.TypeFactory, parameter, nodeClassMethod));
 
-			nodeClassMethod.SavedDataDuringDeserializationStep1 = serializedNodeClassMethod;
+            nodeClassMethod.SavedDataDuringDeserializationStep1 = serializedNodeClassMethod;
 
-			return nodeClassMethod;
-		}
+            return nodeClassMethod;
+        }
 
-		public void Deserialize_Step3()
-		{
-			if (SavedDataDuringDeserializationStep1 == null)
-				throw new Exception("Cannot call Deserialize_Step3 before calling Deserialize");
+        public void Deserialize_Step3()
+        {
+            if (SavedDataDuringDeserializationStep1 == null)
+                throw new Exception("Cannot call Deserialize_Step3 before calling Deserialize");
 
-			Graph.Deserialize(SavedDataDuringDeserializationStep1.Graph, Graph);
+            Graph.Deserialize(SavedDataDuringDeserializationStep1.Graph, Graph);
 
-			SavedDataDuringDeserializationStep1 = null;
-		}
+            SavedDataDuringDeserializationStep1 = null;
+        }
 
-		public string Serialize()
-		{
-			var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.SerializeWithFullTypeName(), Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize());
-			return System.Text.Json.JsonSerializer.Serialize(serializedNodeClassMethod);
-		}
+        public string Serialize()
+        {
+            var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.SerializeWithFullTypeName(), Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize());
+            return System.Text.Json.JsonSerializer.Serialize(serializedNodeClassMethod);
+        }
 
-		#endregion
-	}
+        #endregion
+    }
 }

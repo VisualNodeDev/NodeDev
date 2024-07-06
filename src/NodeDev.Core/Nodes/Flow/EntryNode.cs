@@ -29,14 +29,17 @@ public class EntryNode : FlowNode
 	internal void AddNewParameter(NodeClassMethodParameter newParameter)
 	{
 		Outputs.Add(new Connection(newParameter.Name, this, newParameter.ParameterType));
+
+		Graph.RaiseGraphChanged(true);
 	}
 
 	internal void RenameParameter(NodeClassMethodParameter parameter, int index)
 	{
 		Outputs[index + 1].Name = parameter.Name;
-	}
+		Graph.RaiseGraphChanged(true);
+    }
 
-	internal Connection UpdateParameterType(NodeClassMethodParameter parameter, int index)
+    internal Connection UpdateParameterType(NodeClassMethodParameter parameter, int index)
 	{
 		var connection = Outputs[index + 1];
 

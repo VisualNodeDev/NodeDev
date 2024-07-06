@@ -5,129 +5,132 @@
 <MudSnackbarProvider />
 
 <MudLayout Style="height: 100%; width: 100%">
-	<MudAppBar Elevation="1">
-		<MudButton OnClick="Save" Class="ml-3">Save</MudButton>
-		<MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
-		<MudButton OnClick="Run" Class="ml-3">Run</MudButton>
-		<MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
-		<MudSpacer />
-		<MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
-	</MudAppBar>
-	<MudMainContent Style="width: 100%; height: 100%">
+    <MudAppBar Elevation="1">
+        <MudButton OnClick="Save" Class="ml-3">Save</MudButton>
+        <MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
+        <MudButton OnClick="Run" Class="ml-3">Run</MudButton>
+        <MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+    </MudAppBar>
+    <MudMainContent Style="width: 100%; height: 100%">
 
-		<MudStack Row="true" Class="h100 pa-1">
+        <MudStack Row="true" Class="h100 pa-1">
 
-			<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 h100" KeepPanelsAlive="true" Style="width: 25%; height: 100%">
-				<MudTabPanel Text="Project">
-					<ProjectExplorer Project="Project" @bind-SelectedClass="SelectedClass"></ProjectExplorer>
-				</MudTabPanel>
-				<MudTabPanel Text="Class">
-					@if (SelectedClass != null)
-					{
-						<ClassExplorer @key="SelectedClass" Class="SelectedClass" SelectedMethodChanged="OpenMethod"></ClassExplorer>
-					}
-				</MudTabPanel>
-			</MudTabs>
 
-			@* The 'relative' div is used to control the "Open/Close" icon for the debugger console panel *@
-			<div class="w100 relative flex-1">
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 h100" KeepPanelsAlive="true" Style="width: 25%; height: 100%">
+                <MudTabPanel Text="Project">
+                    <ProjectExplorer Project="Project" @bind-SelectedClass="SelectedClass"></ProjectExplorer>
+                </MudTabPanel>
+                <MudTabPanel Text="Class">
+                    @if (SelectedClass != null)
+                    {
+                        <ClassExplorer @key="SelectedClass" Class="SelectedClass" SelectedMethodChanged="OpenMethod"></ClassExplorer>
+                    }
+                </MudTabPanel>
+            </MudTabs>
 
-				<MudStack Row="false" Class="wh100">
+            @* The 'relative' div is used to control the "Open/Close" icon for the debugger console panel *@
+            <div class="w100 relative flex-1">
 
-					<DebuggedPathView OpenMethod="OpenMethodFromDebuggedPath" />
+                <MudStack Row="false" Class="wh100">
 
-					<CascadingValue Value="this" IsFixed="true">
-						<MudTabs @ref="Tabs" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" @bind-ActivePanelIndex="ActivePanelIndex">
-							@foreach (var method in OpenedMethods)
-							{
-								<MudTabPanel ID="method" @key="method" Text="@method.Name">
-									<GraphCanvas @key="method.Graph" Graph="method.Graph"></GraphCanvas>
-								</MudTabPanel>
-							}
-						</MudTabs>
-					</CascadingValue>
+                    <DebuggedPathView OpenMethod="OpenMethodFromDebuggedPath" />
 
-					<DebuggerConsolePanel Project="Project" />
+                    <CascadingValue Value="this" IsFixed="true">
+                        <MudTabs @ref="Tabs" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" @bind-ActivePanelIndex="ActivePanelIndex">
+                            @foreach (var method in OpenedMethods)
+                            {
+                                <MudTabPanel ID="method" @key="method" Text="@method.Name">
+                                    <GraphCanvas @key="method.Graph" Graph="method.Graph"></GraphCanvas>
+                                </MudTabPanel>
+                            }
+                        </MudTabs>
+                    </CascadingValue>
 
-				</MudStack>
+                    <DebuggerConsolePanel Project="Project" />
 
-			</div>
+                </MudStack>
 
-		</MudStack>
-	</MudMainContent>
+            </div>
+
+            <SourceViewer Method="@(OpenedMethods.Count > 0 ? OpenedMethods[ActivePanelIndex] : null)" />
+
+        </MudStack>
+    </MudMainContent>
 </MudLayout>
 
 @code {
 
-	private Core.Project Project { get; set; } = null!;
+    private Core.Project Project { get; set; } = null!;
 
-	private Core.Class.NodeClass? SelectedClass { get; set; }
+    private Core.Class.NodeClass? SelectedClass { get; set; }
 
-	private List<Core.Class.NodeClassMethod> OpenedMethods { get; } = new();
+    private List<Core.Class.NodeClassMethod> OpenedMethods { get; } = new();
 
-	private MudTabs Tabs { get; set; } = null!;
+    private MudTabs Tabs { get; set; } = null!;
 
-	private int ActivePanelIndex = 0;
+    private int ActivePanelIndex = 0;
 
-	protected override void OnInitialized()
-	{
-		if (File.Exists("project.json"))
-			Project = Core.Project.Deserialize(File.ReadAllText("project.json"));
-		else
-			Project = Core.Project.CreateNewDefaultProject();
+    protected override void OnInitialized()
+    {
+        if (File.Exists("project.json"))
+            Project = Core.Project.Deserialize(File.ReadAllText("project.json"));
+        else
+            Project = Core.Project.CreateNewDefaultProject();
 
-		DebuggedPathService.ChangeProject(Project);
-	}
+        DebuggedPathService.ChangeProject(Project);
+    }
 
-	public void OpenMethodFromDebuggedPath(Core.Class.NodeClassMethod? method)
-	{
-		if (method == null)
-		{
-			// Find the main method
-			var program = Project.Classes.FirstOrDefault(x => x.Name == "Program");
+    public void OpenMethodFromDebuggedPath(Core.Class.NodeClassMethod? method)
+    {
+        if (method == null)
+        {
+            // Find the main method
+            var program = Project.Classes.FirstOrDefault(x => x.Name == "Program");
 
-			// Find the main method in the program class
-			method = program?.Methods.FirstOrDefault(x => x.Name == "Main");
-		}
+            // Find the main method in the program class
+            method = program?.Methods.FirstOrDefault(x => x.Name == "Main");
+        }
 
-		OpenMethod(method);
-	}
+        OpenMethod(method);
+    }
 
-	public void OpenMethod(Core.Class.NodeClassMethod? method)
-	{
-		if (method == null)
-			return;
-		if (!OpenedMethods.Contains(method))
-			OpenedMethods.Add(method);
+    public void OpenMethod(Core.Class.NodeClassMethod? method)
+    {
+        if (method == null)
+            return;
+        if (!OpenedMethods.Contains(method))
+            OpenedMethods.Add(method);
 
-		ActivePanelIndex = OpenedMethods.IndexOf(method);
-		StateHasChanged();
-	}
+        ActivePanelIndex = OpenedMethods.IndexOf(method);
+        StateHasChanged();
+    }
 
-	private void Save()
-	{
-		var content = Project.Serialize();
-		File.WriteAllText("project.json", content);
-	}
+    private void Save()
+    {
+        var content = Project.Serialize();
+        File.WriteAllText("project.json", content);
+    }
 
-	private void Add()
-	{
-		//GraphCanvas?.ShowAddNode();
-	}
+    private void Add()
+    {
+        //GraphCanvas?.ShowAddNode();
+    }
 
-	public void Run()
-	{
-		new Thread(() =>
-		{
-            Project.Run();
-		}).Start();
-	}
+    public void Run()
+    {
+        new Thread(() =>
+        {
+            Project.Run(Project.IsLiveDebuggingEnabled ? Core.BuildOptions.Debug : Core.BuildOptions.Release);
+        }).Start();
+    }
 
-	private void SwitchLiveDebugging()
-	{
-		if (Project.IsLiveDebuggingEnabled)
-			Project.StopLiveDebugging();
-		else
-			Project.StartLiveDebugging();
-	}
+    private void SwitchLiveDebugging()
+    {
+        if (Project.IsLiveDebuggingEnabled)
+            Project.StopLiveDebugging();
+        else
+            Project.StartLiveDebugging();
+    }
 }

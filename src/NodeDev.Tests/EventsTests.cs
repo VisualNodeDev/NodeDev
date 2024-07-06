@@ -46,20 +46,20 @@ public class EventsTests
 		graph.AddNode(setProp);
 
 		// link the execution path
-		graph.Connect(entryNode.Outputs[0], newNode.Inputs[0]);
-		graph.Connect(newNode.Outputs[0], setProp.Inputs[1]); // set input 0 is the target, so use input 1 as the exec
-		graph.Connect(setProp.Outputs[0], returnNode.Inputs[0]);
+		graph.Connect(entryNode.Outputs[0], newNode.Inputs[0], false);
+		graph.Connect(newNode.Outputs[0], setProp.Inputs[1], false); // set input 0 is the target, so use input 1 as the exec
+		graph.Connect(setProp.Outputs[0], returnNode.Inputs[0], false);
 
 		// link the rest
-		graph.Connect(entryNode.Outputs[1], setProp.Inputs[2]);
-		graph.Connect(newNode.Outputs[1], setProp.Inputs[0]);
-		graph.Connect(newNode.Outputs[1], getProp.Inputs[0]);
-		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1]);
+		graph.Connect(entryNode.Outputs[1], setProp.Inputs[2], false);
+		graph.Connect(newNode.Outputs[1], setProp.Inputs[0], false);
+		graph.Connect(newNode.Outputs[1], getProp.Inputs[0], false);
+		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1], false);
 
 		bool raised = false;
 		project.GraphChanged.Subscribe(x =>
 		{
-			Assert.Same(graph, x);
+			Assert.Same(graph, x.Graph);
 
 			raised = true;
 		});

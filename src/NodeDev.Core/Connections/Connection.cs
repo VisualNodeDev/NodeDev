@@ -21,7 +21,9 @@ namespace NodeDev.Core.Connections
 
 		public TypeBase Type { get; private set; }
 
-		public readonly List<Connection> Connections = [];
+		internal readonly List<Connection> _Connections = [];
+
+		public IReadOnlyList<Connection> Connections => _Connections;
 
 		/// <summary>
 		/// Vertices of the connection. Used for drawing connections with multiple segments.
@@ -93,9 +95,9 @@ namespace NodeDev.Core.Connections
 					continue;
 
 				if (!connection.Connections.Contains(otherConnection))
-					connection.Connections.Add(otherConnection);
+					connection._Connections.Add(otherConnection);
 				if (!otherConnection.Connections.Contains(connection))
-					otherConnection.Connections.Add(connection);
+					otherConnection._Connections.Add(connection);
 			}
 
 			return connection;

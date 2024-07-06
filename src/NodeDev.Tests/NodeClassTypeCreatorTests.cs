@@ -8,8 +8,9 @@ namespace NodeDev.Tests;
 
 public class NodeClassTypeCreatorTests
 {
-	[Fact]
-	public void SimpleProjectTest()
+	[Theory]
+	[MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
+	public void SimpleProjectTest(SerializableBuildOptions options)
 	{
 		var project = new Project(Guid.NewGuid());
 
@@ -18,14 +19,15 @@ public class NodeClassTypeCreatorTests
 
 		myClass.Properties.Add(new(myClass, "MyProp", project.TypeFactory.Get<float>()));
 
-		var creator = new NodeClassTypeCreator();
+		var creator = project.CreateNodeClassTypeCreator(options);
 
-		var assembly = creator.CreateProjectClassesAndAssembly(project);
+		creator.CreateProjectClassesAndAssembly();
 
-		Assert.Single(assembly.DefinedTypes.Where(x => x.IsVisible));
-		Assert.Contains(assembly.DefinedTypes, x => x.Name == "TestClass");
+		Assert.NotNull(creator.Assembly);
+        Assert.Single(creator.Assembly.DefinedTypes.Where(x => x.IsVisible));
+		Assert.Contains(creator.Assembly.DefinedTypes, x => x.Name == "TestClass");
 
-		var instance = assembly.CreateInstance(myClass.Name);
+		var instance = creator.Assembly.CreateInstance(myClass.Name);
 
 		Assert.IsType(creator.GeneratedTypes[project.GetNodeClassType(myClass)].Type, instance);
 	}
@@ -39,18 +41,19 @@ public class NodeClassTypeCreatorTests
 	}
 
 
-	[Fact]
-	public void SimpleAddGenerationTest()
+    [Theory]
+    [MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
+    public void SimpleAddGenerationTest(SerializableBuildOptions options)
 	{
 		var graph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
 
-		graph.SelfClass.Project.NodeClassTypeCreator = new();
-		var assembly = graph.SelfClass.Project.NodeClassTypeCreator.CreateProjectClassesAndAssembly(graph.SelfClass.Project);
-
+		var creator = graph.SelfClass.Project.CreateNodeClassTypeCreator(options);
+		creator.CreateProjectClassesAndAssembly();
 	}
 
-	[Fact]
-	public void TestNewGetSet()
+    [Theory]
+    [MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
+    public void TestNewGetSet(SerializableBuildOptions options)
 	{
 		var project = new Project(Guid.NewGuid());
 
@@ -87,17 +90,17 @@ public class NodeClassTypeCreatorTests
 		graph.AddNode(setProp);
 
 		// link the execution path
-		graph.Connect(entryNode.Outputs[0], newNode.Inputs[0]);
-		graph.Connect(newNode.Outputs[0], setProp.Inputs[1]); // set input 0 is the target, so use input 1 as the exec
-		graph.Connect(setProp.Outputs[0], returnNode.Inputs[0]);
+		graph.Connect(entryNode.Outputs[0], newNode.Inputs[0], false);
+		graph.Connect(newNode.Outputs[0], setProp.Inputs[1], false); // set input 0 is the target, so use input 1 as the exec
+		graph.Connect(setProp.Outputs[0], returnNode.Inputs[0], false);
 
 		// link the rest
-		graph.Connect(entryNode.Outputs[1], setProp.Inputs[2]);
-		graph.Connect(newNode.Outputs[1], setProp.Inputs[0]);
-		graph.Connect(newNode.Outputs[1], getProp.Inputs[0]);
-		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1]);
+		graph.Connect(entryNode.Outputs[1], setProp.Inputs[2], false);
+		graph.Connect(newNode.Outputs[1], setProp.Inputs[0], false);
+		graph.Connect(newNode.Outputs[1], getProp.Inputs[0], false);
+		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1], false);
 
-		var result = project.Run([10]);
+		var result = project.Run(options, [10]);
 
 		Assert.Equal(10, result);
 	}

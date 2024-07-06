@@ -2,7 +2,7 @@
 using System.Reflection;
 using NodeDev.Core.Types;
 using FastExpressionCompiler;
-using System.Reflection.PortableExecutable;
+using NodeDev.Core.Nodes;
 
 namespace NodeDev.Core.Class;
 
@@ -14,29 +14,46 @@ public class NodeClassTypeCreator
 	public static string HiddenName(string name) => $"_hidden_{name}";
 	private static GeneratedType CreateGeneratedType(ModuleBuilder mb, string name) => new(mb.DefineType(name, TypeAttributes.Public | TypeAttributes.Class), mb.DefineType(HiddenName(name), TypeAttributes.NotPublic | TypeAttributes.Class | TypeAttributes.Sealed), []);
 
-	public Assembly CreateProjectClassesAndAssembly(Project project)
+	public Assembly? Assembly { get; private set; }
+
+	public readonly Project Project;
+
+	public readonly BuildOptions Options;
+
+	public bool IsPreBuilt => Assembly != null;
+
+	public bool IsBuilt => IsPreBuilt && !Options.PreBuildOnly;
+
+    internal NodeClassTypeCreator(Project project, BuildOptions buildOptions)
+    {
+        Project = project;
+        Options = buildOptions;
+    }
+
+    public void CreateProjectClassesAndAssembly()
 	{
 		// https://learn.microsoft.com/en-us/dotnet/api/system.reflection.emit.assemblybuilder?view=net-7.0
-		var ab = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("NodeProject_" + project.Id.ToString().Replace('-', '_')), AssemblyBuilderAccess.Run);
+		var ab = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), AssemblyBuilderAccess.RunAndCollect);
+        Assembly = ab;
 
-		// The module name is usually the same as the assembly name.
-		var mb = ab.DefineDynamicModule(ab.GetName().Name!);
+        // The module name is usually the same as the assembly name.
+        var mb = ab.DefineDynamicModule(ab.GetName().Name!);
 
 		// Creating all the types early so they are all accessible during expression tree generation
-		foreach (var nodeClass in project.Classes)
+		foreach (var nodeClass in Project.Classes)
 		{
 			GeneratedType generatedType;
-			if (GeneratedTypes.ContainsKey(project.GetNodeClassType(nodeClass)))
-				generatedType = GeneratedTypes[project.GetNodeClassType(nodeClass)];
+			if (GeneratedTypes.ContainsKey(Project.GetNodeClassType(nodeClass)))
+				generatedType = GeneratedTypes[Project.GetNodeClassType(nodeClass)];
 			else
-				GeneratedTypes[project.GetNodeClassType(nodeClass)] = generatedType = CreateGeneratedType(mb, nodeClass.Name);
+                GeneratedTypes[Project.GetNodeClassType(nodeClass)] = generatedType = CreateGeneratedType(mb, nodeClass.Name);
 
 		}
 
 		// Create the properties and methods in the real type
-		foreach (var nodeClass in project.Classes)
+		foreach (var nodeClass in Project.Classes)
 		{
-			var generatedType = GeneratedTypes[project.GetNodeClassType(nodeClass)];
+			var generatedType = GeneratedTypes[Project.GetNodeClassType(nodeClass)];
 
 			var typeBuilder = (TypeBuilder)generatedType.Type;
 			
@@ -59,32 +76,44 @@ public class NodeClassTypeCreator
 				GenerateRealMethodAndEmptyHiddenMethod(method, typeBuilder, generatedType);
 			}
 
-			// Create the real type
-			// At this point the real type has everything it needs to be created
-			// It's methods are simply calling the hidden class methods, but those are still empty
-			GeneratedTypes[project.GetNodeClassType(nodeClass)] = generatedType with
+            // Create the real type
+            // At this point the real type has everything it needs to be created
+            // It's methods are simply calling the hidden class methods, but those are still empty
+            GeneratedTypes[Project.GetNodeClassType(nodeClass)] = generatedType with
 			{
 				Type = typeBuilder.CreateType()
 			};
 		}
 
-		// Create the body of each methods in the hidden type
-		foreach (var generatedType in GeneratedTypes.Values)
+		if (!Options.PreBuildOnly)
 		{
-			foreach ((var method, var methodBuilder) in generatedType.Methods)
-				GenerateHiddenMethodBody(method, methodBuilder);
+			// Create the body of each methods in the hidden type
+			foreach (var generatedType in GeneratedTypes.Values)
+			{
+				foreach ((var method, var methodBuilder) in generatedType.Methods)
+					GenerateHiddenMethodBody(method, methodBuilder);
 
-			// We are finally ready to create the final hidden type
-			generatedType.HiddenType.CreateType();
+				// We are finally ready to create the final hidden type
+				generatedType.HiddenType.CreateType();
+			}
 		}
 
-		return ab;
 	}
 
-	private static void GenerateHiddenMethodBody(NodeClassMethod method, MethodBuilder methodBuilder)
+	public string GetBodyAsCsCode(NodeClassMethod method)
+    {
+		if (!IsPreBuilt)
+			throw new Exception($"Unable to get method's body as CS code. Assembly must be built before");
+
+            var expression = method.Graph.BuildExpression(Options.BuildExpressionOptions);
+
+        return expression.ToCSharpString();
+    }
+
+    private void GenerateHiddenMethodBody(NodeClassMethod method, MethodBuilder methodBuilder)
 	{
 		// Generate the expression tree for the method
-		var expression = method.Graph.BuildExpression(new());
+		var expression = method.Graph.BuildExpression(Options.BuildExpressionOptions);
 
 		var ilGenerator = methodBuilder.GetILGenerator();
 		var result = expression.CompileFastToIL(ilGenerator, CompilerFlags.ThrowOnNotSupportedExpression);
