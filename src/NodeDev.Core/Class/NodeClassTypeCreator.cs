@@ -3,6 +3,7 @@ using System.Reflection;
 using NodeDev.Core.Types;
 using FastExpressionCompiler;
 using NodeDev.Core.Nodes;
+using System.Linq.Expressions;
 
 namespace NodeDev.Core.Class;
 

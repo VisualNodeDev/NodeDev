@@ -100,7 +100,11 @@ namespace NodeDev.Core.Nodes
 				if (output.Type.IsExec)
 					continue;
 
-				var variable = Expression.Variable(output.Type.MakeRealType(), $"{Name}_{output.Name}".Replace(" ", string.Empty).Replace(".", string.Empty));
+				var variable = Expression.Variable(output.Type.MakeRealType(), $"{Name}_{output.Name}"
+					.Replace(" ", string.Empty)
+					.Replace(".", string.Empty)
+					.Replace("<", string.Empty)
+					.Replace(">", string.Empty));
 				yield return (output, variable);
 			}
 		}

@@ -93,6 +93,10 @@ else
 
             Code += $"{System.Environment.NewLine}*/";
         }
+        catch(Exception ex)
+        {
+            Code = $"/* Error during code generation: {System.Environment.NewLine}{ex}{System.Environment.NewLine}*/";
+        }
     }
 
     private void OnGraphChanged(Graph graph)

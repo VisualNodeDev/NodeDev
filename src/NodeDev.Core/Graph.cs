@@ -256,7 +256,7 @@ public class Graph
             info.MethodParametersExpression[parameter.Name] = variable;
         }
 
-        // Create a variable for each node input and output
+        // Create a variable for each node's output
         foreach (var node in Nodes.Values)
         {
             if (node.CanBeInlined)
