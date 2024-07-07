@@ -1,15 +1,14 @@
 using NodeDev.Core;
 using NodeDev.Core.Class;
 using NodeDev.Core.Nodes;
-using NodeDev.Core.Nodes.Flow;
 
 namespace NodeDev.Tests;
 
 public class SerializationTests
 {
-
-	[Fact]
-	public void TestBasicSerialization()
+    [Theory]
+    [MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
+    public void TestBasicSerialization(SerializableBuildOptions options)
 	{
 		var graph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
 		var project = graph.SelfClass.Project;
@@ -22,13 +21,14 @@ public class SerializationTests
 
 		graph = deserializedProject.Classes.First().Methods.First().Graph; // swap the original graph with the deserialized one
 
-		var output = graph.Project.Run([1, 2]);
+		var output = graph.Project.Run(options, [1, 2]);
 
 		Assert.Equal(3, output);
 	}
 
-	[Fact]
-	public void TestSerializationMethodCall()
+    [Theory]
+    [MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
+    public void TestSerializationMethodCall(SerializableBuildOptions options)
 	{
 		var simpleGraph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _, isStatic: false);
 		var project = simpleGraph.SelfClass.Project;
@@ -51,17 +51,17 @@ public class SerializationTests
 		returnNode.Inputs.Add(new("Result", entryNode, project.TypeFactory.Get<int>()));
 
 
-		testMethodGraph.AddNode(entryNode);
-		testMethodGraph.AddNode(methodCall);
-		testMethodGraph.AddNode(returnNode);
+		testMethodGraph.AddNode(entryNode, false);
+		testMethodGraph.AddNode(methodCall, false);
+		testMethodGraph.AddNode(returnNode, false);
 
-		testMethodGraph.Connect(entryNode.Outputs[0], methodCall.Inputs[0]);// exec from entry to method call
-		testMethodGraph.Connect(entryNode.Outputs[1], methodCall.Inputs[2]); // A to A
-		testMethodGraph.Connect(entryNode.Outputs[2], methodCall.Inputs[3]); // B to B
-		testMethodGraph.Connect(methodCall.Outputs[0], returnNode.Inputs[0]); // exec from method to return node
-		testMethodGraph.Connect(methodCall.Outputs[1], returnNode.Inputs[1]); // method call result to return node result
+		testMethodGraph.Connect(entryNode.Outputs[0], methodCall.Inputs[0], false);// exec from entry to method call
+		testMethodGraph.Connect(entryNode.Outputs[1], methodCall.Inputs[2], false); // A to A
+		testMethodGraph.Connect(entryNode.Outputs[2], methodCall.Inputs[3], false); // B to B
+		testMethodGraph.Connect(methodCall.Outputs[0], returnNode.Inputs[0], false); // exec from method to return node
+		testMethodGraph.Connect(methodCall.Outputs[1], returnNode.Inputs[1], false); // method call result to return node result
 
-		var output = testMethodGraph.Project.Run([1, 2]);
+		var output = testMethodGraph.Project.Run(options, [1, 2]);
 
 		Assert.Equal(3, output);
 	}

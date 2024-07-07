@@ -24,17 +24,17 @@ public class Project
 
 	public readonly TypeFactory TypeFactory;
 
-	public NodeClassTypeCreator? NodeClassTypeCreator { get; internal set; }
+	public NodeClassTypeCreator? NodeClassTypeCreator { get; private set; }
 
 	public GraphExecutor? GraphExecutor { get; set; }
 
-	internal Subject<Graph> GraphChangedSubject { get; } = new();
+	internal Subject<(Graph Graph, bool RequireUIRefresh)> GraphChangedSubject { get; } = new();
 
 	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutingSubject { get; } = new();
 	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutedSubject { get; } = new();
 	internal Subject<bool> GraphExecutionChangedSubject { get; } = new();
 
-	public IObservable<Graph> GraphChanged => GraphChangedSubject.AsObservable();
+	public IObservable<(Graph Graph, bool RequireUIRefresh)> GraphChanged => GraphChangedSubject.AsObservable();
 
 	public IObservable<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecuting => GraphNodeExecutingSubject.AsObservable();
 
@@ -55,9 +55,9 @@ public class Project
 		return Classes.SelectMany(x => x.Methods).SelectMany(x => x.Graph.Nodes.Values).OfType<T>();
 	}
 
-    #region CreateNewDefaultProject
+	#region CreateNewDefaultProject
 
-    public static Project CreateNewDefaultProject()
+	public static Project CreateNewDefaultProject()
 	{
 		var project = new Project(Guid.NewGuid());
 
@@ -65,8 +65,8 @@ public class Project
 
 		var main = new Class.NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void), null), new Graph());
 
-		main.Graph.AddNode(new EntryNode(main.Graph));
-		main.Graph.AddNode(new ReturnNode(main.Graph));
+		main.Graph.AddNode(new EntryNode(main.Graph), false);
+		main.Graph.AddNode(new ReturnNode(main.Graph), false);
 		programClass.Methods.Add(main);
 
 		project.Classes.Add(programClass);
@@ -78,13 +78,18 @@ public class Project
 
 	#region Run
 
-	public object? Run(params object?[] inputs)
-	{
+    public object? Run(BuildOptions options, params object?[] inputs)
+    {
 		try
 		{
-			NodeClassTypeCreator = new();
-			var assembly = NodeClassTypeCreator.CreateProjectClassesAndAssembly(this);
+			CreateNodeClassTypeCreator(options);
 
+			if(NodeClassTypeCreator == null)
+				throw new NullReferenceException($"NodeClassTypeCreator should not be null after {nameof(CreateNodeClassTypeCreator)} was called, this shouldn't happen");
+
+            NodeClassTypeCreator.CreateProjectClassesAndAssembly();
+
+			var assembly = NodeClassTypeCreator.Assembly ?? throw new NullReferenceException("NodeClassTypeCreator.Assembly null after project was compiled, this shouldn't happen");
 			var program = assembly.CreateInstance("Program")!;
 
 			GraphExecutionChangedSubject.OnNext(true);
@@ -105,7 +110,12 @@ public class Project
 
 	#region GetCreatedClassType / GetNodeClassType
 
-	public Type GetCreatedClassType(NodeClass nodeClass)
+	public NodeClassTypeCreator CreateNodeClassTypeCreator(BuildOptions options)
+    {
+        return NodeClassTypeCreator = new(this, options);
+    }
+
+    public Type GetCreatedClassType(NodeClass nodeClass)
 	{
 		if (NodeClassTypeCreator == null)
 			throw new Exception("NodeClassTypeCreator is null, is the project currently being run?");

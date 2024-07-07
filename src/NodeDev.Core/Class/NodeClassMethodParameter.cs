@@ -124,24 +124,15 @@ namespace NodeDev.Core.Class
             var oldName = Name;
             Name = name;
 
-            foreach (var nodeClass in Method.Class.Project.Classes)
+            foreach (var methodCall in Method.Graph.Project.GetNodes<MethodCall>())
             {
-                foreach (var method in nodeClass.Methods)
-                {
-                    foreach (var node in method.Graph.Nodes.Values)
-                    {
-                        if (node is MethodCall methodCall && methodCall.TargetMethod == Method)
-                            methodCall.OnMethodParameterRenamed(oldName, this);
-                    }
-                }
+                if (methodCall.TargetMethod == Method)
+                    methodCall.OnMethodParameterRenamed(oldName, this);
             }
 
             var entry = Method.Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
             if (entry != null)
-            {
                 entry.RenameParameter(this, Method.Parameters.IndexOf(this));
-                Method.Class.Project.GraphChangedSubject.OnNext(Method.Graph);
-            }
         }
 
         public void ChangeType(TypeBase type)

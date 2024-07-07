@@ -1,6 +1,7 @@
 using NodeDev.Core;
 using NodeDev.Core.Class;
 using NodeDev.Core.Nodes.Flow;
+using System.Diagnostics;
 
 namespace NodeDev.Tests;
 
@@ -32,107 +33,113 @@ public class GraphExecutorTests
 		addNode.Inputs[1].UpdateType(nodeClass.TypeFactory.Get<TIn>());
 		addNode.Outputs[0].UpdateType(nodeClass.TypeFactory.Get<TOut>());
 
-		graph.AddNode(entryNode);
-		graph.AddNode(addNode);
-		graph.AddNode(returnNode);
+		graph.AddNode(entryNode, false);
+		graph.AddNode(addNode, false);
+		graph.AddNode(returnNode, false);
 
-		graph.Connect(entryNode.Outputs[0], returnNode.Inputs[0]);
+		graph.Connect(entryNode.Outputs[0], returnNode.Inputs[0], false);
 
-		graph.Connect(entryNode.Outputs[1], addNode.Inputs[0]);
-		graph.Connect(entryNode.Outputs[2], addNode.Inputs[1]);
-		graph.Connect(addNode.Outputs[0], returnNode.Inputs[1]);
+		graph.Connect(entryNode.Outputs[1], addNode.Inputs[0], false);
+		graph.Connect(entryNode.Outputs[2], addNode.Inputs[1], false);
+		graph.Connect(addNode.Outputs[0], returnNode.Inputs[1], false);
 
 		return graph;
 	}
 
-	[Fact]
-	public void SimpleAdd()
+	public static TheoryData<SerializableBuildOptions> GetBuildOptions() => new([new(true), new(false)]);
+
+    [Theory]
+	[MemberData(nameof(GetBuildOptions))]
+    public void SimpleAdd(SerializableBuildOptions options)
 	{
 		var graph = CreateSimpleAddGraph<int, int>(out _, out _, out _);
 
-		var output = graph.Project.Run([1, 2]);
+		var output = graph.Project.Run(options, [1, 2]);
 
 		Assert.Equal(3, output);
 	}
 
-	[Fact]
-	public void SimpleAdd_CheckTypeFloat()
+    [Theory]
+    [MemberData(nameof(GetBuildOptions))]
+    public void SimpleAdd_CheckTypeFloat(SerializableBuildOptions options)
 	{
 		var graph = CreateSimpleAddGraph<float, float>(out _, out _, out _);
 
-		var output = graph.Project.Run([1.5f, 2f]);
+		var output = graph.Project.Run(options, [1.5f, 2f]);
 
 		Assert.Equal(3.5f, output);
 	}
 
-	[Fact]
-	public void TestBranch()
+    [Theory]
+    [MemberData(nameof(GetBuildOptions))]
+    public void TestBranch(SerializableBuildOptions options)
 	{
 		var graph = CreateSimpleAddGraph<int, int>(out var entryNode, out var returnNode1, out var addNode);
-		graph.Disconnect(entryNode.Outputs[0], returnNode1.Inputs[0]);
-		graph.Disconnect(returnNode1.Inputs[1], addNode.Outputs[0]);
+		graph.Disconnect(entryNode.Outputs[0], returnNode1.Inputs[0], false);
+		graph.Disconnect(returnNode1.Inputs[1], addNode.Outputs[0], false);
 		returnNode1.Inputs[1].UpdateTextboxText("1");
 
 		var smallerThan = new Core.Nodes.Math.SmallerThan(graph);
 		smallerThan.Inputs[0].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateTextboxText("0");
-		graph.AddNode(smallerThan);
-		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0]);
+		graph.AddNode(smallerThan, false);
+		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0], false);
 
 		var returnNode2 = new Core.Nodes.Flow.ReturnNode(graph);
 		returnNode2.Inputs.Add(new("Result", entryNode, graph.SelfClass.TypeFactory.Get<int>()));
 		returnNode2.Inputs[1].UpdateTextboxText("0");
-		graph.AddNode(returnNode2);
+		graph.AddNode(returnNode2, false);
 
 		var branchNode = new Core.Nodes.Flow.Branch(graph);
-		graph.Connect(entryNode.Outputs[0], branchNode.Inputs[0]);
-		graph.Connect(smallerThan.Outputs[0], branchNode.Inputs[1]);
-		graph.AddNode(branchNode);
+		graph.Connect(entryNode.Outputs[0], branchNode.Inputs[0], false);
+		graph.Connect(smallerThan.Outputs[0], branchNode.Inputs[1], false);
+		graph.AddNode(branchNode, false);
 
-		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0]);
-		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0]);
+		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0], false);
+		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0], false);
 
-		var output = graph.Project.Run([1, 2]);
+		var output = graph.Project.Run(options, [1, 2]);
 		Assert.Equal(0, output);
 
-		output = graph.Project.Run([1, -2]);
+		output = graph.Project.Run(options, [1, -2]);
 		Assert.Equal(1, output);
 	}
 
-	[Fact]
-	public void TestProjectRun()
+    [Theory]
+    [MemberData(nameof(GetBuildOptions))]
+    public void TestProjectRun(SerializableBuildOptions options)
 	{
 		var graph = CreateSimpleAddGraph<int, int>(out var entryNode, out var returnNode1, out var addNode);
-		graph.Disconnect(entryNode.Outputs[0], returnNode1.Inputs[0]);
-		graph.Disconnect(returnNode1.Inputs[1], addNode.Outputs[0]);
+		graph.Disconnect(entryNode.Outputs[0], returnNode1.Inputs[0], false);
+		graph.Disconnect(returnNode1.Inputs[1], addNode.Outputs[0], false);
 		returnNode1.Inputs[1].UpdateTextboxText("1");
 
 		var smallerThan = new Core.Nodes.Math.SmallerThan(graph);
-		graph.AddNode(smallerThan);
+		graph.AddNode(smallerThan, false);
 		smallerThan.Inputs[0].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateTextboxText("0");
-		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0]);
+		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0], false);
 
 		var returnNode2 = new Core.Nodes.Flow.ReturnNode(graph);
-		graph.AddNode(returnNode2);
+		graph.AddNode(returnNode2, false);
 		returnNode2.Inputs.Add(new("Result", entryNode, graph.SelfClass.TypeFactory.Get<int>()));
 		returnNode2.Inputs[1].UpdateTextboxText("0");
 
 		var branchNode = new Core.Nodes.Flow.Branch(graph);
-		graph.AddNode(branchNode);
-		graph.Connect(entryNode.Outputs[0], branchNode.Inputs[0]);
-		graph.Connect(smallerThan.Outputs[0], branchNode.Inputs[1]);
+		graph.AddNode(branchNode, false);
+		graph.Connect(entryNode.Outputs[0], branchNode.Inputs[0], false);
+		graph.Connect(smallerThan.Outputs[0], branchNode.Inputs[1], false);
 
-		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0]);
-		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0]);
+		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0], false);
+		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0], false);
 
-		var output = graph.SelfClass.Project.Run([1, 2]);
+		var output = graph.SelfClass.Project.Run(options, [1, 2]);
 
 		Assert.Equal(0, output);
 
-		output = graph.SelfClass.Project.Run([-1, -2]);
+		output = graph.SelfClass.Project.Run(options, [-1, -2]);
 		Assert.Equal(1, output);
 	}
 }

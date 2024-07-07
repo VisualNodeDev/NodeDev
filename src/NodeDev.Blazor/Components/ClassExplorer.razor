@@ -204,8 +204,8 @@
 			if (CurrentlyEditingItem.Type == TreeItemType.Method)
 			{
 				var method = new Core.Class.NodeClassMethod(Class, Text, Class.TypeFactory.Get(typeof(void), null), new Core.Graph());
-				method.Graph.AddNode(new Core.Nodes.Flow.EntryNode(method.Graph));
-				method.Graph.AddNode(new Core.Nodes.Flow.ReturnNode(method.Graph));
+				method.Graph.AddNode(new Core.Nodes.Flow.EntryNode(method.Graph), false);
+				method.Graph.AddNode(new Core.Nodes.Flow.ReturnNode(method.Graph), false);
 				Class.Methods.Add(method);
 
 				Items.First(x => x.Type == TreeItemType.MethodsFolder).Children.Remove(CurrentlyEditingItem);

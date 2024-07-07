@@ -1,0 +1,118 @@
+﻿@using NodeDev.Core;
+@using NodeDev.Core.Class;
+@using System.Reactive.Linq;
+
+@using BlazorMonaco
+@using BlazorMonaco.Editor
+@using BlazorMonaco.Languages
+
+
+@if (Method == null || Code == null)
+{
+    <MudText Typo="Typo.caption">Open a method to view its generated source code</MudText>
+}
+else
+{
+    var id = Code.GetHashCode().ToString();
+    <StandaloneCodeEditor @key="id" Id="@id" ConstructionOptions="EditorConstructionOptions" CssClass="wh100" />
+}
+
+@code {
+    [Parameter]
+    public NodeClassMethod? Method { get; set; }
+
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    private NodeClassMethod? PreviousMethod { get; set; }
+
+    private IDisposable? GraphChangedSubscription { get; set; }
+
+    private string? Code { get; set; }
+
+    private NodeClassTypeCreator? Creator;
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new()
+            {
+                ReadOnly = true,
+                Value = Code,
+                Language = "csharp",
+                AutomaticLayout = true
+            };
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (!IsVisible)
+            return;
+
+        // Either the target method changed or it previously failed to compile
+        if (Method != PreviousMethod || Creator == null)
+        {
+            if (Method?.Graph.Project != PreviousMethod?.Graph.Project)
+            {
+                GraphChangedSubscription?.Dispose();
+                Creator = null;
+
+                if (Method != null)
+                    GraphChangedSubscription = Method.Graph.Project.GraphChanged.Where(x => x.Graph == Method?.Graph).AcceptThenSample(TimeSpan.FromSeconds(1)).Delay(TimeSpan.FromSeconds(1)).Subscribe(x => InvokeAsync(() => OnGraphChanged(x.Graph)));
+            }
+
+            PreviousMethod = Method;
+            Code = null; // we don't want to leave the code from the previous method visible
+
+            if (Method != null)
+                GetCode();
+        }
+    }
+
+    private void GetCode()
+    {
+        ArgumentNullException.ThrowIfNull(Method);
+
+        if (Creator == null)
+            OnGraphChanged(Method.Graph);
+        if (Creator == null) // We were probably unable to compile the project
+            return;
+
+        try
+        {
+            Code = Creator.GetBodyAsCsCode(Method);
+            StateHasChanged();
+        }
+        catch (BuildError buildError)
+        {
+            Code = $"/* Error during code generation of node {buildError.Node.Name}: {System.Environment.NewLine}{buildError.Message}{System.Environment.NewLine}";
+
+            if(buildError.InnerException != null)
+                Code += $"{System.Environment.NewLine}Inner exception:{System.Environment.NewLine}{buildError.InnerException}";
+
+            Code += $"{System.Environment.NewLine}*/";
+        }
+    }
+
+    private void OnGraphChanged(Graph graph)
+    {
+        ArgumentNullException.ThrowIfNull(Method);
+
+        if (Creator == null)
+        {
+            try
+            {
+                Creator = Method.Graph.Project.CreateNodeClassTypeCreator(new(Core.Nodes.BuildExpressionOptions.Release, true));
+                Creator.CreateProjectClassesAndAssembly();
+            }
+            catch (Exception)
+            {
+                Creator = null;
+                return;
+            }
+        }
+
+        GetCode();
+    }
+}

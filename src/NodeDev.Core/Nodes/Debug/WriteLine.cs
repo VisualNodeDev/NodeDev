@@ -18,7 +18,7 @@ public class WriteLine : NormalFlowNode
 		if (subChunks != null)
 			throw new Exception("WriteLine node should not have subchunks");
 
-		var method = typeof(Console).GetMethod(nameof(Console.WriteLine), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+		var method = typeof(Console).GetMethod(nameof(Console.WriteLine), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, [typeof(object)]);
 		if (method == null)
 			throw new Exception("Unable to find Console.WriteLine method");
 

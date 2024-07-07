@@ -1,6 +1,8 @@
 ﻿namespace NodeDev.Core.Nodes;
 
-public class BuildExpressionOptions
+public record class BuildExpressionOptions(bool RaiseNodeExecutedEvents)
 {
-	public bool AddDebugInfo { get; set; } = false;
+    public static readonly BuildExpressionOptions Debug = new(true);
+
+    public static readonly BuildExpressionOptions Release = new(false);
 }

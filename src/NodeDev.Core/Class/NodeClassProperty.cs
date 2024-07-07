@@ -56,11 +56,11 @@ public class NodeClassProperty : IMemberInfo
 		{
 			foreach (var method in nodeClass.Methods)
 			{
-				var hasAnyGetProperty = method.Graph.Nodes.Values.OfType<Nodes.GetPropertyOrField>().Any();
-				var hasAnySetProperty = method.Graph.Nodes.Values.OfType<Nodes.SetPropertyOrField>().Any();
+				var hasAnyGetProperty = method.Graph.Nodes.Values.OfType<Nodes.GetPropertyOrField>().Any(x => x.TargetMember == this);
+				var hasAnySetProperty = method.Graph.Nodes.Values.OfType<Nodes.SetPropertyOrField>().Any(x => x.TargetMember == this);
 
 				if (hasAnySetProperty || hasAnyGetProperty)
-					Class.Project.GraphChangedSubject.OnNext(method.Graph);
+					method.Graph.RaiseGraphChanged(true);
 			}
 		}
 	}
