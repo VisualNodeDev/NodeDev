@@ -82,6 +82,9 @@ else
         try
         {
             Code = Creator.GetBodyAsCsCode(Method);
+
+            Code = $"// Pseudo code for debugging.{System.Environment.NewLine}// This is not the actual code executed, NodeDev generates IL directly!{System.Environment.NewLine}{Code}";
+
             StateHasChanged();
         }
         catch (BuildError buildError)
