@@ -2,11 +2,9 @@
 using Blazor.Diagrams.Core.Anchors;
 using Blazor.Diagrams.Core.Models;
 using Blazor.Diagrams.Core.Models.Base;
-using Blazor.Diagrams.Core.PathGenerators;
 using Blazor.Diagrams.Core.Routers;
 using Blazor.Diagrams.Options;
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using NodeDev.Blazor.DiagramsModels;
 using NodeDev.Blazor.NodeAttributes;
 using NodeDev.Core;
@@ -15,14 +13,12 @@ using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
 using System.Numerics;
 using System.Reactive.Linq;
-using static MudBlazor.CategoryTypes;
-using System.Xml.Linq;
 using NodeDev.Core.Class;
 using NodeDev.Blazor.Services;
 
 namespace NodeDev.Blazor.Components;
 
-public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase, IDisposable
+public partial class GraphCanvas : ComponentBase, IDisposable
 {
     [Parameter, EditorRequired]
     public Graph Graph { get; set; } = null!;
@@ -262,8 +258,13 @@ public partial class GraphCanvas : Microsoft.AspNetCore.Components.ComponentBase
                     PropagateNewGeneric(source.Connection.Parent, newTypes, false);
                 }
             }
-            else if (destination.Connection.Type is UndefinedGenericType destinationType && source.Connection.Type is not UndefinedGenericType)
-                PropagateNewGeneric(destination.Connection.Parent, new Dictionary<UndefinedGenericType, TypeBase>() { [destinationType] = source.Connection.Type }, false);
+            else if (destination.Connection.Type.HasUndefinedGenerics && !source.Connection.Type.HasUndefinedGenerics)
+            {
+                if (source.Connection.Type.IsAssignableTo(destination.Connection.Type, out var newTypes) && newTypes.Count != 0)
+                {
+                    PropagateNewGeneric(destination.Connection.Parent, newTypes, false);
+                }
+            }
 
             // we have to remove the textbox ?
             if (destination.Connection.Connections.Count == 1 && destination.Connection.Type.AllowTextboxEdit)
