@@ -54,9 +54,10 @@ public class ForeachNode : FlowNode
 			return [Inputs[1]];
 		}
 
-		return new();
+		return [];
 	}
 
+    private readonly string LabelName = $"break_{Random.Shared.Next(0, 100000)}";
 	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
 	{
 		ArgumentNullException.ThrowIfNull(subChunks);
@@ -83,7 +84,7 @@ public class ForeachNode : FlowNode
 		);
 		var afterLoop = Expression.Block(Graph.BuildExpression(subChunks[Outputs[2]], info));
 
-		var breakLabel = Expression.Label();
+		var breakLabel = Expression.Label(LabelName);
 		var loop = Expression.Loop(
 			Expression.IfThenElse(
 				Expression.Call(enumeratorVariable, moveNext), // if the enumerator.MoveNext() returns true

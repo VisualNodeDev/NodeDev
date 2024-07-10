@@ -42,6 +42,8 @@ public class ForNode : FlowNode
 
     public override bool DoesOutputPathAllowMerge(Connection execOutput) => execOutput == Outputs[2]; // the ExecOut path allows merging, but not the loop. The loop is always a dead end.
 
+    private readonly string LabelName = $"break_{Random.Shared.Next(0, 100000)}";
+
     internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
     {
         ArgumentNullException.ThrowIfNull(subChunks);
@@ -53,7 +55,7 @@ public class ForNode : FlowNode
         var loopBody = Expression.Block(Graph.BuildExpression(subChunks[Outputs[0]], info).Append(incrementCount)); // Build the loop body and the counter increment
         var afterLoop = Expression.Block(Graph.BuildExpression(subChunks[Outputs[2]], info)); // Build the after loop body
 
-        var breakLabel = Expression.Label();
+        var breakLabel = Expression.Label(LabelName);
         var loop = Expression.Loop(
             Expression.IfThenElse(
                 Expression.LessThan(count, info.LocalVariables[Inputs[2]]), // i < end
