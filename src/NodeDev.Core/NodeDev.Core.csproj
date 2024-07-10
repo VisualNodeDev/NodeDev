@@ -11,4 +11,8 @@
     <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Dis2Msil\Dis2Msil\Dis2Msil.csproj" />
+  </ItemGroup>
+
 </Project>

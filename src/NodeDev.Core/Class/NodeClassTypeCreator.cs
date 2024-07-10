@@ -2,8 +2,7 @@
 using System.Reflection;
 using NodeDev.Core.Types;
 using FastExpressionCompiler;
-using NodeDev.Core.Nodes;
-using System.Linq.Expressions;
+using Dis2Msil;
 
 namespace NodeDev.Core.Class;
 
@@ -98,17 +97,39 @@ public class NodeClassTypeCreator
                 generatedType.HiddenType.CreateType();
             }
         }
-
     }
 
-    public string GetBodyAsCsCode(NodeClassMethod method)
+    public void GetBodyAsCsAndMsilCode(NodeClassMethod method, out string cs, out string msil)
     {
         if (!IsPreBuilt)
             throw new Exception($"Unable to get method's body as CS code. Assembly must be built before");
 
+        var generated = GeneratedTypes[method.DeclaringType];
+        var builder = generated.Methods[method];
+
         var expression = method.Graph.BuildExpression(Options.BuildExpressionOptions);
 
-        return expression.ToCSharpString();
+        var generator = builder.GetILGenerator();
+        expression.CompileFastToIL(generator, CompilerFlags.ThrowOnNotSupportedExpression);
+
+        cs = expression.ToCSharpString();
+
+        dynamic type = generated.HiddenType.CreateType();
+        for(int i = 0; i < type.DeclaredMethods.Length; ++i)
+        {
+            if (type.DeclaredMethods[i].Name == method.Name)
+            {
+                var methodInfo = (MethodInfo)type.DeclaredMethods[i];
+                var bytes = methodInfo.GetMethodBody()!.GetILAsByteArray();
+                var reader = new MethodBodyReader(builder.Module, bytes!);
+                var code = reader.GetBodyCode();
+
+                msil = code;
+                return;
+            }
+        }
+
+        msil = "method not found";
     }
 
     private void GenerateHiddenMethodBody(NodeClassMethod method, MethodBuilder methodBuilder)
@@ -137,7 +158,7 @@ public class NodeClassTypeCreator
             hiddenParameterTypes = hiddenParameterTypes.Prepend(generatedType.Type).ToArray();
 
         // create the hidden method
-        var hiddenMethod = generatedType.HiddenType.DefineMethod(method.Name, MethodAttributes.Assembly | MethodAttributes.Static, CallingConventions.Standard, returnType, hiddenParameterTypes);
+        var hiddenMethod = generatedType.HiddenType.DefineMethod(method.Name, MethodAttributes.Static, CallingConventions.Standard, returnType, hiddenParameterTypes);
         generatedType.Methods[method] = hiddenMethod;
 
         // Create the real method that calls the hidden method

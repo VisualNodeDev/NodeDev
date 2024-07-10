@@ -25,6 +25,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Diagrams", "Diagrams", "{1F
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Blazor.Diagrams.Core", "Blazor.Diagrams\src\Blazor.Diagrams.Core\Blazor.Diagrams.Core.csproj", "{13919421-1AE3-4B79-8CC9-7C084F74E718}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{F19EB03F-8DAD-4553-B7BA-863B6B2F155F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dis2Msil", "Dis2Msil\Dis2Msil\Dis2Msil.csproj", "{9873F12D-9C5B-4756-B31C-B514664638CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,13 +59,19 @@ Global
 		{13919421-1AE3-4B79-8CC9-7C084F74E718}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{13919421-1AE3-4B79-8CC9-7C084F74E718}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{13919421-1AE3-4B79-8CC9-7C084F74E718}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9873F12D-9C5B-4756-B31C-B514664638CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9873F12D-9C5B-4756-B31C-B514664638CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9873F12D-9C5B-4756-B31C-B514664638CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9873F12D-9C5B-4756-B31C-B514664638CE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{2E39F6E8-637A-4EFE-970C-53CA5972BC90} = {1F7402C9-C5FD-481F-95D0-F9646E68CD02}
+		{1F7402C9-C5FD-481F-95D0-F9646E68CD02} = {F19EB03F-8DAD-4553-B7BA-863B6B2F155F}
 		{13919421-1AE3-4B79-8CC9-7C084F74E718} = {1F7402C9-C5FD-481F-95D0-F9646E68CD02}
+		{9873F12D-9C5B-4756-B31C-B514664638CE} = {F19EB03F-8DAD-4553-B7BA-863B6B2F155F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F82949DF-ABD0-4772-9022-5913ED3C6FB2}

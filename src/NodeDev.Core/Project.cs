@@ -61,9 +61,10 @@ public class Project
 	{
 		var project = new Project(Guid.NewGuid());
 
-		var programClass = new Class.NodeClass("Program", "NewProject", project);
+		var programClass = new NodeClass("Program", "NewProject", project);
 
-		var main = new Class.NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void), null), new Graph());
+		var main = new NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void), null), new Graph());
+		main.IsStatic = true;
 
 		main.Graph.AddNode(new EntryNode(main.Graph), false);
 		main.Graph.AddNode(new ReturnNode(main.Graph), false);
@@ -96,6 +97,10 @@ public class Project
 
 			var main = program.GetType().GetMethod("Main")!;
 			return main.Invoke(program, inputs);
+		}
+		catch(Exception ex)
+		{
+			return null;
 		}
 		finally
 		{

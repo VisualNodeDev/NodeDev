@@ -6,15 +6,27 @@
 @using BlazorMonaco.Editor
 @using BlazorMonaco.Languages
 
+<style>
+    .sourceViewer, .sourceViewer > .mud-tabs-panels {
+        width: 100%;
+        height: 100%
+    }
+</style>
 
-@if (Method == null || Code == null)
+@if (Method == null || CodeCs == null || CodeMsil == null)
 {
     <MudText Typo="Typo.caption">Open a method to view its generated source code</MudText>
 }
 else
 {
-    var id = Code.GetHashCode().ToString();
-    <StandaloneCodeEditor @key="id" Id="@id" ConstructionOptions="EditorConstructionOptions" CssClass="wh100" />
+    <MudTabs Class="sourceViewer">
+        <MudTabPanel Text="Debug pseudo-CS" Class="wh100">
+            <StandaloneCodeEditor @key="CodeCs.GetHashCode().ToString()" ConstructionOptions="@(x => EditorConstructionOptions(x, CodeCs, "csharp"))" CssClass="wh100" />
+        </MudTabPanel>
+        <MudTabPanel Text="Debug MSIL" Class="wh100">
+            <StandaloneCodeEditor @key="CodeMsil.GetHashCode().ToString()" ConstructionOptions="@(x => EditorConstructionOptions(x, CodeMsil, "yaml"))" CssClass="wh100" />
+        </MudTabPanel>
+    </MudTabs>
 }
 
 @code {
@@ -28,18 +40,23 @@ else
 
     private IDisposable? GraphChangedSubscription { get; set; }
 
-    private string? Code { get; set; }
+    private string? CodeMsil;
+    private string? CodeCs;
 
     private NodeClassTypeCreator? Creator;
 
-    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor, string code, string language)
     {
         return new()
             {
                 ReadOnly = true,
-                Value = Code,
-                Language = "csharp",
-                AutomaticLayout = true
+                Value = code,
+                Language = language,
+                AutomaticLayout = true,
+                Minimap = new()
+                {
+                    Enabled = false
+                }
             };
     }
 
@@ -63,42 +80,11 @@ else
             }
 
             PreviousMethod = Method;
-            Code = null; // we don't want to leave the code from the previous method visible
+            CodeCs = null; // we don't want to leave the code from the previous method visible
+            CodeMsil = null;
 
             if (Method != null)
-                GetCode();
-        }
-    }
-
-    private void GetCode()
-    {
-        ArgumentNullException.ThrowIfNull(Method);
-
-        if (Creator == null)
-            OnGraphChanged(Method.Graph);
-        if (Creator == null) // We were probably unable to compile the project
-            return;
-
-        try
-        {
-            Code = Creator.GetBodyAsCsCode(Method);
-
-            Code = $"// Pseudo code for debugging.{System.Environment.NewLine}// This is not the actual code executed, NodeDev generates IL directly!{System.Environment.NewLine}{Code}";
-
-            StateHasChanged();
-        }
-        catch (BuildError buildError)
-        {
-            Code = $"/* Error during code generation of node {buildError.Node.Name}: {System.Environment.NewLine}{buildError.Message}{System.Environment.NewLine}";
-
-            if(buildError.InnerException != null)
-                Code += $"{System.Environment.NewLine}Inner exception:{System.Environment.NewLine}{buildError.InnerException}";
-
-            Code += $"{System.Environment.NewLine}*/";
-        }
-        catch(Exception ex)
-        {
-            Code = $"/* Error during code generation: {System.Environment.NewLine}{ex}{System.Environment.NewLine}*/";
+                OnGraphChanged(Method.Graph);
         }
     }
 
@@ -106,20 +92,39 @@ else
     {
         ArgumentNullException.ThrowIfNull(Method);
 
-        if (Creator == null)
+        try
         {
+            Creator = Method.Graph.Project.CreateNodeClassTypeCreator(new(Core.Nodes.BuildExpressionOptions.Release, true));
+            Creator.CreateProjectClassesAndAssembly();
+
             try
             {
-                Creator = Method.Graph.Project.CreateNodeClassTypeCreator(new(Core.Nodes.BuildExpressionOptions.Release, true));
-                Creator.CreateProjectClassesAndAssembly();
+                Creator.GetBodyAsCsAndMsilCode(Method, out CodeCs, out CodeMsil);
+
+                CodeCs = $"// Pseudo code for debugging.{System.Environment.NewLine}// This is not the actual code executed, we execute IL directly!{System.Environment.NewLine}{CodeCs}";
+
+                StateHasChanged();
             }
-            catch (Exception)
+            catch (BuildError buildError)
             {
-                Creator = null;
-                return;
+                CodeCs = $"/* Error during code generation of node {buildError.Node.Name}: {System.Environment.NewLine}{buildError.Message}{System.Environment.NewLine}";
+                CodeMsil = "";
+
+                if (buildError.InnerException != null)
+                    CodeCs += $"{System.Environment.NewLine}Inner exception:{System.Environment.NewLine}{buildError.InnerException}";
+
+                CodeCs += $"{System.Environment.NewLine}*/";
+            }
+            catch (Exception ex)
+            {
+                CodeCs = $"/* Error during code generation: {System.Environment.NewLine}{ex}{System.Environment.NewLine}*/";
+                CodeMsil = "";
             }
         }
-
-        GetCode();
+        catch (Exception)
+        {
+            Creator = null;
+            return;
+        }
     }
 }

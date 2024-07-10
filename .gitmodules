@@ -3,4 +3,4 @@
 	url = https://github.com/snakex64/Blazor.Diagrams.git
 [submodule "src/Dis2Msil"]
 	path = src/Dis2Msil
-	url = https://github.com/rhotav/Dis2Msil
+	url = https://github.com/snakex64/Dis2Msil

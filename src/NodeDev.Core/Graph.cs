@@ -280,11 +280,7 @@ public class Graph
             .Distinct() // lots of inputs use the same variable as another node's output, make sure we only declare them once
             .Except(info.MethodParametersExpression.Values); // Remove the method parameters as they are declared later and not here
 
-        IEnumerable<Expression> allExpressions = expressions;
-        if (SelfMethod.HasReturnValue)
-            allExpressions = allExpressions.Append(Expression.Label(returnLabelTarget, Expression.Default(returnLabelTarget.Type)));
-
-        var expressionBlock = Expression.Block(localVariables, allExpressions);
+        var expressionBlock = Expression.Block(localVariables, expressions.Append(Expression.Label(returnLabelTarget, Expression.Default(returnLabelTarget.Type))));
 
         var parameters = SelfMethod.IsStatic ? info.MethodParametersExpression.Values : info.MethodParametersExpression.Values.Prepend(info.ThisExpression!);
         var lambdaExpression = Expression.Lambda(expressionBlock, parameters);
