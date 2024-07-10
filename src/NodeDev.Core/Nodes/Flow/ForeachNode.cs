@@ -65,15 +65,15 @@ public class ForeachNode : FlowNode
 		if (getEnumerator == null)
 			throw new Exception($"Unable to find GetEnumerator method on input parameter type: {Inputs[1].Type.FriendlyName}");
 
-		var moveNext = getEnumerator.DeclaringType!.GetMethod(nameof(IEnumerator<int>.MoveNext), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+		var moveNext = typeof(System.Collections.IEnumerator).GetMethod(nameof(System.Collections.IEnumerator.MoveNext), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 		if (moveNext == null)
 			throw new Exception($"Unable to find MoveNext method on input parameter type: {getEnumerator.DeclaringType!.Name}");
 
-		var current = getEnumerator.DeclaringType.GetProperty(nameof(IEnumerator<int>.Current), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+		var current = getEnumerator.ReturnType.GetProperty(nameof(IEnumerator<int>.Current), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 		if (current == null)
 			throw new Exception($"Unable to find Current property on input parameter type: {getEnumerator.DeclaringType!.Name}");
 
-		var enumeratorVariable = Expression.Variable(getEnumerator.DeclaringType!);
+		var enumeratorVariable = Expression.Variable(getEnumerator.ReturnType!);
 		var assignEnumerator = Expression.Assign(enumeratorVariable, Expression.Call(info.LocalVariables[Inputs[1]], getEnumerator));
 		var assignCurrent = Expression.Assign(info.LocalVariables[Outputs[1]], Expression.Property(enumeratorVariable, current));
 
