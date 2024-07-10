@@ -140,7 +140,7 @@ public class GraphAnalysisTests
         Assert.NotNull(chunks.DeadEndInputs);
         Assert.Equal(3, chunks.DeadEndInputs.Count);
         Assert.Equal("Console.WriteLine", chunks.DeadEndInputs[0]!.Parent.Name);
-		Assert.Equal("List<Int32>.Add", chunks.DeadEndInputs[1]!.Parent.Name);
+		Assert.Equal("List<int>.Add", chunks.DeadEndInputs[1]!.Parent.Name);
         Assert.Equal("Return", chunks.DeadEndInputs[2]!.Parent.Name);
     }
 
@@ -163,8 +163,8 @@ public class GraphAnalysisTests
         // First path of the branch has two Console.WriteLine
         Assert.Equal("Console.WriteLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.Chunks[0].Output!.Parent.Name);
         Assert.Equal("Console.WriteLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.Chunks[1].Output!.Parent.Name);
-        // Second path has the List<Int32>.Add
-        Assert.Equal("List<Int32>.Add", chunks.Chunks[0].SubChunk!.ElementAt(1).Value.Chunks[0].Output!.Parent.Name);
+        // Second path has the List<int>.Add
+        Assert.Equal("List<int>.Add", chunks.Chunks[0].SubChunk!.ElementAt(1).Value.Chunks[0].Output!.Parent.Name);
         // The branch remerge with the Console.ReadLine
         Assert.Equal("Console.ReadLine", chunks.Chunks[0].SubChunk!.ElementAt(0).Value.InputMergePoint!.Parent.Name);
         Assert.Equal("Console.ReadLine", chunks.Chunks[0].SubChunk!.ElementAt(1).Value.InputMergePoint!.Parent.Name);
