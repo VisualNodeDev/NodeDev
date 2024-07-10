@@ -12,13 +12,14 @@ namespace NodeDev.Core.Class
 {
     public class NodeClassMethod : IMethodInfo
     {
-        public record class SerializedNodeClassMethod(string Name, string ReturnType, List<string> Parameters, string Graph);
-        public NodeClassMethod(NodeClass ownerClass, string name, TypeBase returnType, Graph graph)
+        public record class SerializedNodeClassMethod(string Name, string ReturnType, List<string> Parameters, string Graph, bool IsStatic);
+        public NodeClassMethod(NodeClass ownerClass, string name, TypeBase returnType, Graph graph, bool isStatic = false)
         {
             Class = ownerClass;
             Name = name;
             ReturnType = returnType;
             Graph = graph;
+            IsStatic = isStatic;
 
             Graph.SelfMethod = this;
         }
@@ -96,7 +97,7 @@ namespace NodeDev.Core.Class
 
             var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassMethod.ReturnType);
             var graph = new Graph();
-            var nodeClassMethod = new NodeClassMethod(owner, serializedNodeClassMethod.Name, returnType, graph);
+            var nodeClassMethod = new NodeClassMethod(owner, serializedNodeClassMethod.Name, returnType, graph, serializedNodeClassMethod.IsStatic);
             graph.SelfMethod = nodeClassMethod; // a bit / really ugly
 
             foreach (var parameter in serializedNodeClassMethod.Parameters)
@@ -119,7 +120,7 @@ namespace NodeDev.Core.Class
 
         public string Serialize()
         {
-            var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.SerializeWithFullTypeName(), Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize());
+            var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.SerializeWithFullTypeName(), Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize(), IsStatic);
             return System.Text.Json.JsonSerializer.Serialize(serializedNodeClassMethod);
         }
 
