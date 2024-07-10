@@ -3,6 +3,7 @@ using System.Reflection;
 using NodeDev.Core.Types;
 using FastExpressionCompiler;
 using Dis2Msil;
+using System.Text;
 
 namespace NodeDev.Core.Class;
 
@@ -112,7 +113,31 @@ public class NodeClassTypeCreator
         var generator = builder.GetILGenerator();
         expression.CompileFastToIL(generator, CompilerFlags.ThrowOnNotSupportedExpression);
 
-        cs = expression.ToCSharpString();
+        var str = new StringBuilder();
+
+        str.Append("public ");
+        if(method.IsStatic)
+            str.Append("static ");
+        str.Append(method.ReturnType.FriendlyName);
+        str.Append(' ');
+        str.Append(method.Name);
+        str.Append('(');
+        for (int i = 0; i < method.Parameters.Count; ++i)
+        {
+            if (i > 0)
+                str.Append(", ");
+            str.Append(method.Parameters[i].ParameterType.FriendlyName);
+            str.Append(' ');
+            str.Append(method.Parameters[i].Name);
+        }
+        str.AppendLine(")");
+        str.AppendLine("{");
+        str.Append(new string(' ', 4));
+        expression.Body.ToCSharpString(str, lineIdent: 4);
+        str.AppendLine();
+        str.Append('}');
+
+        cs = str.ToString();
 
         dynamic type = generated.HiddenType.CreateType();
         for(int i = 0; i < type.DeclaredMethods.Length; ++i)
