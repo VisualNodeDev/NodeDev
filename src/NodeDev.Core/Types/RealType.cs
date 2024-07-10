@@ -81,13 +81,18 @@ public class RealType : TypeBase
 		}
 	}
 
-	public override IEnumerable<IMemberInfo> GetMembers()
-	{
-		var properties = BackendType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-		var fields = BackendType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+	private readonly Lazy<List<RealMemberInfo>> Members;
+	private readonly Lazy<List<RealMethodInfo>> Methods;
 
-		return properties.Select(x => new RealMemberInfo(x, this)).Concat(fields.Select(x => new RealMemberInfo(x, this)));
-	}
+	public override IEnumerable<IMemberInfo> GetMembers() => Members.Value;
+
+	private List<RealMemberInfo> GetMembers_()
+	{
+        var properties = BackendType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+        var fields = BackendType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+
+        return properties.Select(x => new RealMemberInfo(x, this)).Concat(fields.Select(x => new RealMemberInfo(x, this))).ToList();
+    }
 
 	public override TypeBase CloneWithGenerics(TypeBase[] newGenerics)
 	{
@@ -118,7 +123,43 @@ public class RealType : TypeBase
 	private string GetFriendlyName(Type t)
 	{
 		if (Generics.Length == 0)
+		{
+			if (t == typeof(void))
+				return "void";
+			else if (t == typeof(string))
+				return "string";
+			else if (t.IsPrimitive)
+			{
+				if (t == typeof(int))
+					return "int";
+				if (t == typeof(bool))
+					return "bool";
+				if (t == typeof(double))
+					return "double";
+				if (t == typeof(float))
+					return "float";
+				if (t == typeof(long))
+					return "long";
+				if (t == typeof(decimal))
+					return "decimal";
+				if (t == typeof(byte))
+					return "byte";
+				if (t == typeof(short))
+					return "short";
+				if (t == typeof(uint))
+					return "uint";
+				if (t == typeof(ulong))
+					return "ulong";
+				if (t == typeof(ushort))
+					return "ushort";
+				if (t == typeof(sbyte))
+					return "sbyte";
+				if (t == typeof(char))
+					return "char";
+			}
+
 			return t.Name;
+		}
 
 		// return the name of 't' without the ` and the number, replaced with the actual generic type names
 		var name = t.Name[..t.Name.IndexOf('`')];
@@ -126,21 +167,28 @@ public class RealType : TypeBase
 	}
 	public override string FriendlyName => GetFriendlyName(BackendType);
 
-	public override IEnumerable<IMethodInfo> GetMethods()
+	private List<RealMethodInfo> GetMethods_()
+    {
+        return BackendType.GetMethods().Select(x => new RealMethodInfo(TypeFactory, x, this)).ToList();
+    }
+
+    public override IEnumerable<IMethodInfo> GetMethods()
 	{
-		return BackendType.GetMethods().Select(x => new RealMethodInfo(TypeFactory, x, this));
+		return Methods.Value;
 	}
 
 	public override IEnumerable<IMethodInfo> GetMethods(string name)
 	{
-		return BackendType.GetMethods().Where(x => x.Name == name).Select(x => new RealMethodInfo(TypeFactory, x, this));
+		return GetMethods().Where(x => x.Name == name);
 	}
 
 	internal RealType(TypeFactory typeFactory, Type backendType, TypeBase[]? generics)
 	{
 		TypeFactory = typeFactory;
+        Members = new Lazy<List<RealMemberInfo>>(GetMembers_);
+		Methods = new Lazy<List<RealMethodInfo>>(GetMethods_);
 
-		if (generics == null)
+        if (generics == null)
 		{
 			if (backendType.IsGenericType && !backendType.IsConstructedGenericType)
 				throw new Exception("Unable to create real type with undefined generics. To do so you must manually specify the generics through the 'generics' parameter in the RealType constructor");

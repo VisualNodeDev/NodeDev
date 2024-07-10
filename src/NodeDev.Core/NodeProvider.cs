@@ -63,29 +63,27 @@ namespace NodeDev.Core
                     // find if the method exists
                     var methods = type.GetMethods().Where(x => x.Name.Contains(methodCallSplit[^1], StringComparison.OrdinalIgnoreCase));
 
+                    // only keep the methods that are using the startConnection type, if provided
+                    if (startConnection?.Type?.IsExec == false)
+                        methods = methods.Where(x => x.GetParameters().Any(y => startConnection.Type.IsAssignableTo(y.ParameterType, out _)));
+
                     results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
 
-                    results = results.Concat(GetPropertiesAndFields(type, methodCallSplit[1]));
+                    if (startConnection == null)
+                        results = results.Concat(GetPropertiesAndFields(type, methodCallSplit[1]));
                 }
             }
-            else if (startConnection?.Type is RealType realType)
+            else if (startConnection?.Type.IsExec == false)
             {
                 // find if the method exists
-                IEnumerable<MethodInfo> methods = realType.BackendType.GetMethods(BindingFlags.Public | BindingFlags.FlattenHierarchy | BindingFlags.Instance);
+                var methods = startConnection.Type.GetMethods().Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase) && !x.IsStatic);
                 // get extensions methods for the realType.BackendType
 
-                methods = methods.Concat(GetExtensionMethods(realType, project.TypeFactory)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
+                methods = methods.Concat(GetExtensionMethods(startConnection.Type, project.TypeFactory)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 
-                results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), new RealMethodInfo(project.TypeFactory, x, realType))));
+                results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
 
-                results = results.Concat(GetPropertiesAndFields(realType, text));
-            }
-            else if (startConnection?.Type is NodeClassType nodeClassType)
-            {
-                // get the properties in that object
-                results = results.Concat(nodeClassType.NodeClass.Properties.Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x)));
-
-                results = results.Concat(nodeClassType.NodeClass.Methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
+                results = results.Concat(GetPropertiesAndFields(startConnection.Type, text));
             }
 
             // add methods, get properties and set properties
@@ -105,18 +103,27 @@ namespace NodeDev.Core
                 return (object)result;
             });
 
-
             return results;
         }
 
-        private static IEnumerable<MethodInfo> GetExtensionMethods(TypeBase t, TypeFactory typeFactory)
+        private static readonly Dictionary<Assembly, List<RealMethodInfo>> ExtensionMethodsMethodsPerType = [];
+        private static IEnumerable<IMethodInfo> GetExtensionMethods(TypeBase t, TypeFactory typeFactory)
         {
             var query = AppDomain.CurrentDomain.GetAssemblies()
                 .Where(x => !x.IsDynamic) // dirty patch to prevent loading types from the generated assemblies
-                .SelectMany(x => x.GetTypes())
-                .Where(type => !type.IsGenericType)
-                .SelectMany(type => type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
-                .Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && t.IsAssignableTo(typeFactory.Get(method.GetParameters()[0].ParameterType, null), out _));
+                .SelectMany(assembly =>
+                {
+                    if (ExtensionMethodsMethodsPerType.TryGetValue(assembly, out var methods))
+                        return methods;
+
+                    return ExtensionMethodsMethodsPerType[assembly] = assembly
+                        .GetTypes()
+                        .Where(type => !type.IsGenericType)
+                        .SelectMany(x => x.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
+                        .Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && t.IsAssignableTo(typeFactory.Get(method.GetParameters()[0].ParameterType, null), out _))
+                        .Select(x => new RealMethodInfo(typeFactory, x, typeFactory.Get(x.DeclaringType!, null)))
+                        .ToList();
+                });
 
             return query;
         }
