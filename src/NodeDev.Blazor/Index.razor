@@ -15,7 +15,7 @@
     </MudAppBar>
     <MudMainContent Style="width: 100%; height: 100%; overflow-y: hidden">
 
-        <MudExtensions.MudSplitter EnableSlide="true" Sensitivity="0.01" @bind-Dimension="ProjectExplorerGraphPercentage" Class="wh100 overflow-hidden">
+        <MudExtensions.MudSplitter EnableSlide="true" Sensitivity="0.01" @bind-Dimension="ProjectExplorerGraphPercentage" Class="wh100 overflow-hidden relative">
             <StartContent>
                 <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100">
                     <MudTabPanel Text="Project">
@@ -28,13 +28,18 @@
                         }
                     </MudTabPanel>
                 </MudTabs>
+
             </StartContent>
 
             <EndContent>
-                <MudExtensions.MudSplitter Class="wh100 pa-1 relative overflow-y-hidden" @bind-Dimension="SourceViewerGraphPercentage" OnDoubleClicked="@(_ => SourceViewerGraphPercentage = 100)">
+                <MudExtensions.MudSplitter Class="wh100 pa-1 relative overflow-y-hidden" @bind-Dimension="SourceViewerGraphPercentage">
                     <StartContent>
                         @* The 'relative' div is used to control the "Open/Close" icon for the debugger console panel as well as the source viewer open icon *@
                         <div class="wh100 relative flex-1 overflow-y-hidden">
+
+                            <div class="h100 absolute d-flex" style="left: 0px; z-index: 99999">
+                                <MudIconButton Icon="@(ProjectExplorerGraphPercentage >= ProjectExplorer_OpenedGraphPercentage ? Icons.Material.Filled.ArrowLeft : Icons.Material.Filled.ArrowRight)" OnClick="SwitchProjectViewerGraph" Style="margin-top: auto; margin-bottom: auto" />
+                            </div>
 
                             <MudStack Row="false" Class="wh100">
 
@@ -58,7 +63,7 @@
                         </div>
 
                         <div class="h100 absolute d-flex" style="right: 0px">
-                            <MudIconButton Icon="@(SourceViewerGraphPercentage <= 75 ? Icons.Material.Filled.ArrowRight : Icons.Material.Filled.ArrowLeft)" OnClick="SwitchSourceViewerGraph" Style="margin-top: auto; margin-bottom: auto" />
+                            <MudIconButton Icon="@(SourceViewerGraphPercentage <= SourceViewer_OpenedGraphPercentage ? Icons.Material.Filled.ArrowRight : Icons.Material.Filled.ArrowLeft)" OnClick="SwitchSourceViewerGraph" Style="margin-top: auto; margin-bottom: auto" />
                         </div>
 
                     </StartContent>
@@ -85,9 +90,13 @@
 
     private int ActivePanelIndex = 0;
 
+    private const double SourceViewer_OpenedGraphPercentage = 75;
     private double SourceViewerGraphPercentage = 100;
-    private double SourceOpenedGraphPercentage = 75;
-    private double ProjectExplorerGraphPercentage = 18;
+    private double SourceOpenedGraphPercentage = SourceViewer_OpenedGraphPercentage;
+
+    private const double ProjectExplorer_OpenedGraphPercentage = 18;
+    private double ProjectExplorerGraphPercentage = ProjectExplorer_OpenedGraphPercentage;
+    private double ProjectOpenedGraphPercentage = ProjectExplorer_OpenedGraphPercentage;
 
     protected override void OnInitialized()
     {
@@ -101,7 +110,7 @@
 
     private void SwitchSourceViewerGraph()
     {
-        if (SourceViewerGraphPercentage <= 75)
+        if (SourceViewerGraphPercentage <= SourceViewer_OpenedGraphPercentage)
         {
             SourceOpenedGraphPercentage = SourceViewerGraphPercentage;
             SourceViewerGraphPercentage = 100;
@@ -109,6 +118,19 @@
         else
         {
             SourceViewerGraphPercentage = SourceOpenedGraphPercentage;
+        }
+    }
+
+    private void SwitchProjectViewerGraph()
+    {
+        if (ProjectExplorerGraphPercentage >= ProjectExplorer_OpenedGraphPercentage)
+        {
+            ProjectOpenedGraphPercentage = ProjectExplorerGraphPercentage;
+            ProjectExplorerGraphPercentage = 0;
+        }
+        else
+        {
+            ProjectExplorerGraphPercentage = ProjectOpenedGraphPercentage;
         }
     }
 
