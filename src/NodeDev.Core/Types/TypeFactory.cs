@@ -13,7 +13,8 @@ public class TypeFactory
 		"System.Text",
 		"System.Threading",
 		"System.Threading.Tasks",
-	};
+        "System.Diagnostics",
+    };
 	private Dictionary<string, List<string>> TypeCorrespondances = new()
 	{
 		["System.Int32"] = new() { "int" },

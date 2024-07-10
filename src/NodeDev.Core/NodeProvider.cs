@@ -54,14 +54,14 @@ namespace NodeDev.Core
 
             // check if the text is a method call like 'ClassName.MethodName'
             var methodCallSplit = text.Split('.');
-            if (methodCallSplit.Length == 2)
+            if (methodCallSplit.Length >= 2)
             {
                 // try to find the class specified
-                project.TypeFactory.CreateBaseFromUserInput(methodCallSplit[0], out var type);
+                project.TypeFactory.CreateBaseFromUserInput(string.Join('.', methodCallSplit[0..^1]), out var type);
                 if (type != null)
                 {
                     // find if the method exists
-                    var methods = type.GetMethods().Where(x => x.Name.Contains(methodCallSplit[1], StringComparison.OrdinalIgnoreCase));
+                    var methods = type.GetMethods().Where(x => x.Name.Contains(methodCallSplit[^1], StringComparison.OrdinalIgnoreCase));
 
                     results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
 
