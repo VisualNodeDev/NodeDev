@@ -58,21 +58,19 @@ namespace NodeDev.Core.Connections
 
 		#region Serialization
 
-		private record class SerializedConnectionVertex(float X, float Y);
-		private record SerializedConnection(string Id, string Name, string SerializedType, List<string> Connections, string? TextboxValue, List<SerializedConnectionVertex>? Vertices, string? LinkedExec);
-		internal string Serialize()
+		public record class SerializedConnectionVertex(float X, float Y);
+		public record SerializedConnection(string Id, string Name, TypeBase.SerializedType SerializedType, List<string> Connections, string? TextboxValue, List<SerializedConnectionVertex>? Vertices, string? LinkedExec);
+		internal SerializedConnection Serialize()
 		{
 			var connections = Connections.ToList();
 
 			var serializedConnection = new SerializedConnection(Id, Name, Type.SerializeWithFullTypeName(), Connections.Select(x => x.Id).ToList(), TextboxValue, Vertices.Select(x => new SerializedConnectionVertex(x.X, x.Y)).ToList(), LinkedExec?.Id);
 
-			return JsonSerializer.Serialize(serializedConnection);
+			return serializedConnection;
 		}
 
-		internal static Connection Deserialize(Node parent, string serializedConnection, bool isInput)
+		internal static Connection Deserialize(Node parent, SerializedConnection serializedConnectionObj, bool isInput)
 		{
-			var serializedConnectionObj = JsonSerializer.Deserialize<SerializedConnection>(serializedConnection) ?? throw new Exception($"Unable to deserialize connection");
-
 			// Find the LinkedExec connection, if any
 			Connection? linkedExec = null;
 			if(linkedExec != null)

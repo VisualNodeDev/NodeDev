@@ -472,22 +472,21 @@ public class Graph
 
     #region Serialization
 
-    private record class SerializedGraph(List<string> Nodes);
-    public string Serialize()
+    internal record class SerializedGraph(List<Node.SerializedNode> Nodes);
+    internal SerializedGraph Serialize()
     {
-        var nodes = new List<string>();
+        var nodes = new List<Node.SerializedNode>();
 
         foreach (var node in Nodes.Values)
             nodes.Add(node.Serialize());
 
         var serializedGraph = new SerializedGraph(nodes);
 
-        return JsonSerializer.Serialize(serializedGraph);
+        return serializedGraph;
     }
 
-    public static void Deserialize(string serializedGraph, Graph graph)
+    internal static void Deserialize(SerializedGraph serializedGraphObj, Graph graph)
     {
-        var serializedGraphObj = JsonSerializer.Deserialize<SerializedGraph>(serializedGraph) ?? throw new Exception("Unable to deserialize graph");
         foreach (var serializedNode in serializedGraphObj.Nodes)
         {
             var node = Node.Deserialize(graph, serializedNode);

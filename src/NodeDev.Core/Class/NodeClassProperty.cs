@@ -4,7 +4,7 @@ namespace NodeDev.Core.Class;
 
 public class NodeClassProperty : IMemberInfo
 {
-	private record class SerializedNodeClassProperty(string Name, string Type);
+	internal record class SerializedNodeClassProperty(string Name, TypeBase.SerializedType Type);
 	public NodeClassProperty(NodeClass ownerClass, string name, TypeBase propertyType)
 	{
 		Class = ownerClass;
@@ -69,21 +69,20 @@ public class NodeClassProperty : IMemberInfo
 
 	#region Serialization
 
-	public static NodeClassProperty Deserialize(NodeClass owner, string serialized)
+	internal static NodeClassProperty Deserialize(NodeClass owner, SerializedNodeClassProperty serializedNodeClassProperty)
 	{
-		var serializedNodeClassProperty = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassProperty>(serialized) ?? throw new Exception("Unable to deserialize node class property");
-
 		var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassProperty.Type);
 		var nodeClassProperty = new NodeClassProperty(owner, serializedNodeClassProperty.Name, returnType);
 
 		return nodeClassProperty;
 	}
 
-	public string Serialize()
+	internal SerializedNodeClassProperty Serialize()
 	{
 		var serializedNodeClassProperty = new SerializedNodeClassProperty(Name, PropertyType.SerializeWithFullTypeName());
-		return System.Text.Json.JsonSerializer.Serialize(serializedNodeClassProperty);
-	}
+
+        return serializedNodeClassProperty;
+    }
 
 	#endregion
 }

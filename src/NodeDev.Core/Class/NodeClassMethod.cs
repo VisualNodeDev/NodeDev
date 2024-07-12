@@ -12,7 +12,7 @@ namespace NodeDev.Core.Class
 {
     public class NodeClassMethod : IMethodInfo
     {
-        public record class SerializedNodeClassMethod(string Name, string ReturnType, List<string> Parameters, string Graph, bool IsStatic);
+        internal record class SerializedNodeClassMethod(string Name, TypeBase.SerializedType ReturnType, List<NodeClassMethodParameter.SerializedNodeClassMethodParameter> Parameters, Graph.SerializedGraph Graph, bool IsStatic);
         public NodeClassMethod(NodeClass ownerClass, string name, TypeBase returnType, Graph graph, bool isStatic = false)
         {
             Class = ownerClass;
@@ -91,10 +91,8 @@ namespace NodeDev.Core.Class
         #region Serialization
 
         private SerializedNodeClassMethod? SavedDataDuringDeserializationStep1 { get; set; }
-        public static NodeClassMethod Deserialize(NodeClass owner, string serialized)
+        internal static NodeClassMethod Deserialize(NodeClass owner, SerializedNodeClassMethod serializedNodeClassMethod)
         {
-            var serializedNodeClassMethod = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethod>(serialized) ?? throw new Exception("Unable to deserialize node class method");
-
             var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassMethod.ReturnType);
             var graph = new Graph();
             var nodeClassMethod = new NodeClassMethod(owner, serializedNodeClassMethod.Name, returnType, graph, serializedNodeClassMethod.IsStatic);
@@ -118,10 +116,11 @@ namespace NodeDev.Core.Class
             SavedDataDuringDeserializationStep1 = null;
         }
 
-        public string Serialize()
+        internal SerializedNodeClassMethod Serialize()
         {
             var serializedNodeClassMethod = new SerializedNodeClassMethod(Name, ReturnType.SerializeWithFullTypeName(), Parameters.Select(x => x.Serialize()).ToList(), Graph.Serialize(), IsStatic);
-            return System.Text.Json.JsonSerializer.Serialize(serializedNodeClassMethod);
+
+            return serializedNodeClassMethod;
         }
 
         #endregion

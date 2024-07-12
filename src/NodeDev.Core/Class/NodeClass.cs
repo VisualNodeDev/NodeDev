@@ -32,36 +32,34 @@ namespace NodeDev.Core.Class
 
 		#region Serialisation
 
-		public record class SerializedNodeClass(string Name, string Namespace, List<string> Methods, List<string> Properties);
-		public static NodeClass Deserialize(string serialized, Project project, out SerializedNodeClass serializedNodeClass)
+		internal record class SerializedNodeClass(string Name, string Namespace, List<NodeClassMethod.SerializedNodeClassMethod> Methods, List<NodeClassProperty.SerializedNodeClassProperty> Properties);
+		internal static NodeClass Deserialize(SerializedNodeClass serializedNodeClass, Project project)
 		{
-			serializedNodeClass = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClass>(serialized) ?? throw new Exception("Unable to deserialize node class");
-
 			var nodeClass = new NodeClass(serializedNodeClass.Name, serializedNodeClass.Namespace, project);
 
 			return nodeClass;
 		}
 
-		public void Deserialize_Step2(SerializedNodeClass serializedNodeClass)
+		internal void Deserialize_Step2(SerializedNodeClass serializedNodeClass)
 		{
-			foreach (var property in serializedNodeClass.Properties ?? new())
+			foreach (var property in serializedNodeClass.Properties ?? [])
 				Properties.Add(NodeClassProperty.Deserialize(this, property));
 
 			foreach (var method in serializedNodeClass.Methods)
 				Methods.Add(NodeClassMethod.Deserialize(this, method));
 		}
 
-		public void Deserialize_Step3()
+        internal void Deserialize_Step3()
 		{
 			foreach (var method in Methods)
 				method.Deserialize_Step3();
 		}
 
-		public string Serialize()
+        internal SerializedNodeClass Serialize()
 		{
 			var serializedNodeClass = new SerializedNodeClass(Name, Namespace, Methods.Select(x => x.Serialize()).ToList(), Properties.Select(x => x.Serialize()).ToList());
 
-			return System.Text.Json.JsonSerializer.Serialize(serializedNodeClass);
+			return serializedNodeClass;
 		}
 
 		#endregion

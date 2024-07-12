@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace NodeDev.Core.Types;
@@ -42,15 +43,16 @@ public abstract class TypeBase
 
 	public abstract IEnumerable<IMemberInfo> GetMembers();
 
-	private record class SerializedType(string TypeFullName, string SerializedTypeCustom);
-	public string SerializeWithFullTypeName()
+	public record class SerializedType(string TypeFullName, string SerializedTypeCustom);
+	public SerializedType SerializeWithFullTypeName()
 	{
 		var serializedType = new SerializedType(GetType().FullName!, Serialize());
 
-		return System.Text.Json.JsonSerializer.Serialize(serializedType);
+		return serializedType;
 	}
+	public string SerializeWithFullTypeNameString() => JsonSerializer.Serialize(SerializeWithFullTypeName());
 
-	public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes()
+    public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes()
 	{
 		IEnumerable<UndefinedGenericType> undefinedGenericTypes = this is UndefinedGenericType undefinedGenericType ? new[] { undefinedGenericType } : Enumerable.Empty<UndefinedGenericType>();
 
@@ -328,10 +330,15 @@ public abstract class TypeBase
 
 	public abstract IEnumerable<IMethodInfo> GetMethods(string name);
 
-	public static TypeBase Deserialize(TypeFactory typeFactory, string serialized)
+	public static TypeBase DeserializeFullTypeNameString(TypeFactory typeFactory, string serializedTypeStr)
 	{
-		var serializedType = System.Text.Json.JsonSerializer.Deserialize<SerializedType>(serialized) ?? throw new Exception("Unable to deserialize type");
+		var serializedType = JsonSerializer.Deserialize<SerializedType>(serializedTypeStr) ?? throw new Exception("Unable to deserialize type");
 
+        return Deserialize(typeFactory, serializedType);
+    }
+
+	public static TypeBase Deserialize(TypeFactory typeFactory, SerializedType serializedType)
+    {
 		var type = typeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
 
 		var deserializeMethod = type.GetMethod("Deserialize", BindingFlags.Public | BindingFlags.Static) ?? throw new Exception($"Deserialize method not found in type: {serializedType.TypeFullName}");

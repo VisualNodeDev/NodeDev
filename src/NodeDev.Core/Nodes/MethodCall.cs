@@ -24,15 +24,15 @@ public class MethodCall : NormalFlowNode
 
 		public string Serialize()
 		{
-			return JsonSerializer.Serialize(new SavedMethodInfo(TargetMethod.DeclaringType.SerializeWithFullTypeName(), TargetMethod.Name, TargetMethod.GetParameters().Select(p => new SavedMethodInfoParameter(p.ParameterType.SerializeWithFullTypeName())).ToArray()));
+			return JsonSerializer.Serialize(new SavedMethodInfo(TargetMethod.DeclaringType.SerializeWithFullTypeNameString(), TargetMethod.Name, TargetMethod.GetParameters().Select(p => new SavedMethodInfoParameter(p.ParameterType.SerializeWithFullTypeNameString())).ToArray()));
 		}
 
 		public static INodeDecoration Deserialize(TypeFactory typeFactory, string Json)
 		{
 			var info = JsonSerializer.Deserialize<SavedMethodInfo>(Json) ?? throw new Exception("Unable to deserialize method info");
 
-			var type = TypeBase.Deserialize(typeFactory, info.Type);
-			var parameterTypes = info.ParamTypes.Select(x => TypeBase.Deserialize(typeFactory, x.Type));
+			var type = TypeBase.DeserializeFullTypeNameString(typeFactory, info.Type);
+			var parameterTypes = info.ParamTypes.Select(x => TypeBase.DeserializeFullTypeNameString(typeFactory, x.Type));
 			var method = type.GetMethods(info.Name).FirstOrDefault(x => parameterTypes.SequenceEqual(x.GetParameters().Select(y => y.ParameterType)));
 
 			if (method == null)

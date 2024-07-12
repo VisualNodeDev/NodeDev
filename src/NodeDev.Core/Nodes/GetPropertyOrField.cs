@@ -21,14 +21,14 @@ public class GetPropertyOrField : NoFlowNode
 
 		public string Serialize()
 		{
-			return JsonSerializer.Serialize(new SavedGetPropertyOrField(TargetPropertyOrField.DeclaringType.SerializeWithFullTypeName(), TargetPropertyOrField.Name));
+			return JsonSerializer.Serialize(new SavedGetPropertyOrField(TargetPropertyOrField.DeclaringType.SerializeWithFullTypeNameString(), TargetPropertyOrField.Name));
 		}
 
 		public static INodeDecoration Deserialize(TypeFactory typeFactory, string Json)
 		{
 			var info = JsonSerializer.Deserialize<SavedGetPropertyOrField>(Json) ?? throw new Exception("Unable to deserialize property or field info");
 
-			var type = TypeBase.Deserialize(typeFactory, info.Type);
+			var type = TypeBase.DeserializeFullTypeNameString(typeFactory, info.Type);
 
 			if (type is RealType realType)
 			{

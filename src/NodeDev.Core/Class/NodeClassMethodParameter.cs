@@ -12,7 +12,7 @@ namespace NodeDev.Core.Class
 {
     public class NodeClassMethodParameter : IMethodParameterInfo
     {
-        private record class SerializedNodeClassMethodParameter(string Name, string ParameterType, bool? IsOut);
+        internal record class SerializedNodeClassMethodParameter(string Name, TypeBase.SerializedType ParameterType, bool? IsOut);
 
         public string Name { get; private set; }
 
@@ -29,14 +29,13 @@ namespace NodeDev.Core.Class
             Method = method;
         }
 
-        public string Serialize()
+        internal SerializedNodeClassMethodParameter Serialize()
         {
-            return System.Text.Json.JsonSerializer.Serialize(new SerializedNodeClassMethodParameter(Name, ParameterType.SerializeWithFullTypeName(), IsOut));
+            return new SerializedNodeClassMethodParameter(Name, ParameterType.SerializeWithFullTypeName(), IsOut);
         }
 
-        public static NodeClassMethodParameter Deserialize(TypeFactory typeFactory, string serialized, NodeClassMethod nodeClassMethod)
+        internal static NodeClassMethodParameter Deserialize(TypeFactory typeFactory, SerializedNodeClassMethodParameter serializedNodeClassMethodParameter, NodeClassMethod nodeClassMethod)
         {
-            var serializedNodeClassMethodParameter = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassMethodParameter>(serialized) ?? throw new Exception("Unable to deserialize node class method parameter");
             return new NodeClassMethodParameter(serializedNodeClassMethodParameter.Name, TypeBase.Deserialize(typeFactory, serializedNodeClassMethodParameter.ParameterType), nodeClassMethod)
             {
                 IsOut = serializedNodeClassMethodParameter.IsOut ?? false

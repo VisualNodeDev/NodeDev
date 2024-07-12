@@ -238,19 +238,16 @@ namespace NodeDev.Core.Nodes
 
 		#region Serialization
 
-		public record SerializedNode(string Type, string Id, string Name, List<string> Inputs, List<string> Outputs, Dictionary<string, string> Decorations);
-		internal string Serialize()
+		public record SerializedNode(string Type, string Id, string Name, List<Connection.SerializedConnection> Inputs, List<Connection.SerializedConnection> Outputs, Dictionary<string, string> Decorations);
+		internal SerializedNode Serialize()
 		{
 			var serializedNode = new SerializedNode(GetType().FullName!, Id, Name, Inputs.Select(x => x.Serialize()).ToList(), Outputs.Select(x => x.Serialize()).ToList(), Decorations.ToDictionary(x => x.Key.FullName!, x => x.Value.Serialize()));
 
-			return JsonSerializer.Serialize(serializedNode);
+			return serializedNode;
 		}
 
-
-		public static Node Deserialize(Graph graph, string serializedNode)
+		internal static Node Deserialize(Graph graph, SerializedNode serializedNodeObj)
 		{
-			var serializedNodeObj = JsonSerializer.Deserialize<SerializedNode>(serializedNode) ?? throw new Exception("Unable to deserialize node");
-
 			var type = graph.SelfClass.TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
 			var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
 

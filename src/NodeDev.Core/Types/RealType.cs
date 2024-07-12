@@ -247,7 +247,7 @@ public class RealType : TypeBase
 	private record class SerializedType(string TypeFullName, string[] SerializedGenerics);
 	internal protected override string Serialize()
 	{
-		return System.Text.Json.JsonSerializer.Serialize(new SerializedType(BackendType.FullName!, Generics.Select(x => x.SerializeWithFullTypeName()).ToArray()));
+		return System.Text.Json.JsonSerializer.Serialize(new SerializedType(BackendType.FullName!, Generics.Select(x => x.SerializeWithFullTypeNameString()).ToArray()));
 	}
 
 	public new static RealType Deserialize(TypeFactory typeFactory, string serializedString)
@@ -256,7 +256,7 @@ public class RealType : TypeBase
 
 		var type = typeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
 
-		var generics = serializedType.SerializedGenerics.Select(x => TypeBase.Deserialize(typeFactory, x)).ToArray();
+		var generics = serializedType.SerializedGenerics.Select(x => DeserializeFullTypeNameString(typeFactory, x)).ToArray();
 
 		return typeFactory.Get(type, generics);
 	}
