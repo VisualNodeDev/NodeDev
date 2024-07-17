@@ -1,271 +1,306 @@
 ﻿@inject IDialogService DialogService
 
 <MudStack Row="false" Class="wh100">
-	<MudText>@Class.Name</MudText>
+    <MudText>@Class.Name</MudText>
 
-	<MudTreeView T="TreeItem" Items="Items" SelectedValueChanged="OnSelectedItemChanged" Dense="true" Class="w100">
-		<ItemTemplate>
-			@if (context == CurrentlyEditingItem)
-			{
-				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption">
-					<BodyContent Context="Item">
-						<MudTextField T="string" Typo="Typo.caption" @bind-Value="Text" Variant="Variant.Text" OnKeyUp="OnEditTextKeyUp" AutoFocus="true"></MudTextField>
-					</BodyContent>
-				</MudTreeViewItem>
-			}
-			else if (context.Type == TreeItemType.MethodsFolder || context.Type == TreeItemType.PropertiesFolder)
-			{
-				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption">
-					<BodyContent Context="Item">
-						<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item" @onmouseout="() => Hovered = null">
-							<MudText Style="justify-self: start;">@Item.Text</MudText>
-							<div style="@($"justify-self: end; visibility: {(Hovered == Item ? "visible" : "hidden")}")">
-								<MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="context.Type == TreeItemType.MethodsFolder ? ShowAddMethodMenu : ShowNewProperty" />
-							</div>
-						</div>
-					</BodyContent>
-				</MudTreeViewItem>
-			}
-			else if (context.Type == TreeItemType.Method)
-			{
-				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Items="@context.Children" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption">
-					<BodyContent Context="Item">
-						<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item" @onmouseout="() => Hovered = null">
-							<MudText Typo="Typo.caption" Style="justify-self: start;">@Item.Value!.Method!.ReturnType.FriendlyName @Item.Text (@string.Join(',', Item.Value.Method!.Parameters.Select(x => $"{x.ParameterType.FriendlyName} {x.Name}")))</MudText>
-							<div style="@($"justify-self: end; visibility: {(Hovered == Item ? "visible" : "hidden")}")">
-								<MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowMethodEdit(Item.Value!)" />
-								<MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value!)" />
-							</div>
-						</div>
-					</BodyContent>
-				</MudTreeViewItem>
-			}
-			else if (context.Type == TreeItemType.Property && context.Property != null)
-			{
-				<MudTreeViewItem @bind-Expanded="@context.IsExpanded" Value="@context" Text="@context.Name" EndTextTypo="@Typo.caption">
-					<BodyContent Context="Item">
-						<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item" @onmouseout="() => Hovered = null">
-							<MudText Typo="Typo.caption" Style="justify-self: start;">@Item.Value!.Property!.PropertyType.FriendlyName @Item.Text</MudText>
-							<div style="@($"justify-self: end; visibility: {(Hovered == Item ? "visible" : "hidden")}")">
-								<MudIconButton Icon="@Icons.Material.Filled.ShapeLine" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowPropertyTypeEdit(Item.Value!)" />
-								<MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value!)" />
-								<MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" Color="Color.Inherit" />
-							</div>
-						</div>
-					</BodyContent>
-				</MudTreeViewItem>
-			}
-		</ItemTemplate>
-	</MudTreeView>
+    <MudTreeView T="TreeItem" Items="Items" SelectedValueChanged="OnSelectedItemChanged" Dense="true" Class="w100">
+        <ItemTemplate>
+            @if (context.Value == null)
+            { }
+            else if (context.Value == CurrentlyEditingItem)
+            {
+                <MudTreeViewItem @bind-Expanded="@context.Expanded" Items="@context.Children" Value="@context.Value" Text="@context.Text" EndTextTypo="@Typo.caption">
+                    <BodyContent Context="Item">
+                        <MudTextField T="string" Typo="Typo.caption" @bind-Value="Text" Variant="Variant.Text" OnKeyUp="OnEditTextKeyUp" AutoFocus="true"></MudTextField>
+                    </BodyContent>
+                </MudTreeViewItem>
+            }
+            else if (context.Value.Type == TreeItemType.MethodsFolder || context.Value.Type == TreeItemType.PropertiesFolder)
+            {
+                <MudTreeViewItem @bind-Expanded="@context.Expanded" Items="@context.Children" Value="@context.Value" Text="@context.Value!.Name" EndTextTypo="@Typo.caption">
+                    <BodyContent Context="Item">
+                        <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item.Value" @onmouseout="() => Hovered = null">
+                            <MudText Style="justify-self: start;">@Item.Text</MudText>
+                            <div style="@($"justify-self: end; visibility: {(Hovered == Item.Value ? "visible" : "hidden")}")">
+                                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="context.Value.Type == TreeItemType.MethodsFolder ? ShowAddMethodMenu : ShowNewProperty" />
+                            </div>
+                        </div>
+                    </BodyContent>
+                </MudTreeViewItem>
+            }
+            else if (context.Value.Type == TreeItemType.Method)
+            {
+                <MudTreeViewItem @bind-Expanded="@context.Expanded" Value="@context.Value" Text="@context.Value!.Name" EndTextTypo="@Typo.caption">
+                    <BodyContent Context="Item">
+                        <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item.Value" @onmouseout="() => Hovered = null">
+                            <MudText Typo="Typo.caption" Style="justify-self: start;">@Item.Value!.Method!.ReturnType.FriendlyName @Item.Text (@string.Join(',', Item.Value.Method!.Parameters.Select(x => $"{x.ParameterType.FriendlyName} {x.Name}")))</MudText>
+                            <div style="@($"justify-self: end; visibility: {(Hovered == Item.Value ? "visible" : "hidden")}")">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowMethodEdit(Item.Value!)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value!)" />
+                            </div>
+                        </div>
+                    </BodyContent>
+                </MudTreeViewItem>
+            }
+            else if (context.Value.Type == TreeItemType.Property && context.Value.Property != null)
+            {
+                <MudTreeViewItem @bind-Expanded="@context.Expanded" Value="@context.Value" Text="@context.Value.Name" EndTextTypo="@Typo.caption">
+                    <BodyContent Context="Item">
+                        <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item.Value" @onmouseout="() => Hovered = null">
+                            <MudText Typo="Typo.caption" Style="justify-self: start;">@Item.Value!.Property!.PropertyType.FriendlyName @Item.Value!.Name</MudText>
+                            <div style="@($"justify-self: end; visibility: {(Hovered == Item.Value ? "visible" : "hidden")}")">
+                                <MudIconButton Icon="@Icons.Material.Filled.ShapeLine" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowPropertyTypeEdit(Item.Value!)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value!)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" Color="Color.Inherit" />
+                            </div>
+                        </div>
+                    </BodyContent>
+                </MudTreeViewItem>
+            }
+        </ItemTemplate>
+    </MudTreeView>
 </MudStack>
 
 
 @code {
 
-	private enum TreeItemType
-	{
-		PropertiesFolder,
-		Property,
-		MethodsFolder,
-		Method
-	}
-	private record class TreeItem(HashSet<TreeItem> Children, TreeItemType Type, NodeDev.Core.Class.NodeClassMethod? Method, NodeDev.Core.Class.NodeClassProperty? Property)
-	{
-		public string Name { get; set; } = "";
-		public bool IsExpanded { get; set; } = true;
-	}
+    private enum TreeItemType
+    {
+        PropertiesFolder,
+        Property,
+        MethodsFolder,
+        Method
+    }
+    private record class TreeItem(TreeItemType Type, NodeDev.Core.Class.NodeClassMethod? Method, NodeDev.Core.Class.NodeClassProperty? Property)
+    {
+        public string Name { get; set; } = "";
+        public bool IsExpanded { get; set; } = true;
+    }
 
-	[Parameter]
-	public NodeDev.Core.Class.NodeClass Class { get; set; } = null!;
+    [Parameter]
+    public NodeDev.Core.Class.NodeClass Class { get; set; } = null!;
 
-	[Parameter]
-	public NodeDev.Core.Class.NodeClassMethod? SelectedMethod { get; set; }
+    [Parameter]
+    public NodeDev.Core.Class.NodeClassMethod? SelectedMethod { get; set; }
 
-	[Parameter]
-	public EventCallback<NodeDev.Core.Class.NodeClassMethod?> SelectedMethodChanged { get; set; }
+    [Parameter]
+    public EventCallback<NodeDev.Core.Class.NodeClassMethod?> SelectedMethodChanged { get; set; }
 
-	private TreeItem? SelectedTreeItem;
+    private TreeItem? SelectedTreeItem;
 
-	private HashSet<TreeItem> Items { get; } = new();
+    private List<TreeItemData<TreeItem>> Items { get; } = [];
 
-	private MudTreeViewItem<TreeItem>? Hovered = null;
+    private TreeItem? Hovered = null;
 
-	private TreeItem? CurrentlyEditingItem = null;
-	private string? Text = null;
-	public bool IsNew = false;
+    private TreeItem? CurrentlyEditingItem = null;
+    private string? Text = null;
+    public bool IsNew = false;
 
-	protected override void OnInitialized()
-	{
-		base.OnInitialized();
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
 
-		Items.Add(new(new(), TreeItemType.MethodsFolder, null, null)
-			{
-				Name = "Methods"
-			});
+        TreeItemData<TreeItem> methodsFolder;
+        TreeItemData<TreeItem> propertiesFolder;
 
-		Items.Add(new(new(), TreeItemType.PropertiesFolder, null, null)
-			{
-				Name = "Properties"
-			});
+        Items.Add(methodsFolder = new()
+            {
+                Value = new(TreeItemType.MethodsFolder, null, null)
+                {
+                    Name = "Methods"
+                },
+                Children = []
+            });
 
-		foreach (var method in Class.Methods)
-		{
-			Items.First(x => x.Type == TreeItemType.MethodsFolder).Children.Add(new(new(), TreeItemType.Method, method, null)
-				{
-					Name = method.Name
-				});
-		}
+        Items.Add(propertiesFolder = new()
+            {
+                Value = new(TreeItemType.PropertiesFolder, null, null)
+                {
+                    Name = "Properties"
+                },
+                Children = []
+            });
 
-		foreach (var property in Class.Properties)
-		{
-			Items.First(x => x.Type == TreeItemType.PropertiesFolder).Children.Add(new(new(), TreeItemType.Property, null, property)
-				{
-					Name = property.Name
-				});
-		}
-	}
+        foreach (var method in Class.Methods)
+        {
+            methodsFolder.Children.Add(new()
+                {
+                    Value = new(TreeItemType.Method, method, null)
+                    {
+                        Name = method.Name
+                    }
+                });
+        }
 
-	private void ShowAddMethodMenu()
-	{
-		CurrentlyEditingItem = new TreeItem(new(), TreeItemType.Method, null, null)
-			{
-				Name = "NewMethod"
-			};
-		IsNew = true;
-		Text = CurrentlyEditingItem.Name;
+        foreach (var property in Class.Properties)
+        {
+            propertiesFolder.Children.Add(new()
+                {
+                    Value = new(TreeItemType.Property, null, property)
+                    {
+                        Name = property.Name
+                    }
+                });
+        }
+    }
 
-		Items.First(x => x.Type == TreeItemType.MethodsFolder).Children.Add(CurrentlyEditingItem);
-	}
+    private void ShowAddMethodMenu()
+    {
+        var newItem = new TreeItemData<TreeItem>()
+            {
+                Value = new TreeItem(TreeItemType.Method, null, null)
+                {
+                    Name = "NewMethod"
+                }
+            };
+        Items.First(x => x.Value?.Type == TreeItemType.MethodsFolder).Children!.Add(newItem);
 
-	private void ShowNewProperty()
-	{
-		CurrentlyEditingItem = new TreeItem(new(), TreeItemType.Property, null, null)
-			{
-				Name = "NewProperty"
-			};
-		IsNew = true;
-		Text = CurrentlyEditingItem.Name;
+        CurrentlyEditingItem = newItem.Value;
+        IsNew = true;
+        Text = CurrentlyEditingItem.Name;
 
-		Items.First(x => x.Type == TreeItemType.PropertiesFolder).Children.Add(CurrentlyEditingItem);
-	}
+    }
 
-	private void ShowRenameMenu(TreeItem item)
-	{
-		if (item == null)
-			return;
+    private void ShowNewProperty()
+    {
+        var newItem = new TreeItemData<TreeItem>()
+            {
+                Value = new(TreeItemType.Property, null, null)
+                {
+                    Name = "NewProperty"
+                }
+            };
+        Items.First(x => x.Value!.Type == TreeItemType.PropertiesFolder).Children!.Add(newItem);
 
-		CurrentlyEditingItem = item;
-		IsNew = false;
-		Text = CurrentlyEditingItem.Name;
-	}
+        CurrentlyEditingItem = newItem.Value;
+        IsNew = true;
+        Text = CurrentlyEditingItem.Name;
 
-	private async Task ShowPropertyTypeEdit(TreeItem item)
-	{
-		var result = await DialogService.Show<TypeSelectorDialog>("", new()
-			{
-				[nameof(TypeSelectorDialog.TypeFactory)] = Class.TypeFactory
-			}, new DialogOptions()
-			{
-				FullScreen = true,
-				FullWidth = true
-			}).Result;
+    }
 
-		NodeDev.Core.Types.TypeBase typeBase;
-		if (result.Data is Type type)
-			typeBase = Class.TypeFactory.Get(type, null);
-		else if (result.Data is NodeDev.Core.Types.TypeBase t)
-			typeBase = t;
-		else
-			return;
+    private void ShowRenameMenu(TreeItem item)
+    {
+        if (item == null)
+            return;
 
-		item.Property!.ChangeType(typeBase);
-	}
+        Text = item.Name;
+        CurrentlyEditingItem = item;
+        IsNew = false;
+    }
 
-	private async Task ShowMethodEdit(TreeItem item)
-	{
-		var result = await DialogService.Show<EditMethodMenu>("", new()
-			{
-				[nameof(EditMethodMenu.Method)] = item.Method
-			}, new DialogOptions()
-			{
-				FullScreen = false,
-				FullWidth = true,
-				MaxWidth = MaxWidth.Large
-			}).Result;
-	}
+    private async Task ShowPropertyTypeEdit(TreeItem item)
+    {
+        var result = await DialogService.Show<TypeSelectorDialog>("", new()
+            {
+                [nameof(TypeSelectorDialog.TypeFactory)] = Class.TypeFactory
+            }, new DialogOptions()
+            {
+                FullScreen = true,
+                FullWidth = true
+            }).Result;
 
-	private void OnEditTextKeyUp(KeyboardEventArgs args)
-	{
-		if (args.Key != "Enter" || string.IsNullOrWhiteSpace(Text) || CurrentlyEditingItem == null)
-			return;
+        NodeDev.Core.Types.TypeBase typeBase;
+        if (result.Data is Type type)
+            typeBase = Class.TypeFactory.Get(type, null);
+        else if (result.Data is NodeDev.Core.Types.TypeBase t)
+            typeBase = t;
+        else
+            return;
 
-		if (IsNew)
-		{
-			if (CurrentlyEditingItem.Type == TreeItemType.Method)
-			{
-				var method = new Core.Class.NodeClassMethod(Class, Text, Class.TypeFactory.Get(typeof(void), null), new Core.Graph());
-				method.Graph.AddNode(new Core.Nodes.Flow.EntryNode(method.Graph), false);
-				method.Graph.AddNode(new Core.Nodes.Flow.ReturnNode(method.Graph), false);
-				Class.Methods.Add(method);
+        item.Property!.ChangeType(typeBase);
+    }
 
-				Items.First(x => x.Type == TreeItemType.MethodsFolder).Children.Remove(CurrentlyEditingItem);
-				Items.First(x => x.Type == TreeItemType.MethodsFolder).Children.Add(new(new(), TreeItemType.Method, method, null)
-					{
-						Name = method.Name
-					});
-			}
-			else if (CurrentlyEditingItem.Type == TreeItemType.Property)
-			{
-				var property = new Core.Class.NodeClassProperty(Class, Text, Class.TypeFactory.Get<double>());
-				Class.Properties.Add(property);
+    private async Task ShowMethodEdit(TreeItem item)
+    {
+        var result = await DialogService.Show<EditMethodMenu>("", new()
+            {
+                [nameof(EditMethodMenu.Method)] = item.Method
+            }, new DialogOptions()
+            {
+                FullScreen = false,
+                FullWidth = true,
+                MaxWidth = MaxWidth.Large
+            }).Result;
+    }
 
-				Items.First(x => x.Type == TreeItemType.PropertiesFolder).Children.Remove(CurrentlyEditingItem);
-				Items.First(x => x.Type == TreeItemType.PropertiesFolder).Children.Add(new(new(), TreeItemType.Property, null, property)
-					{
-						Name = property.Name
-					});
-			}
-		}
-		else if (CurrentlyEditingItem.Method != null)
-		{
-			CurrentlyEditingItem.Method.Rename(Text);
-			CurrentlyEditingItem.Name = Text;
-		}
-		else if (CurrentlyEditingItem.Property != null)
-		{
-			CurrentlyEditingItem.Property.Rename(Text);
-			CurrentlyEditingItem.Name = Text;
-		}
+    private void OnEditTextKeyUp(KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(Text) || CurrentlyEditingItem == null)
+            return;
 
-		CurrentlyEditingItem = null;
-		Text = null;
-	}
+        if (IsNew)
+        {
+            if (CurrentlyEditingItem!.Type == TreeItemType.Method)
+            {
+                var method = new Core.Class.NodeClassMethod(Class, Text, Class.TypeFactory.Get(typeof(void), null), new Core.Graph());
+                method.Graph.AddNode(new Core.Nodes.Flow.EntryNode(method.Graph), false);
+                method.Graph.AddNode(new Core.Nodes.Flow.ReturnNode(method.Graph), false);
+                Class.Methods.Add(method);
 
-	private void OnSelectedItemChanged(TreeItem? tree)
-	{
-		if (CurrentlyEditingItem != null)
-		{
-			// remove the textbox
-			if (IsNew)
-				Items.First().Children.Remove(CurrentlyEditingItem);
+                Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.RemoveAll(x => x.Value == CurrentlyEditingItem);
+                Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.Add(new()
+                    {
+                        Value = new(TreeItemType.Method, method, null)
+                        {
+                            Name = method.Name
+                        }
+                    });
+            }
+            else if (CurrentlyEditingItem.Type == TreeItemType.Property)
+            {
+                var property = new Core.Class.NodeClassProperty(Class, Text, Class.TypeFactory.Get<double>());
+                Class.Properties.Add(property);
 
-			CurrentlyEditingItem = null;
-			Text = null;
-		}
+                Items.First(x => x.Value!.Type == TreeItemType.PropertiesFolder).Children!.RemoveAll(x => x.Value == CurrentlyEditingItem);
+                Items.First(x => x.Value!.Type == TreeItemType.PropertiesFolder).Children!.Add(new()
+                    {
+                        Value = new(TreeItemType.Property, null, property)
+                        {
+                            Name = property.Name
+                        }
+                    });
+            }
+        }
+        else if (CurrentlyEditingItem.Method != null)
+        {
+            CurrentlyEditingItem.Method.Rename(Text);
+            CurrentlyEditingItem.Name = Text;
+        }
+        else if (CurrentlyEditingItem.Property != null)
+        {
+            CurrentlyEditingItem.Property.Rename(Text);
+            CurrentlyEditingItem.Name = Text;
+        }
 
-		SelectedTreeItem = tree;
+        CurrentlyEditingItem = null;
+        Text = null;
+    }
 
-		if (tree?.Type == TreeItemType.Method)
-		{
-			SelectedMethod = tree.Method;
-			_ = SelectedMethodChanged.InvokeAsync(SelectedMethod);
-		}
-		else
-		{
-			SelectedMethod = null;
-			_ = SelectedMethodChanged.InvokeAsync(SelectedMethod);
-		}
+    private void OnSelectedItemChanged(TreeItem? tree)
+    {
+        if (CurrentlyEditingItem != null)
+        {
+            // remove the textbox
+            if (IsNew)
+                Items.First().Children!.RemoveAll(x => x.Value == CurrentlyEditingItem);
 
-	}
+            CurrentlyEditingItem = null;
+            Text = null;
+        }
+
+        SelectedTreeItem = tree;
+
+        if (tree?.Type == TreeItemType.Method)
+        {
+            SelectedMethod = tree.Method;
+            _ = SelectedMethodChanged.InvokeAsync(SelectedMethod);
+        }
+        else
+        {
+            SelectedMethod = null;
+            _ = SelectedMethodChanged.InvokeAsync(SelectedMethod);
+        }
+
+    }
 
 }

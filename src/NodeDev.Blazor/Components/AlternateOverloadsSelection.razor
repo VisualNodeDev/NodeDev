@@ -3,7 +3,7 @@
 
     <MudPaper Style="height: 100%; width: 100%; overflow: hidden; display: flex">
 
-        <MudList Clickable="true" SelectedItemChanged="@( x => OnNodeMethodSelected.InvokeAsync((NodeDev.Core.Nodes.Node.AlternateOverload)x.Value))" Class="flex-1 overflow-y-scroll">
+        <MudList T="NodeDev.Core.Nodes.Node.AlternateOverload" SelectedValueChanged="@( x => OnNodeMethodSelected.InvokeAsync(x))" Class="flex-1 overflow-y-scroll">
             @foreach (var overload in Node.AlternatesOverloads)
             {
                 <MudListItem Value="overload">

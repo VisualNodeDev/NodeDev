@@ -8,7 +8,7 @@
 
             <MudDataGrid Items="Method.Parameters" EditMode="DataGridEditMode.Cell" ReadOnly="false" Class="w100 flex-1">
                 <Columns>
-                    <TemplateColumn Title="Type" IsEditable="false">
+                    <TemplateColumn Title="Type" Editable="false">
                         <CellTemplate>
                             <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%">
                                 <MudText>@context.Item.ParameterType.FriendlyName</MudText>
