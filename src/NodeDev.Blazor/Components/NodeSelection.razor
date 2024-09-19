@@ -8,7 +8,7 @@
 
             <MudTextField T="string" AutoFocus="true" @bind-Value="SearchText" Immediate="true" DebounceInterval="100" Label="Search" Class="flex-none" OnKeyDown="OnKeyDown"></MudTextField>
 
-            <MudList T="NodeDev.Core.NodeProvider.NodeSearchResult" SelectedValueChanged="@( x => OnNodeTypeSelected.InvokeAsync(x))" Class="flex-1 overflow-y-hidden">
+            <MudList T="NodeDev.Core.NodeProvider.NodeSearchResult" SelectedValueChanged="@( x => OnNodeTypeSelected.InvokeAsync(x))" Class="flex-1 overflow-y-scroll">
                 @foreach (var type in NodeDev.Core.NodeProvider.Search(GraphCanvas.Graph.SelfClass.Project, SearchText, Connection).Take(1000))
                 {
                     @if (type is NodeDev.Core.NodeProvider.MethodCallNode methodCallNode)
