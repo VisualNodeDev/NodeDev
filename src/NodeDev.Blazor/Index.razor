@@ -1,4 +1,6 @@
 ﻿@inject Services.DebuggedPathService DebuggedPathService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -6,8 +8,9 @@
 <MudSnackbarProvider />
 
 <MudLayout Style="height: 100vh; width: 100%; overflow: hidden">
-    <MudAppBar Elevation="1">
-        <MudButton OnClick="Save" Class="ml-3">Save</MudButton>
+    <MudAppBar Elevation="1" data-test-id="appBar">
+        <MudButton OnClick="NewProject" Class="ml-3" data-test-id="newProject">New Project</MudButton>
+        <MudButton OnClick="Save" Class="ml-3" data-test-id="Save">Save</MudButton>
         <MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
         <MudButton OnClick="Run" Class="ml-3">Run</MudButton>
         <MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
@@ -18,7 +21,7 @@
 
         <MudExtensions.MudSplitter EnableSlide="true" Sensitivity="0.01" @bind-Dimension="ProjectExplorerGraphPercentage" Class="wh100 overflow-hidden relative">
             <StartContent>
-                <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100">
+                <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" data-test-id="ProjectExplorerSection">
                     <MudTabPanel Text="Project">
                         <ProjectExplorer Project="Project" @bind-SelectedClass="SelectedClass"></ProjectExplorer>
                     </MudTabPanel>
@@ -164,6 +167,17 @@
     {
         var content = Project.Serialize();
         File.WriteAllText("project.json", content);
+
+        Snackbar.Add("Project saved", Severity.Success);
+    }
+
+    private void NewProject()
+    {
+        if (File.Exists("project.json"))
+            File.Move("project.json", "project_backup.json", true);
+
+
+        NavigationManager.Refresh(true);
     }
 
     private void Add()

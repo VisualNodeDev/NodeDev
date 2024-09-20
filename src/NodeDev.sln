@@ -29,6 +29,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencie
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dis2Msil", "Dis2Msil\Dis2Msil\Dis2Msil.csproj", "{9873F12D-9C5B-4756-B31C-B514664638CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeDev.EndToEndTests", "NodeDev.EndToEndTests\NodeDev.EndToEndTests.csproj", "{DFA6D765-BFC3-407F-9330-B92B89310DCA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A73FFB19-1791-4E6E-829C-A6B85E1BD8F2} = {A73FFB19-1791-4E6E-829C-A6B85E1BD8F2}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,6 +68,10 @@ Global
 		{9873F12D-9C5B-4756-B31C-B514664638CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9873F12D-9C5B-4756-B31C-B514664638CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9873F12D-9C5B-4756-B31C-B514664638CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
