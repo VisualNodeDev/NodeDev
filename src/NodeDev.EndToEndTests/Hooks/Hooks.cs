@@ -9,7 +9,7 @@ public class Hooks
 {
     public IPage User { get; private set; } = null!; //-> We'll call this property in the tests
 
-    private static Process App;
+    private static Process App = null!;
 
     private const int Port = 5166;
 
@@ -22,7 +22,7 @@ public class Hooks
         {
             CreateNoWindow = Environment.GetEnvironmentVariable("HEADLESS") == "true",
             FileName = "dotnet",
-            Arguments = "run --no-build",
+            Arguments = $"run --no-build -- --urls http://*:{Port}",
             WorkingDirectory = "../../../../NodeDev.Blazor.Server",
         })!;
     }
