@@ -11,25 +11,98 @@ on:
 
 jobs:
   build:
-
+    name: Builds the entire solution
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
+
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
     - name: Restore .NET dependencies
-      working-directory: ./src/NodeDev.Blazor.Server
+      working-directory: ./src
       run: dotnet restore
 
     - name: Build
-      working-directory: ./src/NodeDev.Blazor.Server
+      working-directory: ./src
       run: dotnet build --no-restore
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: buildArtifact
+        path: ./src
+        retention-days: 7
+        
+  tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: buildArtifact
+        path: ./src
+
     - name: Test
       working-directory: ./src/NodeDev.Tests
-      run: dotnet test --verbosity normal
+      run: dotnet test --no-build --verbosity normal
+
+  e2e-tests:
+    name: Run End To End Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - uses: actions/download-artifact@master
+      with:
+        name: buildArtifact
+        path: ./src
+
+    - name: Build Necessary for Playwright
+      working-directory: ./src/NodeDev.EndToEndTests
+      run: dotnet build
+    
+    - name: Allow run
+      run: chmod -R +x ./src/NodeDev.Blazor.Server/bin
+
+    - name: Ensure browsers are installed
+      run: pwsh ./src/NodeDev.EndToEndTests/bin/Debug/net8.0/playwright.ps1 install --with-deps
+
+    - name: Test
+      env:
+        HEADLESS: true
+      working-directory: ./src/NodeDev.EndToEndTests
+      run: dotnet test --no-build --verbosity normal
+      
+    - name: Upload std Artifact
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logStd
+        path: ./src/NodeDev.Blazor.Server/logs_std.txt
+        retention-days: 7
+
+    - name: Upload err Artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logErr
+        path: ./src/NodeDev.Blazor.Server/logs_err.txt
+        retention-days: 7
