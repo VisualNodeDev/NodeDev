@@ -37,6 +37,7 @@ jobs:
       with:
         name: buildArtifact
         path: ./src
+        include-hidden-files: true
         retention-days: 7
         
   tests:
@@ -75,13 +76,11 @@ jobs:
         name: buildArtifact
         path: ./src
         
-    - name: Build Necessary for Playwright
-      working-directory: ./src/NodeDev.EndToEndTests
-      run: dotnet build
-
     - name: Ensure browsers are installed
       run: pwsh ./src/NodeDev.EndToEndTests/bin/Debug/net8.0/playwright.ps1 install --with-deps
 
     - name: Test
+      env:
+        HEADLESS: true
       working-directory: ./src/NodeDev.EndToEndTests
       run: dotnet test --no-build --verbosity normal

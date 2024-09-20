@@ -20,7 +20,7 @@ public class Hooks
         // The default path will work if you're running the tests from Visual Studio.
         App = Process.Start(new ProcessStartInfo()
         {
-            CreateNoWindow = false,
+            CreateNoWindow =  Environment.GetEnvironmentVariable("HEADLESS") == "true",
             FileName = "dotnet",
             Arguments = "run --no-build",
             WorkingDirectory = "../../../../NodeDev.Blazor.Server",
