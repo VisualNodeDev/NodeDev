@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
@@ -45,17 +45,18 @@ jobs:
 
     steps:
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
     - uses: actions/download-artifact@v4
       with:
         name: buildArtifact
+        path: ./src
 
     - name: Test
       working-directory: ./src/NodeDev.Tests
-      run: dotnet test --verbosity normal
+      run: dotnet test --no-build --verbosity normal
 
   e2e-tests:
     name: Run End To End Tests
@@ -64,7 +65,7 @@ jobs:
 
     steps:
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
@@ -72,7 +73,12 @@ jobs:
       with:
         name: buildArtifact
         path: ./src
+        
+    - name: Ensure browsers are installed
+      run: pwsh ./src/NodeDev.EndToEndTests/bin/Debug/net8.0/playwright.ps1 install --with-deps
 
     - name: Test
       working-directory: ./src/NodeDev.EndToEndTests
-      run: dotnet test --verbosity normal
+      env:
+        NodeDevServerPath: ../NodeDev.Blazor.Server
+      run: dotnet test --no-build --verbosity normal

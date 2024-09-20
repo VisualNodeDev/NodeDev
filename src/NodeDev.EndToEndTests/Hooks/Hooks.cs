@@ -16,12 +16,14 @@ public class Hooks
     [BeforeFeature]
     public static async Task StartServer()
     {
+        // start the server using either a environment variable set by the CI, or a default path.
+        // The default path will work if you're running the tests from Visual Studio.
         App = Process.Start(new ProcessStartInfo()
         {
             CreateNoWindow = false,
             FileName = "dotnet",
             Arguments = "run --no-build",
-            WorkingDirectory = @"..\..\..\..\NodeDev.Blazor.Server",
+            WorkingDirectory = Environment.GetEnvironmentVariable("NodeDevServerPath") ?? @"..\..\..\..\NodeDev.Blazor.Server",
         })!;
     }
 
