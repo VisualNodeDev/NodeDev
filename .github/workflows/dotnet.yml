@@ -95,14 +95,6 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: logStd
-        path: ./src/NodeDev.Blazor.Server/logs_std.txt
-        retention-days: 7
-
-    - name: Upload err Artifact
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: logErr
-        path: ./src/NodeDev.Blazor.Server/logs_err.txt
+        name: logServer
+        path: ./src/NodeDev.Blazor.Server/logs
         retention-days: 7

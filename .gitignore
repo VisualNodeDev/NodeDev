@@ -28,5 +28,3 @@
 /src/NodeDev.EndToEndTests/bin/Debug/net8.0
 /src/NodeDev.EndToEndTests/obj
 /src/NodeDev.Blazor.Server/project_backup.json
-/src/NodeDev.Blazor.Server/logs_err.txt
-/src/NodeDev.Blazor.Server/logs_std.txt

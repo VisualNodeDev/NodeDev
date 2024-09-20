@@ -4,22 +4,31 @@ using System.Diagnostics;
 
 namespace NodeDev.EndToEndTests.Hooks;
 
+#pragma warning disable CS0162 // Unreachable code detected. Some code is unreachable because it's used for optional logging purposes.
+
 [Binding]
 public class Hooks
 {
     public IPage User { get; private set; } = null!; //-> We'll call this property in the tests
 
     private static Process App = null!;
-    private static StreamWriter StdOutput = null!;
-    private static StreamWriter StdError = null!;
+    private static StreamWriter? StdOutput;
+    private static StreamWriter? StdError;
 
     private const int Port = 5166;
+    private const bool EnableLoggingOfServerOutput = false;
 
     [BeforeFeature]
     public static async Task StartServer()
     {
-        StdOutput = new StreamWriter(File.Open("../../../../NodeDev.Blazor.Server/logs_std.txt", FileMode.Create));
-        StdError = new StreamWriter(File.Open("../../../../NodeDev.Blazor.Server/logs_err.txt", FileMode.Create));
+        if (EnableLoggingOfServerOutput)
+        {
+            var path = "../../../../NodeDev.Blazor.Server/logs";
+            Directory.CreateDirectory(path);
+
+            StdOutput = new StreamWriter(File.Open(Path.Combine(path, "logs_std.txt"), FileMode.Create));
+            StdError = new StreamWriter(File.Open(Path.Combine(path, "logs_err.txt"), FileMode.Create));
+        }
 
         // start the server using either a environment variable set by the CI, or a default path.
         // The default path will work if you're running the tests from Visual Studio.
@@ -30,23 +39,27 @@ public class Hooks
             Arguments = $"run --no-build -- --urls http://localhost:{Port}",
             WorkingDirectory = "../../../../NodeDev.Blazor.Server",
             UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
+            RedirectStandardOutput = EnableLoggingOfServerOutput,
+            RedirectStandardError = EnableLoggingOfServerOutput
         };
 
         App.OutputDataReceived += App_OutputDataReceived;
         App.ErrorDataReceived += App_ErrorDataReceived;
 
         App.Start();
-        App.BeginOutputReadLine();
-        App.BeginErrorReadLine();
+
+        if (EnableLoggingOfServerOutput)
+        {
+            App.BeginOutputReadLine();
+            App.BeginErrorReadLine();
+        }
 
         await Task.Delay(1000);
 
         if(App.HasExited)
         {
-            StdOutput.Flush();
-            StdError.Flush();
+            StdOutput?.Flush();
+            StdError?.Flush();
             throw new Exception("Failed to start the server: " + App.ExitCode);
         }
     }
@@ -54,13 +67,13 @@ public class Hooks
     private static void App_ErrorDataReceived(object sender, DataReceivedEventArgs e)
     {
         if (e.Data != null)
-            StdError.WriteLine(e.Data);
+            StdError?.WriteLine(e.Data);
     }
 
     private static void App_OutputDataReceived(object sender, DataReceivedEventArgs e)
     {
         if(e.Data != null)
-            StdOutput.WriteLine(e.Data);
+            StdOutput?.WriteLine(e.Data);
     }
 
     [BeforeScenario] // -> Notice how we're doing these steps before each scenario
@@ -89,11 +102,7 @@ public class Hooks
             catch
             {
                 if (i == 60)
-                {
-                    StdOutput.Flush();
-                    StdError.Flush();
                     throw;
-                }
             }
 
             await Task.Delay(1000);
@@ -110,11 +119,13 @@ public class Hooks
             await Task.Delay(100);
         }
 
+        if (StdOutput != null && StdError != null)
+        {
+            StdOutput.Flush();
+            StdError.Flush();
 
-        StdOutput.Flush();
-        StdError.Flush();
-
-        StdError.Dispose();
-        StdError.Dispose();
+            StdError.Dispose();
+            StdError.Dispose();
+        }
     }
 }
