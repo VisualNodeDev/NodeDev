@@ -10,6 +10,8 @@ public class Hooks
     public IPage User { get; private set; } = null!; //-> We'll call this property in the tests
 
     private static Process App = null!;
+    private static StreamWriter StdOutput = null!;
+    private static StreamWriter StdError = null!;
 
     private const int Port = 5166;
 
@@ -18,16 +20,38 @@ public class Hooks
     {
         // start the server using either a environment variable set by the CI, or a default path.
         // The default path will work if you're running the tests from Visual Studio.
-        App = Process.Start(new ProcessStartInfo()
+        App = new Process();
+        App.StartInfo = new ProcessStartInfo()
         {
-            CreateNoWindow = Environment.GetEnvironmentVariable("HEADLESS") == "true",
             FileName = "dotnet",
             Arguments = $"run --no-build -- --urls http://localhost:{Port}",
             WorkingDirectory = "../../../../NodeDev.Blazor.Server",
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true
-        })!;
+        };
+
+        App.OutputDataReceived += App_OutputDataReceived;
+        App.ErrorDataReceived += App_ErrorDataReceived;
+
+        App.Start();
+        App.BeginOutputReadLine();
+        App.BeginErrorReadLine();
+
+        StdOutput = new StreamWriter(File.Open("../../../../NodeDev.Blazor.Server/logs_std.txt", FileMode.Create));
+        StdError = new StreamWriter(File.Open("../../../../NodeDev.Blazor.Server/logs_err.txt", FileMode.Create));
+    }
+
+    private static void App_ErrorDataReceived(object sender, DataReceivedEventArgs e)
+    {
+        if (e.Data != null)
+            StdError.WriteLine(e.Data);
+    }
+
+    private static void App_OutputDataReceived(object sender, DataReceivedEventArgs e)
+    {
+        if(e.Data != null)
+            StdOutput.WriteLine(e.Data);
     }
 
     [BeforeScenario] // -> Notice how we're doing these steps before each scenario
@@ -57,9 +81,8 @@ public class Hooks
             {
                 if (i == 5)
                 {
-                    App.Kill();
-                    File.WriteAllText("../../../../NodeDev.Blazor.Server/logs_std.txt", App.StandardOutput.ReadToEnd());
-                    File.AppendAllText("../../../../NodeDev.Blazor.Server/logs_std.txt", App.StandardError.ReadToEnd());
+                    StdOutput.Flush();
+                    StdError.Flush();
                     throw;
                 }
             }
@@ -77,5 +100,12 @@ public class Hooks
         {
             await Task.Delay(100);
         }
+
+
+        StdOutput.Flush();
+        StdError.Flush();
+
+        StdError.Dispose();
+        StdError.Dispose();
     }
 }

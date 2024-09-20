@@ -91,10 +91,18 @@ jobs:
       working-directory: ./src/NodeDev.EndToEndTests
       run: dotnet test --no-build --verbosity normal
       
-    - name: Upload Build Artifact
+    - name: Upload std Artifact
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: logsArtifact
         path: ./src/NodeDev.Blazor.Server/logs_std.txt
+        retention-days: 7
+
+    - name: Upload err Artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logsArtifact
+        path: ./src/NodeDev.Blazor.Server/logs_err.txt
         retention-days: 7
