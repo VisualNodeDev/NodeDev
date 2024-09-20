@@ -82,11 +82,6 @@ jobs:
     - name: Allow run
       run: chmod -R +x ./src/NodeDev.Blazor.Server/bin
 
-    - name: Test Cause not working
-      working-directory: ./src/NodeDev.Blazor.Server
-      run: dotnet run --no-build
-      timeout-minutes: 1
-
     - name: Ensure browsers are installed
       run: pwsh ./src/NodeDev.EndToEndTests/bin/Debug/net8.0/playwright.ps1 install --with-deps
 
