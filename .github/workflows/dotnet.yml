@@ -95,6 +95,6 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: buildArtifact
+        name: logsArtifact
         path: ./src/NodeDev.Blazor.Server/logs_std.txt
         retention-days: 7
