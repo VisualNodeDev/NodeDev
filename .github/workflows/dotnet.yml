@@ -75,20 +75,15 @@ jobs:
         name: buildArtifact
         path: ./src
     
-    - name: Allow run
-      run: chmod -R +x ./src/NodeDev.Blazor.Server/bin
-
-    - name: Test Cause not working
-      working-directory: ./src/NodeDev.Blazor.Server
-      run: dotnet run --no-build
-      timeout-minutes: 1
-
     - name: Build Necessary for Playwright
       working-directory: ./src/NodeDev.EndToEndTests
       run: dotnet build
-
+      
     - name: Ensure browsers are installed
       run: pwsh ./src/NodeDev.EndToEndTests/bin/Debug/net8.0/playwright.ps1 install --with-deps
+      
+    - name: Allow run
+      run: chmod -R +x ./src/NodeDev.Blazor.Server/bin
 
     - name: Test
       env:
