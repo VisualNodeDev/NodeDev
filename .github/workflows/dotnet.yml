@@ -95,7 +95,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: logsArtifact
+        name: logStd
         path: ./src/NodeDev.Blazor.Server/logs_std.txt
         retention-days: 7
 
@@ -103,6 +103,6 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: logsArtifact
+        name: logErr
         path: ./src/NodeDev.Blazor.Server/logs_err.txt
         retention-days: 7
