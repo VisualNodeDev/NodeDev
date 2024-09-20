@@ -90,3 +90,11 @@ jobs:
         HEADLESS: true
       working-directory: ./src/NodeDev.EndToEndTests
       run: dotnet test --no-build --verbosity normal
+      
+    - name: Upload Build Artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: buildArtifact
+        path: ./src/NodeDev.Blazor.Server/logs_std.txt
+        retention-days: 7
