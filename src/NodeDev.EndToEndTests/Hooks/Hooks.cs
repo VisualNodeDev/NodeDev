@@ -24,8 +24,7 @@ public class Hooks
             FileName = "dotnet",
             Arguments = $"run --no-build -- --urls http://localhost:{Port}",
             WorkingDirectory = "../../../../NodeDev.Blazor.Server",
-            WindowStyle = ProcessWindowStyle.Hidden,
-            UseShellExecute = true,
+            UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true
         })!;
