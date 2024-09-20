@@ -22,7 +22,7 @@ public class Hooks
         {
             CreateNoWindow = Environment.GetEnvironmentVariable("HEADLESS") == "true",
             FileName = "dotnet",
-            Arguments = $"run --no-build -- --urls http://*:{Port}",
+            Arguments = $"run --no-build -- --urls http://localhost:{Port}",
             WorkingDirectory = "../../../../NodeDev.Blazor.Server",
         })!;
     }
