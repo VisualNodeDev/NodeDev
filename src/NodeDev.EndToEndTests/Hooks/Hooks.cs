@@ -88,7 +88,7 @@ public class Hooks
             }
             catch
             {
-                if (i == 5)
+                if (i == 60)
                 {
                     StdOutput.Flush();
                     StdError.Flush();
@@ -96,7 +96,7 @@ public class Hooks
                 }
             }
 
-            await Task.Delay(100);
+            await Task.Delay(1000);
         }
     }
 
