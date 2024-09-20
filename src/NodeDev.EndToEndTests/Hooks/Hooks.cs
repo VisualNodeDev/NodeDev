@@ -20,7 +20,7 @@ public class Hooks
         // The default path will work if you're running the tests from Visual Studio.
         App = Process.Start(new ProcessStartInfo()
         {
-            CreateNoWindow =  Environment.GetEnvironmentVariable("HEADLESS") == "true",
+            CreateNoWindow = Environment.GetEnvironmentVariable("HEADLESS") == "true",
             FileName = "dotnet",
             Arguments = "run --no-build",
             WorkingDirectory = "../../../../NodeDev.Blazor.Server",
@@ -35,7 +35,7 @@ public class Hooks
         //Initialise a browser - 'Chromium' can be changed to 'Firefox' or 'Webkit'
         var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
-            Headless = false // -> Use this option to be able to see your test running
+            Headless = Environment.GetEnvironmentVariable("HEADLESS") == "true" // -> Use this option to be able to see your test running
         });
         //Setup a browser context
         var context1 = await browser.NewContextAsync();
