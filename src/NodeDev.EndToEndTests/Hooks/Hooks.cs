@@ -57,6 +57,7 @@ public class Hooks
             {
                 if (i == 5)
                 {
+                    App.Kill();
                     File.WriteAllText("../../../../NodeDev.Blazor.Server/logs_std.txt", App.StandardOutput.ReadToEnd());
                     File.AppendAllText("../../../../NodeDev.Blazor.Server/logs_std.txt", App.StandardError.ReadToEnd());
                     throw;
