@@ -25,3 +25,5 @@
 /src/NodeDev.Core.Types.Tests/bin
 /src/NodeDev.Core.Types.Tests/obj
 /src/NodeDev.Core.Types/bin
+/src/NodeDev.EndToEndTests/bin/Debug/net8.0
+/src/NodeDev.EndToEndTests/obj

@@ -1,98 +1,99 @@
 ﻿
 <MudStack Row="false" Class="wh100">
-	<MudText>Project</MudText>
+    <MudText>Project</MudText>
 
-	<MudTreeView T="TreeItem" Items="Items" @bind-SelectedValue="Selected" @bind-SelectedValue:after="OnSelectedItemChanged" Class="flex-1">
-		<ItemTemplate>
-			@if (context.Value == null)
-			{ }
-			else if (context.Value.Type == TreeItemType.Folder)
-			{
-				<MudTreeViewItem @bind-Expanded="@context.Expanded" Items="@context.Children" Value="@context.Value" Text="@context.Value.Name" EndTextTypo="@Typo.caption" />
-			}
-			else if (context.Value.Type == TreeItemType.Class)
-			{
-				<MudTreeViewItem @bind-Expanded="@context.Expanded" Value="@context.Value" Text="@context.Value.Name" EndTextTypo="@Typo.caption" />
-			}
-		</ItemTemplate>
-	</MudTreeView>
+    <MudTreeView T="TreeItem" Items="Items" @bind-SelectedValue="Selected" @bind-SelectedValue:after="OnSelectedItemChanged" Class="flex-1" data-test-id="projectExplorer">
+        <ItemTemplate>
+            @if (context.Value == null)
+            { }
+            else if (context.Value.Type == TreeItemType.Folder)
+            {
+                <MudTreeViewItem @bind-Expanded="@context.Expanded" Items="@context.Children" Value="@context.Value" Text="@context.Value.Name" EndTextTypo="@Typo.caption" data-test-id="projectExplorerMethod" />
+            }
+            else if (context.Value.Type == TreeItemType.Class)
+            {
+                <MudTreeViewItem @bind-Expanded="@context.Expanded" Value="@context.Value" Text="@context.Value.Name" EndTextTypo="@Typo.caption" data-test-id="projectExplorerClass" />
+            }
+        </ItemTemplate>
+    </MudTreeView>
 </MudStack>
 
 @code {
 
-	private enum TreeItemType
-	{
-		Folder,
-		Class
-	}
+    private enum TreeItemType
+    {
+        Folder,
+        Class
+    }
 
-	private record class TreeItem(string Name, TreeItemType Type, NodeDev.Core.Class.NodeClass? Class)
-	{
-		public bool IsExpanded { get; set; } = true;
-	}
+    private record class TreeItem(string Name, TreeItemType Type, NodeDev.Core.Class.NodeClass? Class)
+    {
+        public bool IsExpanded { get; set; } = true;
+    }
 
-	[Parameter]
-	public NodeDev.Core.Project Project { get; set; } = null!;
+    [Parameter]
+    public NodeDev.Core.Project Project { get; set; } = null!;
 
-	[Parameter]
-	public NodeDev.Core.Class.NodeClass? SelectedClass { get; set; }
+    [Parameter]
+    public NodeDev.Core.Class.NodeClass? SelectedClass { get; set; }
 
-	[Parameter]
-	public EventCallback<NodeDev.Core.Class.NodeClass?> SelectedClassChanged { get; set; }
+    [Parameter]
+    public EventCallback<NodeDev.Core.Class.NodeClass?> SelectedClassChanged { get; set; }
 
-	private TreeItem? Selected = null;
+    private TreeItem? Selected = null;
 
-	private List<TreeItemData<TreeItem>> Items { get; } = new();
+    private List<TreeItemData<TreeItem>> Items { get; } = new();
 
-	private void OnSelectedItemChanged()
-	{
-		if (Selected?.Type == TreeItemType.Class)
-		{
-			SelectedClass = Selected.Class;
-			_ = SelectedClassChanged.InvokeAsync(SelectedClass);
-		}
-		else
-		{
-			SelectedClass = null;
-			_ = SelectedClassChanged.InvokeAsync(SelectedClass);
-		}
-	}
+    private void OnSelectedItemChanged()
+    {
+        if (Selected?.Type == TreeItemType.Class)
+        {
+            SelectedClass = Selected.Class;
+            _ = SelectedClassChanged.InvokeAsync(SelectedClass);
+        }
+        else
+        {
+            SelectedClass = null;
+            _ = SelectedClassChanged.InvokeAsync(SelectedClass);
+        }
+    }
 
-	protected override void OnInitialized()
-	{
-		base.OnInitialized();
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
 
-		foreach (var nodeClass in Project.Classes)
-			AddClass(nodeClass);
-	}
+        foreach (var nodeClass in Project.Classes)
+            AddClass(nodeClass);
+    }
 
-	private void AddClass(NodeDev.Core.Class.NodeClass nodeClass)
-	{
-		// find the folder that already exists in the tree
-		var folders = nodeClass.Namespace.Split('.');
-		TreeItemData<TreeItem>? folder = null;
-		for (int i = 0; i < folders.Length; ++i)
-		{
-			var parent = folder?.Children ?? Items;
-			folder = parent.FirstOrDefault(x => x.Value?.Name == folders[i] && x.Value?.Type == TreeItemType.Folder);
-			if (folder == null)
-			{
-				folder = new TreeItemData<TreeItem>()
-					{
-						Value = new(folders[i], TreeItemType.Folder, null),
-						Children = []
-					};
-				parent.Add(folder);
-			}
-		}
+    private void AddClass(NodeDev.Core.Class.NodeClass nodeClass)
+    {
+        // find the folder that already exists in the tree
+        var folders = nodeClass.Namespace.Split('.');
+        TreeItemData<TreeItem>? folder = null;
+        for (int i = 0; i < folders.Length; ++i)
+        {
+            var parent = folder?.Children ?? Items;
+            folder = parent.FirstOrDefault(x => x.Value?.Name == folders[i] && x.Value?.Type == TreeItemType.Folder);
+            if (folder == null)
+            {
+                folder = new TreeItemData<TreeItem>()
+                    {
+                        Value = new(folders[i], TreeItemType.Folder, null),
+                        Children = [],
+                        Expanded = true
+                    };
+                parent.Add(folder);
+            }
+        }
 
-		if (folder?.Children == null)
-			throw new Exception("Call cannot have no namespace ??");
+        if (folder?.Children == null)
+            throw new Exception("Call cannot have no namespace ??");
 
-		folder.Children.Add(new()
-		{
-			Value = new(nodeClass.Name, TreeItemType.Class, nodeClass)
-		});
-	}
+        folder.Children.Add(new()
+            {
+                Value = new(nodeClass.Name, TreeItemType.Class, nodeClass)
+            });
+    }
 
 }
