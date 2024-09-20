@@ -92,7 +92,7 @@ jobs:
       run: dotnet test --no-build --verbosity normal
       
     - name: Upload std Artifact
-      if: always()
+      if: failure()
       uses: actions/upload-artifact@v4
       with:
         name: logStd

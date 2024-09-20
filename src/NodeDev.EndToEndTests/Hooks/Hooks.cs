@@ -18,6 +18,9 @@ public class Hooks
     [BeforeFeature]
     public static async Task StartServer()
     {
+        StdOutput = new StreamWriter(File.Open("../../../../NodeDev.Blazor.Server/logs_std.txt", FileMode.Create));
+        StdError = new StreamWriter(File.Open("../../../../NodeDev.Blazor.Server/logs_err.txt", FileMode.Create));
+
         // start the server using either a environment variable set by the CI, or a default path.
         // The default path will work if you're running the tests from Visual Studio.
         App = new Process();
@@ -38,8 +41,14 @@ public class Hooks
         App.BeginOutputReadLine();
         App.BeginErrorReadLine();
 
-        StdOutput = new StreamWriter(File.Open("../../../../NodeDev.Blazor.Server/logs_std.txt", FileMode.Create));
-        StdError = new StreamWriter(File.Open("../../../../NodeDev.Blazor.Server/logs_err.txt", FileMode.Create));
+        await Task.Delay(1000);
+
+        if(App.HasExited)
+        {
+            StdOutput.Flush();
+            StdError.Flush();
+            throw new Exception("Failed to start the server: " + App.ExitCode);
+        }
     }
 
     private static void App_ErrorDataReceived(object sender, DataReceivedEventArgs e)
