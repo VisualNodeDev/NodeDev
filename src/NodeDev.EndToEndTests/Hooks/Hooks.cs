@@ -25,7 +25,9 @@ public class Hooks
             Arguments = $"run --no-build -- --urls http://localhost:{Port}",
             WorkingDirectory = "../../../../NodeDev.Blazor.Server",
             WindowStyle = ProcessWindowStyle.Hidden,
-            UseShellExecute = true
+            UseShellExecute = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
         })!;
     }
 
@@ -55,7 +57,11 @@ public class Hooks
             catch
             {
                 if (i == 5)
+                {
+                    File.WriteAllText("../../../../NodeDev.Blazor.Server/logs_std.txt", App.StandardOutput.ReadToEnd());
+                    File.AppendAllText("../../../../NodeDev.Blazor.Server/logs_std.txt", App.StandardError.ReadToEnd());
                     throw;
+                }
             }
 
             await Task.Delay(100);
