@@ -18,6 +18,7 @@ public class Hooks
     {
         // start the server using either a environment variable set by the CI, or a default path.
         // The default path will work if you're running the tests from Visual Studio.
+        Console.WriteLine(Environment.CurrentDirectory);
         App = Process.Start(new ProcessStartInfo()
         {
             CreateNoWindow = false,
