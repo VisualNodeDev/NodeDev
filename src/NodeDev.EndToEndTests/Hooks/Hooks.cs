@@ -24,7 +24,7 @@ public class Hooks
             CreateNoWindow = false,
             FileName = "dotnet",
             Arguments = "run --no-build",
-            WorkingDirectory = Environment.GetEnvironmentVariable("NodeDevServerPath") ?? @"..\..\..\..\NodeDev.Blazor.Server",
+            WorkingDirectory = @"..\..\..\..\NodeDev.Blazor.Server",
         })!;
     }
 

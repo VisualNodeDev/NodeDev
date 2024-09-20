@@ -37,6 +37,7 @@ jobs:
       with:
         name: buildArtifact
         path: ./src
+        retention-days: 7
         
   tests:
     name: Run Unit Tests
