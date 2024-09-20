@@ -70,6 +70,11 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
+    - name: Test Cause not working
+      working-directory: ./src/NodeDev.Blazor.Server
+      run: dotnet run --no-build
+      timeout-minutes: 1
+
     - uses: actions/download-artifact@master
       with:
         name: buildArtifact
