@@ -70,7 +70,7 @@ public class HomePage
     public async Task SaveProject()
     {
         var saveBtn = SearchAppBar.Locator("[data-test-id='Save']");
-        
+
         await saveBtn.WaitForVisible();
 
         await saveBtn.ClickAsync();

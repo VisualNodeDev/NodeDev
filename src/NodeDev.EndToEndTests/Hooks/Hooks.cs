@@ -41,7 +41,7 @@ public class Hooks
         //Initialise a page on the browser context.
         User = await context1.NewPageAsync();
 
-        for (int i = 0;; ++i)
+        for (int i = 0; ; ++i)
         {
             try
             {
