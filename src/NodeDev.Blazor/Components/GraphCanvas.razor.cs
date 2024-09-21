@@ -270,17 +270,21 @@ public partial class GraphCanvas : ComponentBase, IDisposable
             if (destination.Connection.Connections.Count == 1 && destination.Connection.Type.AllowTextboxEdit)
                 UpdateConnectionType(destination.Connection);
 
-            if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel port)
+            if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel sourcePort && link.Target.Model is GraphPortModel targetPort)
             {
-                link.Color = GetTypeShapeColor(port.Connection.Type, port.Connection.Parent.TypeFactory);
+                link.Color = GetTypeShapeColor(sourcePort.Connection.Type, sourcePort.Connection.Parent.TypeFactory);
 
                 // we have to disconnect the previously connected exec, since exec outputs can only have one connection
-                if (source.Connection.Type.IsExec && source.Connection.Connections.Count > 1 && link.Target.Model is GraphPortModel target)
+                if (source.Connection.Type.IsExec && source.Connection.Connections.Count > 1)
                 {
-                    Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source.Connection && (x.Target.Model as GraphPortModel)?.Connection != target.Connection));
-                    Graph.Disconnect(source.Connection, source.Connection.Connections.First(x => x != target.Connection), false);
+                    Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source.Connection && (x.Target.Model as GraphPortModel)?.Connection != targetPort.Connection));
+                    Graph.Disconnect(source.Connection, source.Connection.Connections.First(x => x != targetPort.Connection), false);
                 }
-
+                else if (!destination.Connection.Type.IsExec && destination.Connection.Connections.Count > 1)
+                {
+                    Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection != source.Connection && (x.Target.Model as GraphPortModel)?.Connection == targetPort.Connection));
+                    Graph.Disconnect(destination.Connection, destination.Connection.Connections.First(x => x != sourcePort.Connection), false);
+                }
             }
 
             UpdateVerticesInConnection(source.Connection, destination.Connection, baseLinkModel);

@@ -15,6 +15,14 @@ public sealed class MainPageStepDefinitions
         HomePage = homePage;
     }
 
+    [Then("Open the {string} method in the {string}")]
+    public async Task ThenOpenTheMethodInTheClass(string main, string program)
+    {
+        await ThenTheMethodInTheClassShouldExist(main, program);
+
+        await HomePage.OpenMethodByName(main);
+    }
+
     [Given("I load the default project")]
     public async Task GivenILoadTheDefaultProject()
     {

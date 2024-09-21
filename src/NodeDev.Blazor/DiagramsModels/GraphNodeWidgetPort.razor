@@ -1,4 +1,4 @@
-﻿<div class="@($"col {(IsInput ? "input" : "output")} {(SharingRow ? "sharing" : "")}")">
+﻿<div class="@($"col {(IsInput ? "input" : "output")} {(SharingRow ? "sharing" : "")}")" data-test-id="graphPort">
 	<div class="name">
 		<span class="@(IsInput ? "pl-3 pr-1" : "pr-3 pl-1")">@Port.Connection.Name</span>
 	</div>

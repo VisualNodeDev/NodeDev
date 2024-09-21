@@ -24,4 +24,17 @@
     <ProjectReference Include="..\NodeDev.Blazor.Server\NodeDev.Blazor.Server.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="Features\NodeSelector.feature.cs">
+      <DependentUpon>NodeSelector.feature</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ReqnrollFeatureFiles Update="Features\NodeSelector.feature">
+      <Visible>$(UsingMicrosoftNETSdk)</Visible>
+      <CodeBehindFile>%(RelativeDir)%(Filename).feature$(DefaultLanguageSourceExtension)</CodeBehindFile>
+    </ReqnrollFeatureFiles>
+  </ItemGroup>
+
 </Project>

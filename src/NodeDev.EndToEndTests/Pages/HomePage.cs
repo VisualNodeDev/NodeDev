@@ -24,8 +24,6 @@ public class HomePage
         await SearchNewProjectButton.WaitForVisible();
 
         await SearchNewProjectButton.ClickAsync();
-
-        await Task.Delay(100);
     }
 
     public async Task HasClass(string name)
@@ -41,15 +39,11 @@ public class HomePage
     public async Task OpenProjectExplorerProjectTab()
     {
         await SearchProjectExplorerTabsHeader.GetByText("PROJECT").ClickAsync();
-
-        await Task.Delay(100);
     }
 
     public async Task OpenProjectExplorerClassTab()
     {
         await SearchProjectExplorerTabsHeader.GetByText("CLASS").ClickAsync();
-
-        await Task.Delay(100);
     }
 
     public async Task<ILocator> FindMethodByName(string name)
@@ -65,6 +59,17 @@ public class HomePage
         var locator = await FindMethodByName(name);
 
         await locator.WaitForVisible();
+    }
+
+    public async Task OpenMethodByName(string name)
+    {
+        var locator = await FindMethodByName(name);
+
+        await locator.WaitForVisible();
+
+        await locator.ClickAsync();
+
+        await Task.Delay(200);
     }
 
     public async Task SaveProject()
