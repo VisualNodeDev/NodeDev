@@ -37,6 +37,9 @@ namespace NodeDev.Core
         public record class SetPropertyOrFieldNode(Type Type, IMemberInfo MemberInfo) : NodeSearchResult(Type);
         public static IEnumerable<NodeSearchResult> Search(Project project, string text, Connection? startConnection)
         {
+            if (startConnection?.Type is UndefinedGenericType)
+                startConnection = null; // we want to list every possible choices
+
             var nodes = NodeTypes.Where(x => x != typeof(MethodCall)).Where(p => p.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 
             var results = nodes.Select(x => new NodeSearchResult(x));
@@ -46,8 +49,8 @@ namespace NodeDev.Core
                 IEnumerable<IMemberInfo> members = type.GetMembers();
                 members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase)); // filter with the name
 
-                IEnumerable<NodeSearchResult> results = members.Where(x => x.CanGet).Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x));
-                results = results.Concat(members.Where(x => x.CanGet).Select(x => new SetPropertyOrFieldNode(typeof(SetPropertyOrField), x)));
+                IEnumerable<NodeSearchResult> results = members.Where(x => x.CanSet).Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x));
+                results = results.Concat(members.Where(x => x.CanSet).Select(x => new SetPropertyOrFieldNode(typeof(SetPropertyOrField), x)));
 
                 return results;
             }
