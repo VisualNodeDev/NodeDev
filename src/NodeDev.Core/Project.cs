@@ -6,6 +6,11 @@ using NodeDev.Core.Nodes.Flow;
 using NodeDev.Core.Types;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -85,20 +90,92 @@ public class Project
 
     #endregion
 
+    #region Build
+
+    public void Build(BuildOptions buildOptions)
+    {
+        var name = "project";
+        var assemblyBuilder = BuildAndGetAssembly(buildOptions);
+
+        Directory.CreateDirectory(buildOptions.OutputPath);
+        var filePath = Path.Combine(buildOptions.OutputPath, $"{name}.dll");
+
+        var program = Classes.FirstOrDefault(x => x.Name == "Program");
+        var main = program?.Methods.FirstOrDefault(x => x.Name == "Main");
+        if (program != null && main != null && NodeClassTypeCreator != null)
+        {
+            // Find the entry point in the generate assembly
+            var entry = NodeClassTypeCreator.GeneratedTypes[program.ClassTypeBase].Methods[main];
+            if (entry != null)
+            {
+                var metadataBuilder = assemblyBuilder.GenerateMetadata(out var ilStream, out var fieldData);
+                var peHeaderBuilder = new PEHeaderBuilder(imageCharacteristics: Characteristics.ExecutableImage);
+
+                var peBuilder = new ManagedPEBuilder(
+                                header: peHeaderBuilder,
+                                metadataRootBuilder: new MetadataRootBuilder(metadataBuilder),
+                                ilStream: ilStream,
+                                mappedFieldData: fieldData,
+                                entryPoint: MetadataTokens.MethodDefinitionHandle(entry.MetadataToken));
+
+                var peBlob = new BlobBuilder();
+                peBuilder.Serialize(peBlob);
+
+                using var fileStream = File.Create(filePath);
+
+                peBlob.WriteContentTo(fileStream);
+
+                File.WriteAllText(Path.Combine(buildOptions.OutputPath, $"{name}.runtimeconfig.json"), @$"{{
+    ""runtimeOptions"": {{
+        ""tfm"": ""net{Environment.Version.Major}.{Environment.Version.Minor}"",
+        ""framework"": {{
+            ""name"": ""Microsoft.NETCore.App"",
+            ""version"": ""{GetNetCoreVersion()}""
+        }}
+    }}
+}}");
+            }
+        }
+        else // not an executable, just save the generated assembly (dll)
+            assemblyBuilder.Save(filePath);
+    }
+    private static string GetNetCoreVersion()
+    {
+        var assembly = typeof(System.Runtime.GCSettings).GetTypeInfo().Assembly;
+        var assemblyPath = assembly.Location.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        int netCoreAppIndex = Array.IndexOf(assemblyPath, "Microsoft.NETCore.App");
+
+        if (netCoreAppIndex > 0 && netCoreAppIndex < assemblyPath.Length - 2)
+            return assemblyPath[netCoreAppIndex + 1];
+
+        return "";
+    }
+
+    private PersistedAssemblyBuilder BuildAndGetAssembly(BuildOptions buildOptions)
+    {
+        CreateNodeClassTypeCreator(buildOptions);
+
+        if (NodeClassTypeCreator == null)
+            throw new NullReferenceException($"NodeClassTypeCreator should not be null after {nameof(CreateNodeClassTypeCreator)} was called, this shouldn't happen");
+
+        NodeClassTypeCreator.CreateProjectClassesAndAssembly();
+
+        var assembly = NodeClassTypeCreator.Assembly;
+        if (assembly == null)
+            throw new NullReferenceException("NodeClassTypeCreator.Assembly null after project was compiled, this shouldn't happen");
+
+        return assembly;
+    }
+
+    #endregion
+
     #region Run
 
     public object? Run(BuildOptions options, params object?[] inputs)
     {
         try
         {
-            CreateNodeClassTypeCreator(options);
-
-            if (NodeClassTypeCreator == null)
-                throw new NullReferenceException($"NodeClassTypeCreator should not be null after {nameof(CreateNodeClassTypeCreator)} was called, this shouldn't happen");
-
-            NodeClassTypeCreator.CreateProjectClassesAndAssembly();
-
-            var assembly = NodeClassTypeCreator.Assembly ?? throw new NullReferenceException("NodeClassTypeCreator.Assembly null after project was compiled, this shouldn't happen");
+            var assembly = BuildAndGetAssembly(options);
             var program = assembly.CreateInstance("Program")!;
 
             GraphExecutionChangedSubject.OnNext(true);
