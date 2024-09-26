@@ -11,344 +11,398 @@ namespace NodeDev.Core.Types;
 
 public abstract class TypeBase
 {
-	public abstract string Name { get; }
+    public abstract string Name { get; }
 
-	public abstract string FullName { get; }
+    public abstract string FullName { get; }
 
-	public virtual bool IsClass => true;
+    public virtual bool IsClass => true;
 
-	public abstract TypeBase[] Generics { get; }
+    public abstract TypeBase[] Generics { get; }
 
-	public abstract TypeBase? BaseType { get; }
+    public abstract TypeBase? BaseType { get; }
 
-	public abstract TypeBase[] Interfaces { get; }
+    public abstract TypeBase[] Interfaces { get; }
 
-	public bool HasUndefinedGenerics => Generics.Any(x => x is UndefinedGenericType || x.HasUndefinedGenerics);
+    public abstract bool IsArray { get; }
 
-	public virtual bool IsExec => false;
+    public abstract TypeBase ArrayType { get; }
 
-	public virtual bool AllowTextboxEdit => false;
+    public abstract TypeBase ArrayInnerType { get; }
 
-	public virtual string? DefaultTextboxValue => null;
+    public bool HasUndefinedGenerics => Generics.Any(x => x is UndefinedGenericType || x.HasUndefinedGenerics);
 
-	public abstract string FriendlyName { get; }
+    public virtual bool IsExec => false;
 
-	internal protected abstract string Serialize();
+    public virtual bool AllowTextboxEdit => false;
 
-	public abstract Type MakeRealType();
+    public virtual string? DefaultTextboxValue => null;
 
-	public abstract TypeBase CloneWithGenerics(TypeBase[] newGenerics);
+    public abstract string FriendlyName { get; }
 
-	public virtual object? ParseTextboxEdit(string text) => throw new NotImplementedException();
+    internal protected abstract string Serialize();
 
-	public abstract IEnumerable<IMemberInfo> GetMembers();
+    public abstract Type MakeRealType();
 
-	public record class SerializedType(string TypeFullName, string SerializedTypeCustom);
-	public SerializedType SerializeWithFullTypeName()
-	{
-		var serializedType = new SerializedType(GetType().FullName!, Serialize());
+    public abstract TypeBase CloneWithGenerics(TypeBase[] newGenerics);
 
-		return serializedType;
-	}
-	public string SerializeWithFullTypeNameString() => JsonSerializer.Serialize(SerializeWithFullTypeName());
+    public virtual object? ParseTextboxEdit(string text) => throw new NotImplementedException();
+
+    public abstract IEnumerable<IMemberInfo> GetMembers();
+
+    public record class SerializedType(string TypeFullName, string SerializedTypeCustom);
+    public SerializedType SerializeWithFullTypeName()
+    {
+        var serializedType = new SerializedType(GetType().FullName!, Serialize());
+
+        return serializedType;
+    }
+    public string SerializeWithFullTypeNameString() => JsonSerializer.Serialize(SerializeWithFullTypeName());
 
     public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes()
-	{
-		IEnumerable<UndefinedGenericType> undefinedGenericTypes = this is UndefinedGenericType undefinedGenericType ? new[] { undefinedGenericType } : Enumerable.Empty<UndefinedGenericType>();
+    {
+        IEnumerable<UndefinedGenericType> undefinedGenericTypes = this is UndefinedGenericType undefinedGenericType ? new[] { undefinedGenericType } : Enumerable.Empty<UndefinedGenericType>();
 
-		return undefinedGenericTypes.Concat(Generics.SelectMany(x => x.GetUndefinedGenericTypes())).Distinct();
-	}
+        return undefinedGenericTypes.Concat(Generics.SelectMany(x => x.GetUndefinedGenericTypes())).Distinct();
+    }
 
-	public TypeBase ReplaceUndefinedGeneric(IReadOnlyDictionary<UndefinedGenericType, TypeBase> genericTypes)
-	{
-		if (this is UndefinedGenericType undefinedGeneric)
-		{
-			if (genericTypes.TryGetValue(undefinedGeneric, out var newType))
-				return newType;
-			else
-				return undefinedGeneric; // put back the undefined generic if we didn't find a replacement
-		}
+    public TypeBase ReplaceUndefinedGeneric(IReadOnlyDictionary<UndefinedGenericType, TypeBase> genericTypes)
+    {
+        if (this is UndefinedGenericType undefinedGeneric)
+        {
+            if (genericTypes.TryGetValue(undefinedGeneric, out var newType))
+                return newType;
+            else
+                return undefinedGeneric; // put back the undefined generic if we didn't find a replacement
+        }
 
-		var generics = new TypeBase[Generics.Length];
+        var generics = new TypeBase[Generics.Length];
 
-		for (int i = 0; i < Generics.Length; ++i)
-		{
-			var generic = Generics[i];
-			if (generic is UndefinedGenericType undefinedGenericType)
-			{
-				if (genericTypes.TryGetValue(undefinedGenericType, out var newType))
-					generics[i] = newType;
-				else
-					generics[i] = undefinedGenericType; // put back the undefined generic if we didn't find a replacement
-			}
-			else
-				generics[i] = generic.ReplaceUndefinedGeneric(genericTypes); // ask a more complex type to replace its own undefined generics
-		}
+        for (int i = 0; i < Generics.Length; ++i)
+        {
+            var generic = Generics[i];
+            if (generic is UndefinedGenericType undefinedGenericType)
+            {
+                if (genericTypes.TryGetValue(undefinedGenericType, out var newType))
+                    generics[i] = newType;
+                else
+                    generics[i] = undefinedGenericType; // put back the undefined generic if we didn't find a replacement
+            }
+            else
+                generics[i] = generic.ReplaceUndefinedGeneric(genericTypes); // ask a more complex type to replace its own undefined generics
+        }
 
-		return CloneWithGenerics(generics);
-	}
+        return CloneWithGenerics(generics);
+    }
 
-	#region Assignation checks
+    #region Assignation checks
 
-	/// <summary>
-	/// Returns in the backend type is the same, ignoring generics
-	/// For RealType, that means the actual 'Type' Backend 
-	/// </summary>
-	/// <param name="typeBase"></param>
-	/// <returns></returns>
-	public abstract bool IsSameBackend(TypeBase typeBase);
+    /// <summary>
+    /// Returns in the backend type is the same, ignoring generics
+    /// For RealType, that means the actual 'Type' Backend 
+    /// </summary>
+    /// <param name="typeBase"></param>
+    /// <returns></returns>
+    public abstract bool IsSameBackend(TypeBase typeBase);
 
-	internal bool IsDirectlyAssignableTo(TypeBase other, bool allowInOutGenerics, [MaybeNullWhen(false)] out Dictionary<UndefinedGenericType, TypeBase> changedGenerics)
-	{
-		if (this is UndefinedGenericType thisUndefinedGenericType)
-		{
-			if (other is UndefinedGenericType)
-			{
-				changedGenerics = new(); // nothing to change, we're plugging a generic into another generic
-				return true;
-			}
-			else // we can change 'this' to the same type as 'other' and plug into it
-			{
-				changedGenerics = new()
-				{
-					[thisUndefinedGenericType] = other
-				};
-				return true;
-			}
+    /// <summary>
+    /// Validate if 'this' is directly assignable to 'other' without checkout the entire hierarchy of inheritance and inteface implementations
+    /// </summary>
+    /// <param name="other">Other type we are trying to plug into</param>
+    /// <param name="allowInOutGenerics">Check for covariant and contravariant generics</param>
+    /// <param name="changedGenerics">Generics that needs to be updated in order for the assignation to work</param>
+    /// <returns></returns>
+    internal bool IsDirectlyAssignableTo(TypeBase other, bool allowInOutGenerics, [MaybeNullWhen(false)] out Dictionary<UndefinedGenericType, TypeBase> changedGenerics)
+    {
+        if (this is UndefinedGenericType thisUndefinedGenericType)
+        {
+            if (other is UndefinedGenericType)
+            {
+                changedGenerics = []; // nothing to change, we're plugging a generic into another generic
+                return true;
+            }
+            else if(!IsArray || other.IsArray) // we can change 'this' to the same type as 'other' and plug into it
+            {
+                // We are either plugging:
+                // T into string[], T into string or T[] into string[]
+                changedGenerics = new()
+                {
+                    [thisUndefinedGenericType] = other
+                };
+                return true;
+            }
 
-		}
-		else if (other is UndefinedGenericType otherUndefinedGenericType) // we can change the other generic into the current type
-		{
-			changedGenerics = new()
-			{
-				[otherUndefinedGenericType] = this
-			};
-			return true;
-		}
+            changedGenerics = null;
+            return false;
+        }
+        else if (other is UndefinedGenericType otherUndefinedGenericType) // we can change the other generic into the current type
+        {
+            if (IsArray)
+            {
+                // We are either plugging : string[] into T[] or string[] into T
+                // In both cases we want to update the generic to the array type and let the system handle the rest later on
+                changedGenerics = new()
+                {
+                    [otherUndefinedGenericType] = this
+                };
+                return true;
+            }
+            else if (!IsArray && !other.IsArray) // string into T 
+            {
+                changedGenerics = new()
+                {
+                    [otherUndefinedGenericType] = this
+                };
+                return true;
+            }
 
-		if (IsSameBackend(other)) // same backend, List<int> would be the same backend as List<string> or List<T>
-		{
-			// check all the generics, they have to either be undefined, the same or covariant
-			changedGenerics = new();
-			for (int i = 0; i < Generics.Length; ++i)
-			{
-				if (allowInOutGenerics && other.IsOut(i)) // we can plug a less derived type, like IEnumerable<Child> to IEnumerable<Parent>
-				{
-					if (Generics[i].IsAssignableTo(other.Generics[i], out var changedGenericsLocal))
-					{
-						foreach (var changed in changedGenericsLocal)
-							changedGenerics[changed.Key] = changed.Value;
-						continue; // it worked, check the next generic
-					}
-				}
-				else if (allowInOutGenerics && other.IsIn(i)) // We can plug a more derived type, like IComparable<Parent> to IComparable<Child>
-				{
-					if (other.Generics[i].IsAssignableTo(Generics[i], out var changedGenericsLocal))
-					{
-						foreach (var changed in changedGenericsLocal)
-							changedGenerics[changed.Key] = changed.Value;
-						continue; // it worked, check the next generic
-					}
-				}
-				else
-				{
-					// the generic is not covariant, so it has to be the same
-					if (Generics[i].IsDirectlyAssignableTo(other.Generics[i], allowInOutGenerics, out var changedGenericsLocal))
-					{
-						foreach (var changed in changedGenericsLocal)
-							changedGenerics[changed.Key] = changed.Value;
-						continue; // it worked, check the next generic
-					}
-				}
+            // string into T[] <----- this is not allowed
+            changedGenerics = null;
+            return false;
+        }
+
+        if (IsSameBackend(other)) // same backend, List<int> would be the same backend as List<string> or List<T>
+        {
+            // check all the generics, they have to either be undefined, the same or covariant
+            changedGenerics = new();
+            for (int i = 0; i < Generics.Length; ++i)
+            {
+                if (allowInOutGenerics && other.IsOut(i)) // we can plug a less derived type, like IEnumerable<Child> to IEnumerable<Parent>
+                {
+                    if (Generics[i].IsAssignableTo(other.Generics[i], out var changedGenericsLocal))
+                    {
+                        foreach (var changed in changedGenericsLocal)
+                            changedGenerics[changed.Key] = changed.Value;
+                        continue; // it worked, check the next generic
+                    }
+                }
+                else if (allowInOutGenerics && other.IsIn(i)) // We can plug a more derived type, like IComparable<Parent> to IComparable<Child>
+                {
+                    if (other.Generics[i].IsAssignableTo(Generics[i], out var changedGenericsLocal))
+                    {
+                        foreach (var changed in changedGenericsLocal)
+                            changedGenerics[changed.Key] = changed.Value;
+                        continue; // it worked, check the next generic
+                    }
+                }
+                else
+                {
+                    // the generic is not covariant, so it has to be the same
+                    if (Generics[i].IsDirectlyAssignableTo(other.Generics[i], allowInOutGenerics, out var changedGenericsLocal))
+                    {
+                        foreach (var changed in changedGenericsLocal)
+                            changedGenerics[changed.Key] = changed.Value;
+                        continue; // it worked, check the next generic
+                    }
+                }
+
+                // one of the generics is not assignable, so we're not assignable
+                changedGenerics = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        changedGenerics = null;
+        return false;
+    }
+
+    public bool IsAssignableTo(TypeBase other, [MaybeNullWhen(false)] out Dictionary<UndefinedGenericType, TypeBase> changedGenerics)
+    {
+        if ((this is ExecType && other is not ExecType) || (other is ExecType && this is not ExecType))
+        {
+            changedGenerics = null;
+            return false;
+        }
+
+        if (IsDirectlyAssignableTo(other, true, out changedGenerics))
+            return true; // Either plugging something easy like List<int> to List<int>, some generic or covariant like IEnumerable<Parent> to IEnumerable<Child>
+
+        var myAssignableTypes = GetAssignableTypes().OrderBy(x => x.Depth).Select(x => x.Type);
+
+        var changedGenericsLocal = new Dictionary<UndefinedGenericType, TypeBase>();
+        foreach (var myAssignableType in myAssignableTypes)
+        {
+            if (!myAssignableType.IsSameBackend(other))
+                continue;
+
+            if (myAssignableType.Generics.Length != other.Generics.Length)
+                throw new Exception("Unable to compare types with different number of generics, this should never happen since the BackendType is identical");
+
+            bool isAssignable = true;
+            changedGenericsLocal.Clear(); // reuse the same dictionary for optimisation purposes
+            for (int i = 0; i < myAssignableType.Generics.Length; i++)
+            {
+                // check if either, both or none of the current and other type are undefined generics
+                if (myAssignableType.Generics[i] is UndefinedGenericType currentUndefinedGeneric)
+                {
+                    if (other.Generics[i] is UndefinedGenericType)
+                        continue; // this works out fine, we're plugging a generic into another generic
+                    else
+                    {
+                        // we're plugging a generic into a non generic type, we just record that and keep checking the others
+                        // however this only works if we're either plugging :
+                        // T into string or T[] into string[]
+                        if (currentUndefinedGeneric.IsArray && !other.Generics[i].IsArray)
+                        {
+                            isAssignable = false;
+                            break;
+                        }
+                        else
+                        {
+                            changedGenericsLocal[currentUndefinedGeneric] = other.Generics[i];
+                            continue;
+                        }
+                    }
+                }
+                else if (other.Generics[i] is UndefinedGenericType otherUndefinedGeneric)
+                {
+                    // we know we're not a generic, so we're plugging a type into a generic
+                    // However, this only works if we're either plugging :
+                    // string into T or string[] into T[]
+                    if (myAssignableType.IsArray && !other.Generics[i].IsArray)
+                    {
+                        isAssignable = false;
+                        break;
+                    }
+
+                    changedGenericsLocal[otherUndefinedGeneric] = myAssignableType.Generics[i];
+                    continue;
+                }
+
+                bool checkParents = true;
+                TypeBase left, right;
+                // let's check if they have the same backend type, like List<T> and List<int> share the List<> backend type
+                // if they are 2 types that could be assigned only by looking at their BaseType or interfaces (Like List<int> to IEnumerable<int>), that will be checked later
+                if (!myAssignableType.Generics[i].IsSameBackend(other.Generics[i]))
+                {
+                    // Check if the types are assignable even if the generic isn't the same
+                    // By example, List<ParentClass> can be assigned to IEnumerable<ChildClass> even though ParentClass and ChildClass aren't the same
+                    if (other.IsOut(i))
+                    {
+                        // we have to check if otherAssignableType.Generics[i] is less derived than myAssignableType.Generics[i]
+                        left = myAssignableType.Generics[i];
+                        right = other.Generics[i];
+                    }
+                    else if (other.IsIn(i))
+                    {
+                        // we have to check if otherAssignableType.Generics[i] is more derived than myAssignableType.Generics[i]
+                        left = other.Generics[i];
+                        right = myAssignableType.Generics[i];
+                    }
+                    else
+                    {
+                        // we have to check if otherAssignableType.Generics[i] is the same as myAssignableType.Generics[i]
+                        left = myAssignableType.Generics[i];
+                        right = other.Generics[i];
+                        checkParents = false;
+                    }
+                }
+                else
+                {
+                    // we have to check if otherAssignableType.Generics[i] is the same as myAssignableType.Generics[i]
+                    left = myAssignableType.Generics[i];
+                    right = other.Generics[i];
+                    checkParents = false;
+                }
+
+                // Check parents will recursively check if the left is assignable to the right, going up the inheritance tree
+                if (checkParents)
+                {
+                    if (left.IsAssignableTo(right, out var changedGenericsLocally))
+                    {
+                        foreach (var changed in changedGenericsLocally)
+                            changedGenericsLocal[changed.Key] = changed.Value;
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (left.IsDirectlyAssignableTo(right, false, out var changedGenericsLocally))
+                    {
+                        foreach (var changed in changedGenericsLocally)
+                            changedGenericsLocal[changed.Key] = changed.Value;
+                        continue;
+                    }
+                }
 
 
-				// one of the generics is not assignable, so we're not assignable
-				changedGenerics = null;
-				return false;
-			}
+                isAssignable = false;
+                break;
+            }
 
-			return true;
-		}
-
-		changedGenerics = null;
-		return false;
-	}
-
-	public bool IsAssignableTo(TypeBase other, [MaybeNullWhen(false)] out Dictionary<UndefinedGenericType, TypeBase> changedGenerics)
-	{
-		if ((this is ExecType && other is not ExecType) || (other is ExecType && this is not ExecType))
-		{
-			changedGenerics = null;
-			return false;
-		}
-
-		if (IsDirectlyAssignableTo(other, true, out changedGenerics))
-			return true; // Either plugging something easy like List<int> to List<int>, some generic or covariant like IEnumerable<Parent> to IEnumerable<Child>
-
-		var myAssignableTypes = GetAssignableTypes().OrderBy(x => x.Depth).Select(x => x.Type).ToList();
-
-		var changedGenericsLocal = new Dictionary<UndefinedGenericType, TypeBase>();
-		foreach (var myAssignableType in myAssignableTypes)
-		{
-			if (!myAssignableType.IsSameBackend(other))
-				continue;
-
-			if (myAssignableType.Generics.Length != other.Generics.Length)
-				throw new Exception("Unable to compare types with different number of generics, this should never happen since the BackendType is identical");
-
-			bool isAssignable = true;
-			changedGenericsLocal.Clear(); // reuse the same dictionary for optimisation purposes
-			for (int i = 0; i < myAssignableType.Generics.Length; i++)
-			{
-				// check if either, both or none of the current and other type are undefined generics
-				if (myAssignableType.Generics[i] is UndefinedGenericType currentUndefinedGeneric)
-				{
-					if (myAssignableType.Generics[i] is UndefinedGenericType)
-						continue; // this works out fine, we're plugging a generic into another generic
-					else // we're plugging a generic into a non generic type, just we record that and keep checking the others
-					{
-						changedGenericsLocal[currentUndefinedGeneric] = myAssignableType.Generics[i];
-						continue;
-					}
-				}
-				else if (other.Generics[i] is UndefinedGenericType otherUndefinedGeneric)
-				{
-					// we know we're not a generic, so we're plugging a type into a generic
-					changedGenericsLocal[otherUndefinedGeneric] = myAssignableType.Generics[i];
-					continue;
-				}
-
-				bool checkParents = true;
-				TypeBase left, right;
-				// let's check if they have the same backend type, like List<T> and List<int> share the List<> backend type
-				// if they are 2 types that could be assigned only by looking at their BaseType or interfaces (Like List<int> to IEnumerable<int>), that will be checked later
-				if (!myAssignableType.Generics[i].IsSameBackend(other.Generics[i]))
-				{
-					// Check if the types are assignable even if the generic isn't the same
-					// By example, List<ParentClass> can be assigned to IEnumerable<ChildClass> even though ParentClass and ChildClass aren't the same
-					if (other.IsOut(i))
-					{
-						// we have to check if otherAssignableType.Generics[i] is less derived than myAssignableType.Generics[i]
-						left = myAssignableType.Generics[i];
-						right = other.Generics[i];
-					}
-					else if (other.IsIn(i))
-					{
-						// we have to check if otherAssignableType.Generics[i] is more derived than myAssignableType.Generics[i]
-						left = other.Generics[i];
-						right = myAssignableType.Generics[i];
-					}
-					else
-					{
-						// we have to check if otherAssignableType.Generics[i] is the same as myAssignableType.Generics[i]
-						left = myAssignableType.Generics[i];
-						right = other.Generics[i];
-						checkParents = false;
-					}
-				}
-				else
-				{
-					left = myAssignableType.Generics[i];
-					right = other.Generics[i];
-					checkParents = false;
-				}
-
-				if (checkParents)
-				{
-					if (left.IsAssignableTo(right, out var changedGenericsLocally))
-					{
-						foreach (var changed in changedGenericsLocally)
-							changedGenericsLocal[changed.Key] = changed.Value;
-						continue;
-					}
-				}
-				else
-				{
-					if (left.IsDirectlyAssignableTo(right, false, out var changedGenericsLocally))
-					{
-						foreach (var changed in changedGenericsLocally)
-							changedGenericsLocal[changed.Key] = changed.Value;
-						continue;
-					}
-				}
+            if (isAssignable)
+            {
+                changedGenerics = changedGenericsLocal;
+                return true;
+            }
+        }
 
 
-				isAssignable = false;
-				break;
-			}
+        changedGenerics = null;
+        return false;
+    }
 
-			if (isAssignable)
-			{
-				changedGenerics = changedGenericsLocal;
-				return true;
-			}
-		}
+    #endregion
 
+    /// <summary>
+    /// If true, We can plug any less derived type. Ex IComparer<Person> can be assigned to IComparer<Employee> even though a person is not necessarily an employee. This one is unusual
+    /// </summary>
+    public virtual bool IsIn(int genericIndex) => false;
 
-		changedGenerics = null;
-		return false;
-	}
+    /// <summary>
+    /// If true, we can plug any derived type. Ex List<Employee> ca be assigned to IEnumerable<Person>
+    /// </summary>
+    public virtual bool IsOut(int genericIndex) => false;
 
-	#endregion
+    /// <summary>
+    /// Returns a list of types that this type can be assigned to
+    /// </summary>
+    public IEnumerable<(TypeBase Type, int Depth)> GetAssignableTypes()
+    {
+        return GetAssignableTypes(0).DistinctBy(x => x.Type);
+    }
 
-	/// <summary>
-	/// If true, We can plug any less derived type. Ex IComparer<Person> can be assigned to IComparer<Employee> even though a person is not necessarily an employee. This one is unusual
-	/// </summary>
-	public virtual bool IsIn(int genericIndex) => false;
+    private IEnumerable<(TypeBase Type, int Depth)> GetAssignableTypes(int depth)
+    {
+        yield return (this, depth);
 
-	/// <summary>
-	/// If true, we can plug any derived type. Ex List<Employee> ca be assigned to IEnumerable<Person>
-	/// </summary>
-	public virtual bool IsOut(int genericIndex) => false;
+        if (BaseType != null)
+        {
+            foreach (var baseType in BaseType.GetAssignableTypes(depth + 1))
+                yield return baseType;
+        }
 
-	/// <summary>
-	/// Returns a list of types that this type can be assigned to
-	/// </summary>
-	public IEnumerable<(TypeBase Type, int Depth)> GetAssignableTypes()
-	{
-		return GetAssignableTypes(0).DistinctBy(x => x.Type);
-	}
+        foreach (var @interface in Interfaces)
+        {
+            foreach (var interfaceType in @interface.GetAssignableTypes(depth + 1))
+                yield return interfaceType;
+        }
+    }
 
-	private IEnumerable<(TypeBase Type, int Depth)> GetAssignableTypes(int depth)
-	{
-		yield return (this, depth);
+    public abstract IEnumerable<IMethodInfo> GetMethods();
 
-		if (BaseType != null)
-		{
-			foreach (var baseType in BaseType.GetAssignableTypes(depth + 1))
-				yield return baseType;
-		}
+    public abstract IEnumerable<IMethodInfo> GetMethods(string name);
 
-		foreach (var @interface in Interfaces)
-		{
-			foreach (var interfaceType in @interface.GetAssignableTypes(depth + 1))
-				yield return interfaceType;
-		}
-	}
-
-	public abstract IEnumerable<IMethodInfo> GetMethods();
-
-	public abstract IEnumerable<IMethodInfo> GetMethods(string name);
-
-	public static TypeBase DeserializeFullTypeNameString(TypeFactory typeFactory, string serializedTypeStr)
-	{
-		var serializedType = JsonSerializer.Deserialize<SerializedType>(serializedTypeStr) ?? throw new Exception("Unable to deserialize type");
+    public static TypeBase DeserializeFullTypeNameString(TypeFactory typeFactory, string serializedTypeStr)
+    {
+        var serializedType = JsonSerializer.Deserialize<SerializedType>(serializedTypeStr) ?? throw new Exception("Unable to deserialize type");
 
         return Deserialize(typeFactory, serializedType);
     }
 
-	public static TypeBase Deserialize(TypeFactory typeFactory, SerializedType serializedType)
+    public static TypeBase Deserialize(TypeFactory typeFactory, SerializedType serializedType)
     {
-		var type = typeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
+        var type = typeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
 
-		var deserializeMethod = type.GetMethod("Deserialize", BindingFlags.Public | BindingFlags.Static) ?? throw new Exception($"Deserialize method not found in type: {serializedType.TypeFullName}");
+        var deserializeMethod = type.GetMethod("Deserialize", BindingFlags.Public | BindingFlags.Static) ?? throw new Exception($"Deserialize method not found in type: {serializedType.TypeFullName}");
 
-		var deserializedType = deserializeMethod.Invoke(null, new object[] { typeFactory, serializedType.SerializedTypeCustom });
+        var deserializedType = deserializeMethod.Invoke(null, new object[] { typeFactory, serializedType.SerializedTypeCustom });
 
-		if (deserializedType is TypeBase typeBase)
-			return typeBase;
+        if (deserializedType is TypeBase typeBase)
+            return typeBase;
 
-		throw new Exception($"Deserialize method in type {serializedType.TypeFullName} returned invalid type");
-	}
+        throw new Exception($"Deserialize method in type {serializedType.TypeFullName} returned invalid type");
+    }
 
 }
