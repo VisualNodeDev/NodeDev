@@ -2,7 +2,7 @@
 @inject Services.DebuggedPathService DebuggedPathService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject ProjectProviderService ProjectProviderService
+@inject ProjectService ProjectService
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -19,7 +19,7 @@
             <StartContent>
                 <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" data-test-id="ProjectExplorerSection">
                     <MudTabPanel Text="Project">
-                        <ProjectExplorer Project="Project" @bind-SelectedClass="SelectedClass"></ProjectExplorer>
+                        <ProjectExplorer Project="ProjectService.Project" @bind-SelectedClass="SelectedClass"></ProjectExplorer>
                     </MudTabPanel>
                     <MudTabPanel Text="Class">
                         @if (SelectedClass != null)
@@ -56,7 +56,7 @@
                                     </MudTabs>
                                 </CascadingValue>
 
-                                <DebuggerConsolePanel Project="Project" />
+                                <DebuggerConsolePanel Project="ProjectService.Project" />
 
                             </MudStack>
 
@@ -79,7 +79,6 @@
 </MudLayout>
 
 @code {
-    private Core.Project Project => ProjectProviderService.Project;
 
     private Core.Class.NodeClass? SelectedClass { get; set; }
 
@@ -100,12 +99,12 @@
     protected override void OnInitialized()
     {
 
-        DebuggedPathService.ChangeProject(Project);
+        DebuggedPathService.ChangeProject(ProjectService.Project);
     }
 
     private void OnProjectChanged()
 	{
-        DebuggedPathService.ChangeProject(Project);
+        DebuggedPathService.ChangeProject(ProjectService.Project);
         NavigationManager.Refresh(true);
 	}
 
@@ -140,7 +139,7 @@
         if (method == null)
         {
             // Find the main method
-            var program = Project.Classes.FirstOrDefault(x => x.Name == "Program");
+            var program = ProjectService.Project.Classes.FirstOrDefault(x => x.Name == "Program");
 
             // Find the main method in the program class
             method = program?.Methods.FirstOrDefault(x => x.Name == "Main");

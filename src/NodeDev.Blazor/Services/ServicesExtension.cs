@@ -16,7 +16,7 @@ namespace NodeDev.Blazor.Services
             services
 				.AddMudServices()
 				.AddScoped<DebuggedPathService>()
-				.AddSingleton<ProjectProviderService>();
+				.AddSingleton<ProjectService>();
 
             return services;
 		}

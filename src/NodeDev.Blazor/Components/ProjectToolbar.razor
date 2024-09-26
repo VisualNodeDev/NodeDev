@@ -1,15 +1,15 @@
 ﻿@using Microsoft.AspNetCore.Components.Forms
 @using NodeDev.Blazor.Services
 @using NodeDev.Core
-@inject ProjectProviderService ProjectProviderService
+@inject ProjectService ProjectService
 @inject ISnackbar Snackbar
 
 <MudFileUpload T="IBrowserFile" FilesChanged="Open">
     <ActivatorContent>
-        <MudButton Class="ml-3">Open Project</MudButton>
+        <MudButton Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="openProject">Open Project</MudButton>
     </ActivatorContent>
 </MudFileUpload>
-<MudButton OnClick="NewProject" Class="ml-3" data-test-id="newProject">New Project</MudButton>
+<MudButton OnClick="NewProject" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="newProject">New Project</MudButton>
 <MudButton OnClick="Save" Class="ml-3" data-test-id="Save">Save</MudButton>
 <MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
 <MudButton OnClick="Run" Class="ml-3">Run</MudButton>
@@ -20,26 +20,23 @@
 
 @code {
 
-    private Project Project => ProjectProviderService.Project;
+    private Project Project => ProjectService.Project;
 
     [Parameter]
     public EventCallback OnProjectChanged { get; set; }
 
-
     private IBrowserFile? File;
-    private string? FileContent;
-
 
     private async Task Open(IBrowserFile file)
     {
         File = file;
         if (File != null)
         {
-            using var stream = File.OpenReadStream();
+            using var stream = file.OpenReadStream();
             using var reader = new StreamReader(stream);
             var json = await reader.ReadToEndAsync();
 
-            ProjectProviderService.Project = Core.Project.Deserialize(json);
+            ProjectService.ChangeProject(Core.Project.Deserialize(json));
 
             await OnProjectChanged.InvokeAsync();
         }
@@ -56,7 +53,7 @@
 
     private async Task NewProject()
     {
-        ProjectProviderService.Project = Core.Project.CreateNewDefaultProject();
+        ProjectService.ChangeProject(Core.Project.CreateNewDefaultProject());
 
         await OnProjectChanged.InvokeAsync();
     }
