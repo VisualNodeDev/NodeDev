@@ -21,9 +21,9 @@ namespace NodeDev.Core.Types
             NbArrayLevels = nbArrayLevels;
         }
 
-        public override string Name => InnerNodeClassType.Name + GetArrayString();
+        public override string Name => InnerNodeClassType.Name + GetArrayString(NbArrayLevels);
 
-        public override string FullName => InnerNodeClassType.FullName + GetArrayString();
+        public override string FullName => InnerNodeClassType.FullName + GetArrayString(NbArrayLevels);
 
         public override TypeBase[] Generics => InnerNodeClassType.Generics;
 
@@ -33,7 +33,7 @@ namespace NodeDev.Core.Types
 
         public override bool IsArray => true;
 
-        public override string FriendlyName => InnerNodeClassType.FriendlyName + GetArrayString();
+        public override string FriendlyName => InnerNodeClassType.FriendlyName + GetArrayString(NbArrayLevels);
 
         public override TypeBase ArrayInnerType => NbArrayLevels == 1 ? InnerNodeClassType : new NodeClassArrayType(InnerNodeClassType, NbArrayLevels - 1);
 
@@ -93,9 +93,9 @@ namespace NodeDev.Core.Types
         }
 
 
-        private string GetArrayString()
+        public static string GetArrayString(int nbArrayLevels)
         {
-            var str = string.Create(NbArrayLevels * 2, NbArrayLevels, static (span, nbLevels) =>
+            var str = string.Create(nbArrayLevels * 2, nbArrayLevels, static (span, nbLevels) =>
             {
                 for (int i = 0; i < span.Length; i += 2)
                 {

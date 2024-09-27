@@ -46,7 +46,7 @@ public class UndefinedGenericType : TypeBase
 
     public UndefinedGenericType(string name, int nbArrayLevels = 0)
     {
-        FullName = Name = name;
+        FullName = Name = name + NodeClassArrayType.GetArrayString(nbArrayLevels);
         NbArrayLevels = nbArrayLevels;
     }
 

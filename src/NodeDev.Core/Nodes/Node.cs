@@ -64,7 +64,7 @@ namespace NodeDev.Core.Nodes
 		public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
 
 		public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
-		public virtual IEnumerable<AlternateOverload> AlternatesOverloads => Enumerable.Empty<AlternateOverload>();
+		public virtual IEnumerable<AlternateOverload> AlternatesOverloads => [];
 
 		/// <summary>
 		/// returns a list of changed connections, if any
@@ -72,7 +72,7 @@ namespace NodeDev.Core.Nodes
 		/// <param name="connection">The connection that was generic, it is not generic anymore</param>
 		public virtual List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase baseType)
 		{
-			return new();
+			return [];
 		}
 
 		public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
