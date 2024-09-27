@@ -32,8 +32,8 @@
         File = file;
         if (File != null)
         {
-            using var stream = file.OpenReadStream();
-            using var reader = new StreamReader(stream);
+            await using var stream = file.OpenReadStream();
+            await using var reader = new StreamReader(stream);
             var json = await reader.ReadToEndAsync();
 
             ProjectService.ChangeProject(Core.Project.Deserialize(json));

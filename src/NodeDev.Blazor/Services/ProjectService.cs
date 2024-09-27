@@ -12,12 +12,7 @@ namespace NodeDev.Blazor.Services
     /// </summary>
     public class ProjectService
     {
-        private Project _project;
-
-        public Project Project
-        {
-            get => _project;
-        }
+        public Project Project { get; private set; }
 
         public delegate void ProjectChangedHandler();
         /// <summary>
@@ -30,7 +25,7 @@ namespace NodeDev.Blazor.Services
         /// </summary>
         public ProjectService()
         {
-            _project = Project.CreateNewDefaultProject();
+            Project = Project.CreateNewDefaultProject();
         }
 
         /// <summary>
@@ -39,7 +34,7 @@ namespace NodeDev.Blazor.Services
         /// <param name="project"></param>
         public void ChangeProject(Project project)
         {
-            _project = project;
+            Project = project;
             ProjectChanged?.Invoke();
         }
     }
