@@ -22,18 +22,13 @@
 
     private Project Project => ProjectService.Project;
 
-    [Parameter]
-    public EventCallback OnProjectChanged { get; set; }
-
     private async Task Open(IBrowserFile file)
     {
         await using var stream = file.OpenReadStream();
-        await using var reader = new StreamReader(stream);
+        using var reader = new StreamReader(stream);
         var json = await reader.ReadToEndAsync();
 
         ProjectService.ChangeProject(Core.Project.Deserialize(json));
-
-        await OnProjectChanged.InvokeAsync();
     }
 
     private void Save()
@@ -45,11 +40,9 @@
         Snackbar.Add("Project saved", Severity.Success);
     }
 
-    private async Task NewProject()
+    private void NewProject()
     {
         ProjectService.ChangeProject(Core.Project.CreateNewDefaultProject());
-
-        await OnProjectChanged.InvokeAsync();
     }
 
     private void Add()

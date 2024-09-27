@@ -3,6 +3,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ProjectService ProjectService
+@implements IDisposable
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -11,7 +12,7 @@
 
 <MudLayout Style="height: 100vh; width: 100%; overflow: hidden">
     <MudAppBar Elevation="1" data-test-id="appBar">
-        <ProjectToolbar OnProjectChanged="OnProjectChanged" />
+        <ProjectToolbar />
     </MudAppBar>
     <MudMainContent Style="width: 100%; height: 100%; overflow-y: hidden">
 
@@ -98,6 +99,8 @@
 
     protected override void OnInitialized()
     {
+        ProjectService.ProjectChanged += OnProjectChanged;
+
         DebuggedPathService.ChangeProject(ProjectService.Project);
     }
 
@@ -156,5 +159,10 @@
 
         ActivePanelIndex = OpenedMethods.IndexOf(method);
         StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        ProjectService.ProjectChanged -= OnProjectChanged;
     }
 }
