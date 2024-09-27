@@ -10,7 +10,7 @@ namespace NodeDev.Blazor.Services
     /// <summary>
     /// Service used to keep a singleton of the project throughout the application.
     /// </summary>
-    internal class ProjectService
+    public class ProjectService
     {
         private Project _project;
 
