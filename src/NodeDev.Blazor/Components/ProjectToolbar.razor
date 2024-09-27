@@ -25,21 +25,15 @@
     [Parameter]
     public EventCallback OnProjectChanged { get; set; }
 
-    private IBrowserFile? File;
-
     private async Task Open(IBrowserFile file)
     {
-        File = file;
-        if (File != null)
-        {
-            await using var stream = file.OpenReadStream();
-            await using var reader = new StreamReader(stream);
-            var json = await reader.ReadToEndAsync();
+        await using var stream = file.OpenReadStream();
+        await using var reader = new StreamReader(stream);
+        var json = await reader.ReadToEndAsync();
 
-            ProjectService.ChangeProject(Core.Project.Deserialize(json));
+        ProjectService.ChangeProject(Core.Project.Deserialize(json));
 
-            await OnProjectChanged.InvokeAsync();
-        }
+        await OnProjectChanged.InvokeAsync();
     }
 
     private void Save()
