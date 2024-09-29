@@ -96,6 +96,13 @@ public class TypeFactory
 
 	public string? CreateBaseFromUserInput(string typeName, out TypeBase? type)
 	{
+		int nbArray = 0;
+		while(typeName.EndsWith("[]"))
+		{
+			++nbArray;
+			typeName = typeName[..^2];
+		}
+
 		typeName = typeName.Replace(" ", "");
 		if (typeName.Count(c => c == '<') != typeName.Count(c => c == '>'))
 		{
@@ -119,6 +126,9 @@ public class TypeFactory
 			else if (currentRealType != null)
 			{
 				type = Get(currentRealType, null);
+				for (int i = 0; i < nbArray; ++i)
+					type = type.ArrayType;
+
 				return null;
 			}
 			else if (currentRealType == null)
@@ -127,7 +137,10 @@ public class TypeFactory
 				if (nodeClass != null)
 				{
 					type = nodeClass.ClassTypeBase;
-					return null;
+                    for (int i = 0; i < nbArray; ++i)
+                        type = type.ArrayType;
+
+                    return null;
 				}
 			}
 
@@ -166,7 +179,10 @@ public class TypeFactory
 
 		// create the generic type
 		type = Get(baseType, genericArgsTypes);
-		return null;
+        for (int i = 0; i < nbArray; ++i)
+            type = type.ArrayType;
+
+        return null;
 	}
 
 	#endregion
