@@ -1,0 +1,68 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using NodeDev.Blazor.Services
+@using NodeDev.Core
+@inject ProjectService ProjectService
+@inject ISnackbar Snackbar
+
+<MudFileUpload T="IBrowserFile" FilesChanged="Open">
+    <ActivatorContent>
+        <MudButton Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="openProject">Open Project</MudButton>
+    </ActivatorContent>
+</MudFileUpload>
+<MudButton OnClick="NewProject" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="newProject">New Project</MudButton>
+<MudButton OnClick="Save" Class="ml-3" data-test-id="Save">Save</MudButton>
+<MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
+<MudButton OnClick="Run" Class="ml-3">Run</MudButton>
+<MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
+<MudSpacer />
+<MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+
+
+@code {
+
+    private Project Project => ProjectService.Project;
+
+    private async Task Open(IBrowserFile file)
+    {
+        await using var stream = file.OpenReadStream();
+        using var reader = new StreamReader(stream);
+        var json = await reader.ReadToEndAsync();
+
+        ProjectService.ChangeProject(Core.Project.Deserialize(json));
+    }
+
+    private void Save()
+    {
+        // Until we have a proper save dialog, we just save the project to a file
+        string content = Project.Serialize();
+        System.IO.File.WriteAllText("project.json", content);
+
+        Snackbar.Add("Project saved", Severity.Success);
+    }
+
+    private void NewProject()
+    {
+        ProjectService.ChangeProject(Core.Project.CreateNewDefaultProject());
+    }
+
+    private void Add()
+    {
+        //GraphCanvas?.ShowAddNode();
+    }
+
+    public void Run()
+    {
+        new Thread(() =>
+        {
+            Project.Run(Project.IsLiveDebuggingEnabled ? Core.BuildOptions.Debug : Core.BuildOptions.Release);
+        }).Start();
+    }
+
+    private void SwitchLiveDebugging()
+    {
+        if (Project.IsLiveDebuggingEnabled)
+            Project.StopLiveDebugging();
+        else
+            Project.StartLiveDebugging();
+    }
+}
