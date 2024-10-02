@@ -34,6 +34,8 @@ namespace NodeDev.Core.Class
 
         public Graph Graph { get; }
 
+        public TypeFactory TypeFactory => Class.TypeFactory;
+
         public bool IsStatic { get; set; }
 
         public TypeBase DeclaringType => Class.ClassTypeBase;

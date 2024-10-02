@@ -38,9 +38,9 @@ public class New : NormalFlowNode
                 throw new Exception("Unknowned type in New node: " + Outputs[1].Type.Name);
         }
     }
-    public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
+    public override List<Connection> GenericConnectionTypeDefined(Connection connection)
     {
-        if (newType.IsArray)
+        if (Outputs[1].Type.IsArray)
         {
             Inputs.Add(new("Length", this, TypeFactory.Get<int>()));
         }

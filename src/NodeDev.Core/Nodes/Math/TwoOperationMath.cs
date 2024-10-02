@@ -21,8 +21,8 @@ namespace NodeDev.Core.Nodes.Math
 			Outputs.Add(new("c", this, new UndefinedGenericType("T3")));
 		}
 
-		public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
-		{
+		public override List<Connection> GenericConnectionTypeDefined(Connection connection)
+        {
 			if (Inputs.Count(x => x.Type is RealType t && (t.BackendType.IsPrimitive || t.BackendType == typeof(string))) == 2)
 			{
 				if (!Outputs[0].Type.HasUndefinedGenerics)

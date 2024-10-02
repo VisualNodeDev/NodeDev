@@ -65,13 +65,15 @@ public class GraphManagerService
 	{
 		foreach (var port in node.InputsAndOutputs) // check if any of the ports have the generic we just solved
 		{
-			if (!port.Type.GetUndefinedGenericTypes().Any(changedGenerics.ContainsKey))
+			var previousType = port.Type;
+
+			if (!previousType.GetUndefinedGenericTypes().Any(changedGenerics.ContainsKey))
 				continue;
 
 			// update port.Type property as well as the textbox visibility if necessary
-			port.UpdateTypeAndTextboxVisibility(port.Type.ReplaceUndefinedGeneric(changedGenerics));
-
-			GraphCanvas.UpdatePortTypeAndColor(port);
+			port.UpdateTypeAndTextboxVisibility(previousType.ReplaceUndefinedGeneric(changedGenerics));
+            node.GenericConnectionTypeDefined(port);
+            GraphCanvas.UpdatePortTypeAndColor(port);
 
 			var isPortInput = port.IsInput; // cache for performance, IsInput is slow
 			// check if other connections had their own generics and if we just solved them
@@ -80,9 +82,9 @@ public class GraphManagerService
 				var source = isPortInput ? other : port;
 				var target = isPortInput ? port : other;
 				if (source.Type.IsAssignableTo(target.Type, out var changedGenerics2) && changedGenerics2.Count != 0)
-					PropagateNewGeneric(other.Parent, changedGenerics2, requireUIRefresh);
-				else if ((changedGenerics2?.Count ?? 0) != 0)// damn, looks like changing the generic made it so we can't link to this connection anymore
-					Graph.Disconnect(port, other, false); // no need to refresh UI here as it'll already be refresh at the end of this method
+					PropagateNewGeneric(other.Parent, changedGenerics2, false); // no need to refresh UI since we'll do it ourselves anyway at the end of this call
+				else if ((changedGenerics2?.Count ?? 0) != 0)// looks like changing the generic made it so we can't link to this connection anymore
+					DisconnectConnectionBetween(port, other);
 			}
 		}
 

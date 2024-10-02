@@ -70,8 +70,8 @@ namespace NodeDev.Core.Nodes
 		/// returns a list of changed connections, if any
 		/// </summary>
 		/// <param name="connection">The connection that was generic, it is not generic anymore</param>
-		public virtual List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase baseType)
-		{
+		public virtual List<Connection> GenericConnectionTypeDefined(Connection connection)
+        {
 			return [];
 		}
 
