@@ -75,7 +75,7 @@ public class NodeClassTypeCreatorTests
 		returnNode.Inputs.Add(new("Result", entryNode, myClass.TypeFactory.Get<int>()));
 
 		var newNode = new New(graph);
-		newNode.Outputs[1].UpdateType(myClass.ClassTypeBase);
+		newNode.Outputs[1].UpdateTypeAndTextboxVisibility(myClass.ClassTypeBase);
 
 		var setProp = new SetPropertyOrField(graph);
 		setProp.SetMemberTarget(prop);

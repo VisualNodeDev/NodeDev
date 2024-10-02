@@ -43,7 +43,7 @@ public class EntryNode : FlowNode
 	{
 		var connection = Outputs[index + 1];
 
-		connection.UpdateType(parameter.ParameterType);
+		connection.UpdateTypeAndTextboxVisibility(parameter.ParameterType);
 
 		return connection;
 	}
@@ -56,7 +56,7 @@ public class EntryNode : FlowNode
 		Outputs.RemoveRange(1, Outputs.Count - 1);
 		Outputs.AddRange(newConnections);
 
-		Graph.MergedRemovedConnectionsWithNewConnections(newConnections, removedConnections);
+		Graph.MergeRemovedConnectionsWithNewConnections(newConnections, removedConnections);
 	}
 
 	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)

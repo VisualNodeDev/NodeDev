@@ -29,9 +29,9 @@ public class GraphExecutorTests
 
 		addNode = new Core.Nodes.Math.Add(graph);
 
-		addNode.Inputs[0].UpdateType(nodeClass.TypeFactory.Get<TIn>());
-		addNode.Inputs[1].UpdateType(nodeClass.TypeFactory.Get<TIn>());
-		addNode.Outputs[0].UpdateType(nodeClass.TypeFactory.Get<TOut>());
+		addNode.Inputs[0].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<TIn>());
+		addNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<TIn>());
+		addNode.Outputs[0].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<TOut>());
 
 		graph.AddNode(entryNode, false);
 		graph.AddNode(addNode, false);
@@ -80,8 +80,8 @@ public class GraphExecutorTests
 		returnNode1.Inputs[1].UpdateTextboxText("1");
 
 		var smallerThan = new Core.Nodes.Math.SmallerThan(graph);
-		smallerThan.Inputs[0].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
-		smallerThan.Inputs[1].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
+		smallerThan.Inputs[0].UpdateTypeAndTextboxVisibility(graph.SelfClass.TypeFactory.Get<int>());
+		smallerThan.Inputs[1].UpdateTypeAndTextboxVisibility(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateTextboxText("0");
 		graph.AddNode(smallerThan, false);
 		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0], false);
@@ -117,8 +117,8 @@ public class GraphExecutorTests
 
 		var smallerThan = new Core.Nodes.Math.SmallerThan(graph);
 		graph.AddNode(smallerThan, false);
-		smallerThan.Inputs[0].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
-		smallerThan.Inputs[1].UpdateType(graph.SelfClass.TypeFactory.Get<int>());
+		smallerThan.Inputs[0].UpdateTypeAndTextboxVisibility(graph.SelfClass.TypeFactory.Get<int>());
+		smallerThan.Inputs[1].UpdateTypeAndTextboxVisibility(graph.SelfClass.TypeFactory.Get<int>());
 		smallerThan.Inputs[1].UpdateTextboxText("0");
 		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0], false);
 

@@ -66,19 +66,28 @@ public class Project
     #region CreateNewDefaultProject
 
     public static Project CreateNewDefaultProject()
-    {
+	{
+		return CreateNewDefaultProject(out _);
+	}
+
+    public static Project CreateNewDefaultProject(out NodeClassMethod main)
+	{
         var project = new Project(Guid.NewGuid());
 
         var programClass = new NodeClass("Program", "NewProject", project);
 
-        var main = new NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void), null), new Graph());
+        main = new NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void), null), new Graph());
         main.IsStatic = true;
 
-        main.Graph.AddNode(new EntryNode(main.Graph), false);
-        main.Graph.AddNode(new ReturnNode(main.Graph), false);
+		var entry = new EntryNode(main.Graph);
+		var returnNode = new ReturnNode(main.Graph);
+		main.Graph.AddNode(entry, false);
+        main.Graph.AddNode(returnNode, false);
         programClass.Methods.Add(main);
+		project.Classes.Add(programClass);
 
-        project.Classes.Add(programClass);
+		// Connect entry's exec to return node's exec
+		main.Graph.Connect(entry.Outputs[0], returnNode.Inputs[0], false);
 
         return project;
     }

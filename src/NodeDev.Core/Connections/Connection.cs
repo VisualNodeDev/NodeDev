@@ -47,6 +47,9 @@ namespace NodeDev.Core.Connections
 		/// </summary>
 		public Connection? LinkedExec { get; }
 
+		public bool IsInput => Parent.Inputs.Contains(this);
+		public bool IsOutput => Parent.Outputs.Contains(this);
+
 		public Connection(string name, Node parent, TypeBase type, string? id = null, Connection? linkedExec = null)
 		{
 			Id = id ?? Guid.NewGuid().ToString();
@@ -110,7 +113,7 @@ namespace NodeDev.Core.Connections
 		}
 
 
-		public void UpdateType(TypeBase newType)
+		public void UpdateTypeAndTextboxVisibility(TypeBase newType)
 		{
 			Type = newType;
 

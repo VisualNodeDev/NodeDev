@@ -385,7 +385,7 @@ public class Graph
 
     #region Connect / Disconnect / MergedRemovedConnectionsWithNewConnections
 
-    public void MergedRemovedConnectionsWithNewConnections(List<Connection> newConnections, List<Connection> removedConnections)
+    public void MergeRemovedConnectionsWithNewConnections(List<Connection> newConnections, List<Connection> removedConnections)
     {
         foreach (var removedConnection in removedConnections)
         {

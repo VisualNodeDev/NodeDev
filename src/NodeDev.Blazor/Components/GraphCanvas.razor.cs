@@ -15,10 +15,11 @@ using System.Numerics;
 using System.Reactive.Linq;
 using NodeDev.Core.Class;
 using NodeDev.Blazor.Services;
+using NodeDev.Blazor.Services.GraphManager;
 
 namespace NodeDev.Blazor.Components;
 
-public partial class GraphCanvas : ComponentBase, IDisposable
+public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 {
     [Parameter, EditorRequired]
     public Graph Graph { get; set; } = null!;
@@ -29,7 +30,10 @@ public partial class GraphCanvas : ComponentBase, IDisposable
     [Inject]
     internal DebuggedPathService DebuggedPathService { get; set; } = null!;
 
-    private int PopupX = 0;
+	private GraphManagerService? _GraphManagerService;
+	private GraphManagerService GraphManagerService => _GraphManagerService ??= new GraphManagerService(this);
+
+	private int PopupX = 0;
     private int PopupY = 0;
     private Vector2 PopupNodePosition;
     private Connection? PopupNodeConnection;
@@ -67,7 +71,6 @@ public partial class GraphCanvas : ComponentBase, IDisposable
         Diagram.Links.Added += x => OnConnectionAdded(x, false);
         Diagram.Links.Removed += OnConnectionRemoved;
         Diagram.SelectionChanged += SelectionChanged;
-
     }
 
     #endregion
@@ -138,7 +141,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable
 
     #region UpdateConnectionType
 
-    private void UpdateConnectionType(Connection connection)
+    public void UpdatePortTypeAndColor(Connection connection)
     {
         var node = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == connection.Parent);
         if (node == null)
@@ -151,16 +154,6 @@ public partial class GraphCanvas : ComponentBase, IDisposable
             link.Color = color;
 
         Diagram.Refresh();
-    }
-
-    #endregion
-
-    #region UpdateNodeBaseInfo
-
-    private void UpdateNodeBaseInfo(Node node)
-    {
-        var nodeModel = Diagram.Nodes.OfType<GraphNodeModel>().First(x => x.Node == node);
-        nodeModel.UpdateNodeBaseInfo(node);
     }
 
     #endregion
@@ -239,8 +232,8 @@ public partial class GraphCanvas : ComponentBase, IDisposable
             {
                 DisableConnectionUpdate = true;
                 var old = baseLinkModel.Source;
-                baseLinkModel.SetSource(baseLinkModel.Target);
-                baseLinkModel.SetTarget(old);
+                baseLinkModel.SetSource(baseLinkModel.Target); // this is necessary as everything assumes that the source is an output and vice versa
+				baseLinkModel.SetTarget(old);
                 DisableConnectionUpdate = false;
 
                 var tmp = source;
@@ -248,47 +241,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable
                 destination = tmp;
             }
 
-            Graph.Connect(source.Connection, destination.Connection, false);
-
-            // we're plugging something something with a generic into something without a generic
-            if (source.Connection.Type.HasUndefinedGenerics && !destination.Connection.Type.HasUndefinedGenerics)
-            {
-                if (source.Connection.Type.IsAssignableTo(destination.Connection.Type, out var newTypes) && newTypes.Count != 0)
-                {
-                    PropagateNewGeneric(source.Connection.Parent, newTypes, false);
-                }
-            }
-            else if (destination.Connection.Type.HasUndefinedGenerics && !source.Connection.Type.HasUndefinedGenerics)
-            {
-                if (source.Connection.Type.IsAssignableTo(destination.Connection.Type, out var newTypes) && newTypes.Count != 0)
-                {
-                    PropagateNewGeneric(destination.Connection.Parent, newTypes, false);
-                }
-            }
-
-            // we have to remove the textbox ?
-            if (destination.Connection.Connections.Count == 1 && destination.Connection.Type.AllowTextboxEdit)
-                UpdateConnectionType(destination.Connection);
-
-            if (baseLinkModel is LinkModel link && link.Source.Model is GraphPortModel sourcePort && link.Target.Model is GraphPortModel targetPort)
-            {
-                link.Color = GetTypeShapeColor(sourcePort.Connection.Type, sourcePort.Connection.Parent.TypeFactory);
-                // we have to disconnect the previously connected exec, since exec outputs can only have one connection
-                if (source.Connection.Type.IsExec && source.Connection.Connections.Count > 1)
-                {
-                    Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source.Connection && (x.Target.Model as GraphPortModel)?.Connection != targetPort.Connection));
-                    Graph.Disconnect(source.Connection, source.Connection.Connections.First(x => x != targetPort.Connection), false);
-                }
-                else if (!destination.Connection.Type.IsExec && destination.Connection.Connections.Count > 1)
-                {
-                    Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection != source.Connection && (x.Target.Model as GraphPortModel)?.Connection == targetPort.Connection));
-                    Graph.Disconnect(destination.Connection, destination.Connection.Connections.First(x => x != sourcePort.Connection), false);
-                }
-            }
-
-            UpdateVerticesInConnection(source.Connection, destination.Connection, baseLinkModel);
-
-            Graph.RaiseGraphChanged(true);
+			GraphManagerService.AddNewConnectionBetween(source.Connection, destination.Connection);
         });
     }
 
@@ -318,7 +271,12 @@ public partial class GraphCanvas : ComponentBase, IDisposable
         }
     }
 
-    private Connection GetConnectionContainingVertices(Connection source, Connection destination)
+	/// <summary>
+	/// Return the output connection except for execs, in that case we return the input connection.
+	/// This is because vertices are stored for the port, and execs conveniently only have one output connection while other types only have one input connection.
+	/// </summary>
+	/// <returns></returns>
+	private Connection GetConnectionContainingVertices(Connection source, Connection destination)
     {
         if (source.Type.IsExec) // execs can only have one connection, therefor they always contains the vertex information
             return source;
@@ -380,7 +338,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable
 
                 // We have to add back the textbox editor
                 if (destination.Connections.Count == 0 && destination.Type.AllowTextboxEdit)
-                    UpdateConnectionType(destination);
+                    UpdatePortTypeAndColor(destination);
 
                 UpdateVerticesInConnection(source, destination, baseLinkModel);
             }
@@ -461,9 +419,9 @@ public partial class GraphCanvas : ComponentBase, IDisposable
                     Graph.Connect(PopupNodeConnection, destination, false);
 
                     if (destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit)
-                        UpdateConnectionType(destination);
+                        UpdatePortTypeAndColor(destination);
                     if (PopupNodeConnection.Connections.Count == 1 && PopupNodeConnection.Type.AllowTextboxEdit)
-                        UpdateConnectionType(PopupNodeConnection);
+                        UpdatePortTypeAndColor(PopupNodeConnection);
 
                     var source = isPopupNodeInput ? destination : PopupNodeConnection;
                     var target = isPopupNodeInput ? PopupNodeConnection : destination;
@@ -471,8 +429,8 @@ public partial class GraphCanvas : ComponentBase, IDisposable
                     // check if we need to propagate some generic
                     if (!destination.Type.IsExec && source.Type.IsAssignableTo(target.Type, out var changedGenerics))
                     {
-                        PropagateNewGeneric(node, changedGenerics, false);
-                        PropagateNewGeneric(destination.Parent, changedGenerics, false);
+                        GraphManagerService.PropagateNewGeneric(node, changedGenerics, false);
+						GraphManagerService.PropagateNewGeneric(destination.Parent, changedGenerics, false);
                     }
                     else if (source.Type.IsExec && source.Connections.Count > 1) // check if we have to disconnect the previously connected exec
                     {
@@ -513,11 +471,9 @@ public partial class GraphCanvas : ComponentBase, IDisposable
         if (PopupNode == null)
             return;
 
-        PopupNode.SelectOverload(overload, out var newConnections, out var removedConnections);
+		GraphManagerService.SelectNodeOverload(PopupNode, overload);
 
-        Graph.MergedRemovedConnectionsWithNewConnections(newConnections, removedConnections);
-
-        CancelPopup();
+		CancelPopup();
     }
 
     #endregion
@@ -544,40 +500,12 @@ public partial class GraphCanvas : ComponentBase, IDisposable
         if (PopupNode == null || GenericTypeSelectionMenuGeneric == null)
             return;
 
-        PropagateNewGeneric(PopupNode, new Dictionary<UndefinedGenericType, TypeBase>() { [GenericTypeSelectionMenuGeneric] = type }, false);
+        GraphManagerService.PropagateNewGeneric(PopupNode, new Dictionary<UndefinedGenericType, TypeBase>() { [GenericTypeSelectionMenuGeneric] = type }, false);
 
         // Prefer updating the nodes directly instead of calling Graph.RaiseGraphChanged(true) to be sure it is called as soon as possible
         UpdateNodes(Graph.Nodes.Values.ToList());
 
         CancelPopup();
-    }
-
-    private void PropagateNewGeneric(Node node, IReadOnlyDictionary<UndefinedGenericType, TypeBase> changedGenerics, bool requireUIRefresh)
-    {
-        foreach (var port in node.InputsAndOutputs) // check if any of the ports have the generic we just solved
-        {
-            if (port.Type.GetUndefinedGenericTypes().Any(changedGenerics.ContainsKey))
-            {
-                var isPortInput = node.Inputs.Contains(port);
-
-                port.UpdateType(port.Type.ReplaceUndefinedGeneric(changedGenerics));
-
-                UpdateConnectionType(port);
-
-                // check if other connections had their own generics and if we just solved them
-                foreach (var other in port.Connections.ToList())
-                {
-                    var source = isPortInput ? other : port;
-                    var target = isPortInput ? port : other;
-                    if (source.Type.IsAssignableTo(target.Type, out var changedGenerics2) && changedGenerics2.Count != 0)
-                        PropagateNewGeneric(other.Parent, changedGenerics2, requireUIRefresh);
-                    else if ((changedGenerics2?.Count ?? 0) != 0)// damn, looks like changing the generic made it so we can't link to this connection anymore
-                        Graph.Disconnect(port, other, false); // no need to refresh UI here as it'll already be refresh at the end of this method
-                }
-            }
-        }
-
-        Graph.RaiseGraphChanged(requireUIRefresh);
     }
 
     #endregion
@@ -662,11 +590,31 @@ public partial class GraphCanvas : ComponentBase, IDisposable
         PopupNodeConnection = null;
     }
 
-    #endregion
+	#endregion
 
-    #region CreateGraphNodeModel
+	#region RemoveLink
 
-    private void CreateGraphNodeModel(Node node)
+	public void RemoveLinkFromGraphCanvas(Connection source, Connection destination)
+	{
+		Graph.Invoke(() =>
+		{
+			DisableConnectionUpdate = true;
+			try
+			{
+				Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source && (x.Target.Model as GraphPortModel)?.Connection == destination));
+			}
+			finally
+			{
+				DisableConnectionUpdate = false;
+			}
+		});
+	}
+
+	#endregion
+
+	#region CreateGraphNodeModel
+
+	private void CreateGraphNodeModel(Node node)
     {
         var nodeModel = Diagram.Nodes.Add(new GraphNodeModel(node));
         foreach (var connection in node.InputsAndOutputs)

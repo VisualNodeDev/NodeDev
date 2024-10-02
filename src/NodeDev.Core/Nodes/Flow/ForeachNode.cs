@@ -49,7 +49,7 @@ public class ForeachNode : FlowNode
 		if (Inputs[1].Type.HasUndefinedGenerics)
 		{
 			var type = newType.Generics[0]; // get the 'T' our of IEnumerable<T>
-			Inputs[1].UpdateType(type);
+			Inputs[1].UpdateTypeAndTextboxVisibility(type);
 
 			return [Inputs[1]];
 		}

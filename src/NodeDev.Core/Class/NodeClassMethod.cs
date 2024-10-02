@@ -40,7 +40,11 @@ namespace NodeDev.Core.Class
 
         public bool HasReturnValue => ReturnType != Class.TypeFactory.Void;
 
-        public void Rename(string newName)
+		public EntryNode? EntryNode => Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
+
+		public IEnumerable<ReturnNode> ReturnNodes => Graph.Nodes.Values.OfType<ReturnNode>();
+
+		public void Rename(string newName)
         {
             if (string.IsNullOrWhiteSpace(newName))
                 return;
