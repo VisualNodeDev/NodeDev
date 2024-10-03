@@ -30,10 +30,10 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
     [Inject]
     internal DebuggedPathService DebuggedPathService { get; set; } = null!;
 
-	private GraphManagerService? _GraphManagerService;
-	private GraphManagerService GraphManagerService => _GraphManagerService ??= new GraphManagerService(this);
+    private GraphManagerService? _GraphManagerService;
+    private GraphManagerService GraphManagerService => _GraphManagerService ??= new GraphManagerService(this);
 
-	private int PopupX = 0;
+    private int PopupX = 0;
     private int PopupY = 0;
     private Vector2 PopupNodePosition;
     private Connection? PopupNodeConnection;
@@ -233,7 +233,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
                 DisableConnectionUpdate = true;
                 var old = baseLinkModel.Source;
                 baseLinkModel.SetSource(baseLinkModel.Target); // this is necessary as everything assumes that the source is an output and vice versa
-				baseLinkModel.SetTarget(old);
+                baseLinkModel.SetTarget(old);
                 DisableConnectionUpdate = false;
 
                 var tmp = source;
@@ -241,7 +241,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
                 destination = tmp;
             }
 
-			GraphManagerService.AddNewConnectionBetween(source.Connection, destination.Connection);
+            GraphManagerService.AddNewConnectionBetween(source.Connection, destination.Connection);
         });
     }
 
@@ -271,12 +271,12 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
         }
     }
 
-	/// <summary>
-	/// Return the output connection except for execs, in that case we return the input connection.
-	/// This is because vertices are stored for the port, and execs conveniently only have one output connection while other types only have one input connection.
-	/// </summary>
-	/// <returns></returns>
-	private Connection GetConnectionContainingVertices(Connection source, Connection destination)
+    /// <summary>
+    /// Return the output connection except for execs, in that case we return the input connection.
+    /// This is because vertices are stored for the port, and execs conveniently only have one output connection while other types only have one input connection.
+    /// </summary>
+    /// <returns></returns>
+    private Connection GetConnectionContainingVertices(Connection source, Connection destination)
     {
         if (source.Type.IsExec) // execs can only have one connection, therefor they always contains the vertex information
             return source;
@@ -391,11 +391,13 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
         Diagram.Batch(() =>
         {
+            CreateGraphNodeModel(node);
+
             if (PopupNodeConnection != null && PopupNode != null)
             {
                 // check if the source was an input or output and choose the proper destination based on that
                 List<Connection> sources, destinations;
-                bool isPopupNodeInput = PopupNode.Inputs.Contains(PopupNodeConnection);
+                bool isPopupNodeInput = PopupNodeConnection.IsInput;
                 if (isPopupNodeInput)
                 {
                     sources = PopupNode.Inputs;
@@ -416,38 +418,14 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
                 // if we found a connection, connect them together
                 if (destination != null)
                 {
-                    Graph.Connect(PopupNodeConnection, destination, false);
-
-                    if (destination.Connections.Count == 1 && destination.Type.AllowTextboxEdit)
-                        UpdatePortTypeAndColor(destination);
-                    if (PopupNodeConnection.Connections.Count == 1 && PopupNodeConnection.Type.AllowTextboxEdit)
-                        UpdatePortTypeAndColor(PopupNodeConnection);
-
                     var source = isPopupNodeInput ? destination : PopupNodeConnection;
                     var target = isPopupNodeInput ? PopupNodeConnection : destination;
 
-                    // check if we need to propagate some generic
-                    if (!destination.Type.IsExec && source.Type.IsAssignableTo(target.Type, out var changedGenerics))
-                    {
-                        GraphManagerService.PropagateNewGeneric(node, changedGenerics, false);
-						GraphManagerService.PropagateNewGeneric(destination.Parent, changedGenerics, false);
-                    }
-                    else if (source.Type.IsExec && source.Connections.Count > 1) // check if we have to disconnect the previously connected exec
-                    {
-                        Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source && (x.Target.Model as GraphPortModel)?.Connection != target));
-                        var toRemove = source.Connections.FirstOrDefault(x => x != target);
-                        if (toRemove != null)
-                            Graph.Disconnect(source, toRemove, false);
-                    }
+                    GraphManagerService.AddNewConnectionBetween(source, target);
                 }
             }
 
             CancelPopup();
-
-            CreateGraphNodeModel(node);
-            AddNodeLinks(node, false);
-
-            UpdateNodes(Graph.Nodes.Values.ToList());
         });
 
     }
@@ -471,9 +449,9 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
         if (PopupNode == null)
             return;
 
-		GraphManagerService.SelectNodeOverload(PopupNode, overload);
+        GraphManagerService.SelectNodeOverload(PopupNode, overload);
 
-		CancelPopup();
+        CancelPopup();
     }
 
     #endregion
@@ -590,31 +568,31 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
         PopupNodeConnection = null;
     }
 
-	#endregion
+    #endregion
 
-	#region RemoveLink
+    #region RemoveLink
 
-	public void RemoveLinkFromGraphCanvas(Connection source, Connection destination)
-	{
-		Graph.Invoke(() =>
-		{
-			DisableConnectionUpdate = true;
-			try
-			{
-				Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source && (x.Target.Model as GraphPortModel)?.Connection == destination));
-			}
-			finally
-			{
-				DisableConnectionUpdate = false;
-			}
-		});
-	}
+    public void RemoveLinkFromGraphCanvas(Connection source, Connection destination)
+    {
+        Graph.Invoke(() =>
+        {
+            DisableConnectionUpdate = true;
+            try
+            {
+                Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source && (x.Target.Model as GraphPortModel)?.Connection == destination));
+            }
+            finally
+            {
+                DisableConnectionUpdate = false;
+            }
+        });
+    }
 
-	#endregion
+    #endregion
 
-	#region CreateGraphNodeModel
+    #region CreateGraphNodeModel
 
-	private void CreateGraphNodeModel(Node node)
+    private void CreateGraphNodeModel(Node node)
     {
         var nodeModel = Diagram.Nodes.Add(new GraphNodeModel(node));
         foreach (var connection in node.InputsAndOutputs)

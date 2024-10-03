@@ -35,9 +35,10 @@ public class New : NormalFlowNode
                 return [new(Outputs[1].Type, [])]; // for now, we don't handle custom constructors
 
             else
-                throw new Exception("Unknowned type in New node: " + Outputs[1].Type.Name);
+                throw new Exception("Unknown type in New node: " + Outputs[1].Type.Name);
         }
     }
+
     public override List<Connection> GenericConnectionTypeDefined(Connection connection)
     {
         if (Outputs[1].Type.IsArray)
