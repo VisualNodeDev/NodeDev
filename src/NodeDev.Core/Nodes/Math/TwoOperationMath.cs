@@ -51,7 +51,7 @@ namespace NodeDev.Core.Nodes.Math
 				else
 					resultingType = typeof(int);
 
-				Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(resultingType, null));
+				Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(resultingType, null), overrideInitialType: true);
 
 				return new() { Outputs[0] };
 			}
@@ -64,7 +64,7 @@ namespace NodeDev.Core.Nodes.Math
 
 				if(correctOne != null)
 				{
-					Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(correctOne.ReturnType, null));
+					Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(correctOne.ReturnType, null), overrideInitialType: true);
 					return new() { Outputs[0] };
 				}
 			}

@@ -43,7 +43,7 @@ public class EntryNode : FlowNode
 	{
 		var connection = Outputs[index + 1];
 
-		connection.UpdateTypeAndTextboxVisibility(parameter.ParameterType);
+		connection.UpdateTypeAndTextboxVisibility(parameter.ParameterType, overrideInitialType: true);
 
 		return connection;
 	}

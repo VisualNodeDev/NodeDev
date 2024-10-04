@@ -12,7 +12,7 @@ public class Equals : TwoOperationMath
 	{
 		Name = "Equals";
 
-		Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(typeof(bool), null));
+		Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(typeof(bool), null), overrideInitialType: true);
 	}
 
 	internal override void BuildInlineExpression(BuildExpressionInfo info)

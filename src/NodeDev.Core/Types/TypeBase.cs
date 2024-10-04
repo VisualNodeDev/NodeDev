@@ -60,7 +60,7 @@ public abstract class TypeBase
 
     public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes()
     {
-        IEnumerable<UndefinedGenericType> undefinedGenericTypes = this is UndefinedGenericType undefinedGenericType ? new[] { undefinedGenericType } : Enumerable.Empty<UndefinedGenericType>();
+        IEnumerable<UndefinedGenericType> undefinedGenericTypes = this is UndefinedGenericType undefinedGenericType ? [undefinedGenericType] : Enumerable.Empty<UndefinedGenericType>();
 
         return undefinedGenericTypes.Concat(Generics.SelectMany(x => x.GetUndefinedGenericTypes())).Distinct();
     }
@@ -105,19 +105,20 @@ public abstract class TypeBase
     public abstract bool IsSameBackend(TypeBase typeBase);
 
     /// <summary>
-    /// Validate if 'this' is directly assignable to 'other' without checkout the entire hierarchy of inheritance and inteface implementations
+    /// Validate if 'this' is directly assignable to 'other' without checkout the entire hierarchy of inheritance and interface implementations
     /// </summary>
     /// <param name="other">Other type we are trying to plug into</param>
     /// <param name="allowInOutGenerics">Check for covariant and contravariant generics</param>
     /// <param name="changedGenerics">Generics that needs to be updated in order for the assignation to work</param>
     /// <returns></returns>
-    internal bool IsDirectlyAssignableTo(TypeBase other, bool allowInOutGenerics, [MaybeNullWhen(false)] out Dictionary<UndefinedGenericType, TypeBase> changedGenerics)
+    internal bool IsDirectlyAssignableTo(TypeBase other, bool allowInOutGenerics, [MaybeNullWhen(false)] out Dictionary<UndefinedGenericType, TypeBase> changedGenerics, out int totalDepths)
     {
         if (this is UndefinedGenericType thisUndefinedGenericType)
         {
             if (other is UndefinedGenericType)
             {
                 changedGenerics = []; // nothing to change, we're plugging a generic into another generic
+                totalDepths = 0;
                 return true;
             }
             else if(!IsArray || other.IsArray) // we can change 'this' to the same type as 'other' and plug into it
@@ -128,10 +129,12 @@ public abstract class TypeBase
                 {
                     [thisUndefinedGenericType] = other
                 };
+                totalDepths = 0;
                 return true;
             }
 
             changedGenerics = null;
+            totalDepths = -1;
             return false;
         }
         else if (other is UndefinedGenericType otherUndefinedGenericType) // we can change the other generic into the current type
@@ -144,6 +147,7 @@ public abstract class TypeBase
                 {
                     [otherUndefinedGenericType] = this
                 };
+                totalDepths = 0;
                 return true;
             }
             else if (!IsArray && !other.IsArray) // string into T 
@@ -152,11 +156,13 @@ public abstract class TypeBase
                 {
                     [otherUndefinedGenericType] = this
                 };
+                totalDepths = 0;
                 return true;
             }
 
             // string into T[] <----- this is not allowed
             changedGenerics = null;
+            totalDepths = -1;
             return false;
         }
 
@@ -164,12 +170,15 @@ public abstract class TypeBase
         {
             // check all the generics, they have to either be undefined, the same or covariant
             changedGenerics = new();
+            totalDepths = 0;
             for (int i = 0; i < Generics.Length; ++i)
             {
                 if (allowInOutGenerics && other.IsOut(i)) // we can plug a less derived type, like IEnumerable<Child> to IEnumerable<Parent>
                 {
-                    if (Generics[i].IsAssignableTo(other.Generics[i], out var changedGenericsLocal))
+                    if (Generics[i].IsAssignableTo(other.Generics[i], out var changedGenericsLocal, out var totalSubDepths))
                     {
+                        totalDepths += totalSubDepths;
+
                         foreach (var changed in changedGenericsLocal)
                             changedGenerics[changed.Key] = changed.Value;
                         continue; // it worked, check the next generic
@@ -177,8 +186,10 @@ public abstract class TypeBase
                 }
                 else if (allowInOutGenerics && other.IsIn(i)) // We can plug a more derived type, like IComparable<Parent> to IComparable<Child>
                 {
-                    if (other.Generics[i].IsAssignableTo(Generics[i], out var changedGenericsLocal))
+                    if (other.Generics[i].IsAssignableTo(Generics[i], out var changedGenericsLocal, out var totalSubDepths))
                     {
+                        totalDepths += totalSubDepths;
+
                         foreach (var changed in changedGenericsLocal)
                             changedGenerics[changed.Key] = changed.Value;
                         continue; // it worked, check the next generic
@@ -187,8 +198,10 @@ public abstract class TypeBase
                 else
                 {
                     // the generic is not covariant, so it has to be the same
-                    if (Generics[i].IsDirectlyAssignableTo(other.Generics[i], allowInOutGenerics, out var changedGenericsLocal))
+                    if (Generics[i].IsDirectlyAssignableTo(other.Generics[i], allowInOutGenerics, out var changedGenericsLocal, out var totalSubDepths))
                     {
+                        totalDepths += totalSubDepths;
+
                         foreach (var changed in changedGenericsLocal)
                             changedGenerics[changed.Key] = changed.Value;
                         continue; // it worked, check the next generic
@@ -197,6 +210,7 @@ public abstract class TypeBase
 
                 // one of the generics is not assignable, so we're not assignable
                 changedGenerics = null;
+                totalDepths = -1;
                 return false;
             }
 
@@ -204,24 +218,44 @@ public abstract class TypeBase
         }
 
         changedGenerics = null;
+        totalDepths = -1;
         return false;
     }
 
     public bool IsAssignableTo(TypeBase other, [MaybeNullWhen(false)] out Dictionary<UndefinedGenericType, TypeBase> changedGenerics)
     {
+        return IsAssignableTo(other, out changedGenerics, out _);
+    }
+
+    /// <summary>
+    /// Check if 'this' is assignable to 'other' and return the depth of the assignation.
+    /// Also return the generics that needs to be updated in order for the assignation to work.
+    /// </summary>
+    /// <param name="totalDepths">
+    /// Total depths of the assignation. That is, how far up the inheritance tree did we need to go to make this assignation work.
+    /// It also sums up the depths of the generics assignations.
+    /// This is use to prioritize assignations of lower depth, such as converting List<string> to IList<string> instead of IEnumerable<string>, if possible.
+    /// </param>
+    /// <returns>True if the assignation is possible. Then <paramref name="changedGenerics"/> and <paramref name="totalDepths"/> are both set.</returns>
+    public bool IsAssignableTo(TypeBase other, [MaybeNullWhen(false)] out Dictionary<UndefinedGenericType, TypeBase> changedGenerics, out int totalDepths)
+    {
         if ((this is ExecType && other is not ExecType) || (other is ExecType && this is not ExecType))
         {
             changedGenerics = null;
+            totalDepths = -1;
             return false;
         }
 
-        if (IsDirectlyAssignableTo(other, true, out changedGenerics))
+        if (IsDirectlyAssignableTo(other, true, out changedGenerics, out var totalSubDepths))
+        {
+            totalDepths = totalSubDepths;
             return true; // Either plugging something easy like List<int> to List<int>, some generic or covariant like IEnumerable<Parent> to IEnumerable<Child>
+        }
 
-        var myAssignableTypes = GetAssignableTypes().OrderBy(x => x.Depth).Select(x => x.Type);
+        var myAssignableTypes = GetAssignableTypes().OrderBy(x => x.Depth);
 
         var changedGenericsLocal = new Dictionary<UndefinedGenericType, TypeBase>();
-        foreach (var myAssignableType in myAssignableTypes)
+        foreach ((var myAssignableType, var assignableDepth) in myAssignableTypes)
         {
             if (!myAssignableType.IsSameBackend(other))
                 continue;
@@ -229,8 +263,9 @@ public abstract class TypeBase
             if (myAssignableType.Generics.Length != other.Generics.Length)
                 throw new Exception("Unable to compare types with different number of generics, this should never happen since the BackendType is identical");
 
-            bool isAssignable = true;
-            changedGenericsLocal.Clear(); // reuse the same dictionary for optimisation purposes
+            var isAssignable = true;
+            changedGenericsLocal.Clear(); // reuse the same dictionary for optimization purposes
+            var totalDepthsLocal = 0;
             for (int i = 0; i < myAssignableType.Generics.Length; i++)
             {
                 // check if either, both or none of the current and other type are undefined generics
@@ -309,8 +344,10 @@ public abstract class TypeBase
                 // Check parents will recursively check if the left is assignable to the right, going up the inheritance tree
                 if (checkParents)
                 {
-                    if (left.IsAssignableTo(right, out var changedGenericsLocally))
+                    if (left.IsAssignableTo(right, out var changedGenericsLocally, out var totalDepths1))
                     {
+                        totalDepthsLocal += totalDepths1;
+
                         foreach (var changed in changedGenericsLocally)
                             changedGenericsLocal[changed.Key] = changed.Value;
                         continue;
@@ -318,8 +355,10 @@ public abstract class TypeBase
                 }
                 else
                 {
-                    if (left.IsDirectlyAssignableTo(right, false, out var changedGenericsLocally))
+                    if (left.IsDirectlyAssignableTo(right, false, out var changedGenericsLocally, out totalSubDepths))
                     {
+                        totalDepthsLocal += totalSubDepths;
+
                         foreach (var changed in changedGenericsLocally)
                             changedGenericsLocal[changed.Key] = changed.Value;
                         continue;
@@ -334,12 +373,14 @@ public abstract class TypeBase
             if (isAssignable)
             {
                 changedGenerics = changedGenericsLocal;
+                totalDepths = assignableDepth + 1 + totalDepthsLocal;
                 return true;
             }
         }
 
 
         changedGenerics = null;
+        totalDepths = -1;
         return false;
     }
 

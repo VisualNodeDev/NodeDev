@@ -141,7 +141,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
     #region UpdateConnectionType
 
-    public void UpdatePortTypeAndColor(Connection connection)
+    public void UpdatePortColor(Connection connection)
     {
         var node = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == connection.Parent);
         if (node == null)
@@ -338,7 +338,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
                 // We have to add back the textbox editor
                 if (destination.Connections.Count == 0 && destination.Type.AllowTextboxEdit)
-                    UpdatePortTypeAndColor(destination);
+                    UpdatePortColor(destination);
 
                 UpdateVerticesInConnection(source, destination, baseLinkModel);
             }
@@ -478,7 +478,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
         if (PopupNode == null || GenericTypeSelectionMenuGeneric == null)
             return;
 
-        GraphManagerService.PropagateNewGeneric(PopupNode, new Dictionary<UndefinedGenericType, TypeBase>() { [GenericTypeSelectionMenuGeneric] = type }, false);
+        GraphManagerService.PropagateNewGeneric(PopupNode, new Dictionary<UndefinedGenericType, TypeBase>() { [GenericTypeSelectionMenuGeneric] = type }, false, null, overrideInitialTypes: true);
 
         // Prefer updating the nodes directly instead of calling Graph.RaiseGraphChanged(true) to be sure it is called as soon as possible
         UpdateNodes(Graph.Nodes.Values.ToList());

@@ -1,5 +1,4 @@
-﻿using NodeDev.Blazor.DiagramsModels;
-using NodeDev.Core;
+﻿using NodeDev.Core;
 using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
@@ -25,14 +24,14 @@ public class GraphManagerService
         Graph.Connect(source, destination, false);
 
         // we're plugging something something with a generic into something without a generic
-        if (source.Type.IsAssignableTo(destination.Type, out var newTypes) && newTypes.Count != 0)
+        if (source.IsAssignableTo(destination, true, true, out var newTypes, out var usedInitialTypes) && newTypes.Count != 0)
         {
-            PropagateNewGeneric(source.Parent, newTypes, false);
-            PropagateNewGeneric(destination.Parent, newTypes, false);
+            PropagateNewGeneric(source.Parent, newTypes, usedInitialTypes, destination, false);
+            PropagateNewGeneric(destination.Parent, newTypes, usedInitialTypes, source, false);
         }
 
-        GraphCanvas.UpdatePortTypeAndColor(source);
-        GraphCanvas.UpdatePortTypeAndColor(destination);
+        GraphCanvas.UpdatePortColor(source);
+        GraphCanvas.UpdatePortColor(destination);
 
         // we have to disconnect the previously connected exec, since exec outputs can only have one connection
         if (source.Type.IsExec && source.Connections.Count > 1)
@@ -48,38 +47,47 @@ public class GraphManagerService
         Graph.Disconnect(source, destination, false);
         GraphCanvas.RemoveLinkFromGraphCanvas(source, destination);
 
-        GraphCanvas.UpdatePortTypeAndColor(source);
-        GraphCanvas.UpdatePortTypeAndColor(destination);
+        GraphCanvas.UpdatePortColor(source);
+        GraphCanvas.UpdatePortColor(destination);
     }
 
-    public void PropagateNewGeneric(Node node, IReadOnlyDictionary<UndefinedGenericType, TypeBase> changedGenerics, bool requireUIRefresh)
+    /// <summary>
+    /// Propagate the new generic type to all the connections of the node and recursively to the connected nodes.
+    /// </summary>
+    /// <param name="initiatingConnection">The connection that initiated the propagation. This is used to avoid reupdating back and forth, sometimes erasing information in the process.</param>
+    public void PropagateNewGeneric(Node node, IReadOnlyDictionary<UndefinedGenericType, TypeBase> changedGenerics, bool useInitialTypes, Connection? initiatingConnection, bool overrideInitialTypes)
     {
+        bool hadAnyChanges = false;
         foreach (var port in node.InputsAndOutputs) // check if any of the ports have the generic we just solved
         {
-            var previousType = port.Type;
+            var previousType = useInitialTypes ? port.InitialType : port.Type;
 
             if (!previousType.GetUndefinedGenericTypes().Any(changedGenerics.ContainsKey))
                 continue;
 
             // update port.Type property as well as the textbox visibility if necessary
-            port.UpdateTypeAndTextboxVisibility(previousType.ReplaceUndefinedGeneric(changedGenerics));
-            node.GenericConnectionTypeDefined(port);
-            GraphCanvas.UpdatePortTypeAndColor(port);
+            port.UpdateTypeAndTextboxVisibility(previousType.ReplaceUndefinedGeneric(changedGenerics), overrideInitialType: overrideInitialTypes);
+            hadAnyChanges |= node.GenericConnectionTypeDefined(port).Count != 0;
+            GraphCanvas.UpdatePortColor(port);
 
             var isPortInput = port.IsInput; // cache for performance, IsInput is slow
                                             // check if other connections had their own generics and if we just solved them
             foreach (var other in port.Connections.ToList())
             {
+                if(other == initiatingConnection)
+                    continue;
+
                 var source = isPortInput ? other : port;
                 var target = isPortInput ? port : other;
-                if (source.Type.IsAssignableTo(target.Type, out var changedGenerics2) && changedGenerics2.Count != 0)
-                    PropagateNewGeneric(other.Parent, changedGenerics2, false); // no need to refresh UI since we'll do it ourselves anyway at the end of this call
+                if (source.IsAssignableTo(target, isPortInput, !isPortInput, out var changedGenerics2, out var usedInitialTypes) && changedGenerics2.Count != 0)
+                    PropagateNewGeneric(other.Parent, changedGenerics2, usedInitialTypes, port, false);
                 else if ((changedGenerics2?.Count ?? 0) != 0)// looks like changing the generic made it so we can't link to this connection anymore
                     DisconnectConnectionBetween(port, other);
             }
         }
 
-        Graph.RaiseGraphChanged(requireUIRefresh);
+        if (hadAnyChanges)
+            Graph.RaiseGraphChanged(false);
     }
 
     public void SelectNodeOverload(Node popupNode, Node.AlternateOverload overload)

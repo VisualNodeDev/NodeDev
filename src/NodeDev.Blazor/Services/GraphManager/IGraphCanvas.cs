@@ -7,7 +7,7 @@ public interface IGraphCanvas
 {
 	Graph Graph { get; }
 
-	void UpdatePortTypeAndColor(Connection connection);
+	void UpdatePortColor(Connection connection);
 
 	void RemoveLinkFromGraphCanvas(Connection source, Connection destination);
 }
