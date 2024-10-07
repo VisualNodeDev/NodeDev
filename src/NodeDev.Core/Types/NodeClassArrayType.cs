@@ -95,6 +95,9 @@ namespace NodeDev.Core.Types
 
         public static string GetArrayString(int nbArrayLevels)
         {
+            if (nbArrayLevels == 0)
+                return string.Empty;
+
             var str = string.Create(nbArrayLevels * 2, nbArrayLevels, static (span, nbLevels) =>
             {
                 for (int i = 0; i < span.Length; i += 2)

@@ -28,40 +28,54 @@ public class UndefinedGenericType : TypeBase
 
     public override bool IsArray => NbArrayLevels != 0;
 
-    public override TypeBase ArrayType => new UndefinedGenericType(Name, NbArrayLevels + 1);
+    public override UndefinedGenericType ArrayType => new(UndefinedGenericTypeName, NbArrayLevels + 1);
 
-    public override TypeBase ArrayInnerType
-    {
-        get
-        {
-            if (NbArrayLevels == 1)
-                return new UndefinedGenericType(Name);
-            else if(NbArrayLevels > 1)
-                return new UndefinedGenericType(Name, NbArrayLevels - 1);
+    public override UndefinedGenericType ArrayInnerType => IsArray ? new UndefinedGenericType(UndefinedGenericTypeName, NbArrayLevels - 1) : throw new Exception("Can't call ArrayInnerType on non-array type");
 
-            throw new Exception("Can't call ArrayInnerType on non-array type");
-        }
-    }
-
+    public readonly string UndefinedGenericTypeName;
 
     public UndefinedGenericType(string name, int nbArrayLevels = 0)
     {
+        UndefinedGenericTypeName = name;
         FullName = Name = name + NodeClassArrayType.GetArrayString(nbArrayLevels);
         NbArrayLevels = nbArrayLevels;
     }
+
+    /// <summary>
+    /// Simplifies the current undefined generic to match as easily as possible with the other type.
+    /// T[] to string[] will return string. T to string[] will return string[].
+    /// </summary>
+    public TypeBase SimplifyToMatchWith(TypeBase otherType)
+    {
+        var thisUndefined = this;
+        while(thisUndefined.IsArray)
+        {
+            if(!otherType.IsArray)
+                throw new Exception("Can't simplify array to non-array type");
+
+            thisUndefined = thisUndefined.ArrayInnerType;
+            otherType = otherType.ArrayInnerType;
+        }
+
+        return otherType;
+    }
+
 
     public override IEnumerable<IMethodInfo> GetMethods() => [];
 
     public override IEnumerable<IMethodInfo> GetMethods(string name) => [];
 
-    internal protected override string Serialize() => JsonSerializer.Serialize(new SerializedUndefinedGenericType(Name, NbArrayLevels));
+    #region Serialize / Deserialize
 
-    public new static UndefinedGenericType Deserialize(TypeFactory typeFactory, string serialized)
+    internal protected override string Serialize() => JsonSerializer.Serialize(new SerializedUndefinedGenericType(UndefinedGenericTypeName, NbArrayLevels));
+    public static UndefinedGenericType Deserialize(TypeFactory typeFactory, string serialized)
     {
         var deserialized = JsonSerializer.Deserialize<SerializedUndefinedGenericType>(serialized) ?? throw new Exception("Unable to deserialize UndefinedGenericType");
 
-        return new(deserialized.Name, deserialized.NbArrayLevels);
+        return new UndefinedGenericType(deserialized.Name, deserialized.NbArrayLevels);
     }
+
+    #endregion
 
     public override Type MakeRealType()
     {
@@ -73,6 +87,6 @@ public class UndefinedGenericType : TypeBase
         if (typeBase is not UndefinedGenericType undefinedGenericType)
             return false;
 
-        return Name == undefinedGenericType.Name && NbArrayLevels == undefinedGenericType.NbArrayLevels;
+        return Name == undefinedGenericType.Name;
     }
 }

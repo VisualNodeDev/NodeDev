@@ -9,7 +9,7 @@ public class UndefinedGenericTypeTests
 	public void SerializeUndefinedGenericType_ReturnsExpectedJson()
 	{
 		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
-		var undefinedGenericType = new UndefinedGenericType("T", 2);
+		var undefinedGenericType = new UndefinedGenericType("T").ArrayType.ArrayType;
 
 		var serialized = undefinedGenericType.Serialize();
 		var expectedJson = JsonSerializer.Serialize(new { Name = "T", NbArrayLevels = 2 });
@@ -21,7 +21,7 @@ public class UndefinedGenericTypeTests
 	public void SerializeUndefinedGenericType_Deserialize()
 	{
 		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
-		var undefinedGenericType = new UndefinedGenericType("T", 2);
+		var undefinedGenericType = new UndefinedGenericType("T").ArrayType.ArrayType;
 
 		var serialized = undefinedGenericType.SerializeWithFullTypeName();
 

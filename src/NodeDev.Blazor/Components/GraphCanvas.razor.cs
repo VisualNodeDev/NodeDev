@@ -413,7 +413,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
                 if (PopupNodeConnection.Type is UndefinedGenericType) // can connect to anything except exec
                     destination = destinations.FirstOrDefault(x => !x.Type.IsExec);
                 else // can connect to anything that is assignable to the type
-                    destination = destinations.FirstOrDefault(x => PopupNodeConnection.Type.IsAssignableTo(x.Type, out _) || (x.Type is UndefinedGenericType && !PopupNodeConnection.Type.IsExec));
+                    destination = destinations.FirstOrDefault(x => PopupNodeConnection.Type.IsAssignableTo(x.Type, out _, out _) || (x.Type is UndefinedGenericType && !PopupNodeConnection.Type.IsExec));
 
                 // if we found a connection, connect them together
                 if (destination != null)
@@ -459,9 +459,9 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
     #region OnGenericTypeSelectionMenuAsked
 
     private bool IsShowingGenericTypeSelection = false;
-    private UndefinedGenericType? GenericTypeSelectionMenuGeneric;
+    private string? GenericTypeSelectionMenuGeneric;
 
-    public void OnGenericTypeSelectionMenuAsked(GraphNodeModel nodeModel, UndefinedGenericType undefinedGenericType)
+    public void OnGenericTypeSelectionMenuAsked(GraphNodeModel nodeModel, string undefinedGenericType)
     {
         PopupNode = nodeModel.Node;
         var p = Diagram.GetScreenPoint(nodeModel.Position.X, nodeModel.Position.Y) - Diagram.Container!.NorthWest;
@@ -478,7 +478,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
         if (PopupNode == null || GenericTypeSelectionMenuGeneric == null)
             return;
 
-        GraphManagerService.PropagateNewGeneric(PopupNode, new Dictionary<UndefinedGenericType, TypeBase>() { [GenericTypeSelectionMenuGeneric] = type }, false, null, overrideInitialTypes: true);
+        GraphManagerService.PropagateNewGeneric(PopupNode, new Dictionary<string, TypeBase>() { [GenericTypeSelectionMenuGeneric] = type }, false, null, overrideInitialTypes: true);
 
         // Prefer updating the nodes directly instead of calling Graph.RaiseGraphChanged(true) to be sure it is called as soon as possible
         UpdateNodes(Graph.Nodes.Values.ToList());

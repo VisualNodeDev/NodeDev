@@ -61,7 +61,7 @@ namespace NodeDev.Core.Nodes
 		/// </summary>
 		public int GraphIndex { get; set; } = -1;
 
-		public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
+		public IEnumerable<string> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
 
 		public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
 		public virtual IEnumerable<AlternateOverload> AlternatesOverloads => [];

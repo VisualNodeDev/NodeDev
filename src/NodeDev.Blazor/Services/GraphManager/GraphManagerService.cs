@@ -24,10 +24,12 @@ public class GraphManagerService
         Graph.Connect(source, destination, false);
 
         // we're plugging something something with a generic into something without a generic
-        if (source.IsAssignableTo(destination, true, true, out var newTypes, out var usedInitialTypes) && newTypes.Count != 0)
+        if (source.IsAssignableTo(destination, true, true, out var newTypesLeft, out var newTypesRight, out var usedInitialTypes))
         {
-            PropagateNewGeneric(source.Parent, newTypes, usedInitialTypes, destination, false);
-            PropagateNewGeneric(destination.Parent, newTypes, usedInitialTypes, source, false);
+            if (newTypesLeft.Count != 0)
+                PropagateNewGeneric(source.Parent, newTypesLeft, usedInitialTypes, destination, false);
+            if (newTypesRight.Count != 0)
+                PropagateNewGeneric(destination.Parent, newTypesRight, usedInitialTypes, source, false);
         }
 
         GraphCanvas.UpdatePortColor(source);
@@ -55,7 +57,7 @@ public class GraphManagerService
     /// Propagate the new generic type to all the connections of the node and recursively to the connected nodes.
     /// </summary>
     /// <param name="initiatingConnection">The connection that initiated the propagation. This is used to avoid reupdating back and forth, sometimes erasing information in the process.</param>
-    public void PropagateNewGeneric(Node node, IReadOnlyDictionary<UndefinedGenericType, TypeBase> changedGenerics, bool useInitialTypes, Connection? initiatingConnection, bool overrideInitialTypes)
+    public void PropagateNewGeneric(Node node, IReadOnlyDictionary<string, TypeBase> changedGenerics, bool useInitialTypes, Connection? initiatingConnection, bool overrideInitialTypes)
     {
         bool hadAnyChanges = false;
         foreach (var port in node.InputsAndOutputs) // check if any of the ports have the generic we just solved
@@ -74,14 +76,19 @@ public class GraphManagerService
                                             // check if other connections had their own generics and if we just solved them
             foreach (var other in port.Connections.ToList())
             {
-                if(other == initiatingConnection)
+                if (other == initiatingConnection)
                     continue;
 
                 var source = isPortInput ? other : port;
                 var target = isPortInput ? port : other;
-                if (source.IsAssignableTo(target, isPortInput, !isPortInput, out var changedGenerics2, out var usedInitialTypes) && changedGenerics2.Count != 0)
-                    PropagateNewGeneric(other.Parent, changedGenerics2, usedInitialTypes, port, false);
-                else if ((changedGenerics2?.Count ?? 0) != 0)// looks like changing the generic made it so we can't link to this connection anymore
+                if (source.IsAssignableTo(target, isPortInput, !isPortInput, out var changedGenericsLeft2, out var changedGenericsRight2, out var usedInitialTypes) && (changedGenericsLeft2.Count != 0 || changedGenericsRight2.Count != 0))
+                {
+                    if (changedGenericsLeft2.Count != 0)
+                        PropagateNewGeneric(port.Parent, changedGenericsLeft2, usedInitialTypes, other, false);
+                    if (changedGenericsRight2.Count != 0)
+                        PropagateNewGeneric(other.Parent, changedGenericsRight2, usedInitialTypes, port, false);
+                }
+                else if ((changedGenericsLeft2?.Count ?? 0) != 0)// looks like changing the generic made it so we can't link to this connection anymore
                     DisconnectConnectionBetween(port, other);
             }
         }

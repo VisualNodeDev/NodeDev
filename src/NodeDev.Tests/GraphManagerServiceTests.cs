@@ -198,4 +198,40 @@ public class GraphManagerServiceTests : NodeDevTestsBase
         Assert.Equal(typeFactory.Get<IEnumerable<string>>(), foreachNode2.Inputs[1].Type);
         Assert.Equal(typeFactory.Get<string>(), foreachNode2.Outputs[1].Type);
     }
+
+    [Fact]
+    public void ConnectArrayToArrayT_ShouldPropagateChange()
+    {
+        var project = Project.CreateNewDefaultProject(out var main);
+        Assert.NotNull(main.EntryNode);
+        Assert.Single(main.ReturnNodes);
+        Assert.Equal(main.EntryNode.Outputs[0].Connections[0], main.ReturnNodes.Single().Inputs[0]);
+
+        var typeFactory = main.TypeFactory;
+
+        // create fake IGraphCanvas
+        var graphCanvas = Substitute.For<IGraphCanvas>();
+        graphCanvas.Graph.Returns(main.Graph);
+
+        var graphManager = new GraphManagerService(graphCanvas);
+
+        // output string[]
+        var newArray = new New(main.Graph);
+        newArray.Outputs[1].UpdateTypeAndTextboxVisibility(typeFactory.Get<string[]>(), overrideInitialType: true);
+        newArray.GenericConnectionTypeDefined(newArray.Outputs[1]);
+
+        var arrayGet = new ArrayGet(main.Graph);
+        main.Graph.AddNode(arrayGet, false);
+
+        // connect output of foreachNode into input of foreachNode2
+        graphManager.AddNewConnectionBetween(newArray.Outputs[1], arrayGet.Inputs[0]);
+
+        graphCanvas.Received().UpdatePortColor(Arg.Is(newArray.Outputs[1]));
+        graphCanvas.Received().UpdatePortColor(Arg.Is(arrayGet.Inputs[0]));
+        graphCanvas.Received().UpdatePortColor(Arg.Is(arrayGet.Outputs[0]));
+
+        // Input of arrayGet should be string[], output should be string
+        Assert.Equal(typeFactory.Get<string[]>(), arrayGet.Inputs[0].Type);
+        Assert.Equal(typeFactory.Get<string>(), arrayGet.Outputs[0].Type);
+    }
 }

@@ -3,6 +3,7 @@ using NodeDev.Core.Class;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using NodeDev.Core.Types;
+using System.Reflection;
 
 namespace NodeDev.Tests;
 
@@ -24,12 +25,20 @@ public class NodeClassTypeCreatorTests
 		creator.CreateProjectClassesAndAssembly();
 
 		Assert.NotNull(creator.Assembly);
-        Assert.Single(creator.Assembly.DefinedTypes.Where(x => x.IsVisible));
-		Assert.Contains(creator.Assembly.DefinedTypes, x => x.Name == "TestClass");
 
-		var instance = creator.Assembly.CreateInstance(myClass.Name);
+		var inMemoryAssemblyStream = new MemoryStream();
+		creator.Assembly.Save(inMemoryAssemblyStream);
+		inMemoryAssemblyStream.Position = 0;
 
-		Assert.IsType(creator.GeneratedTypes[project.GetNodeClassType(myClass)].Type, instance);
+		var assembly = Assembly.Load(inMemoryAssemblyStream.ToArray());
+
+        Assert.Single(assembly.DefinedTypes, x => x.IsVisible);
+		Assert.Contains(assembly.DefinedTypes, x => x.Name == "TestClass");
+
+		var instance = assembly.CreateInstance(myClass.Name);
+
+		Assert.NotNull(instance);
+		Assert.Equal(creator.GeneratedTypes[project.GetNodeClassType(myClass)].Type.FullName!, instance.GetType().FullName);
 	}
 
 	[Fact]
