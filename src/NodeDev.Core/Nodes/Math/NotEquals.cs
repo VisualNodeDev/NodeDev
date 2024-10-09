@@ -11,7 +11,7 @@ public class NotEquals : TwoOperationMath
 	{
 		Name = "NotEquals";
 
-		Outputs[0].UpdateType(TypeFactory.Get(typeof(bool), null));
+		Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(typeof(bool), null), overrideInitialType: true);
 	}
 
 	internal override void BuildInlineExpression(BuildExpressionInfo info)

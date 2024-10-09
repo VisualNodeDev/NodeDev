@@ -21,8 +21,8 @@ namespace NodeDev.Core.Nodes.Math
 			Outputs.Add(new("c", this, new UndefinedGenericType("T3")));
 		}
 
-		public override List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase newType)
-		{
+		public override List<Connection> GenericConnectionTypeDefined(Connection connection)
+        {
 			if (Inputs.Count(x => x.Type is RealType t && (t.BackendType.IsPrimitive || t.BackendType == typeof(string))) == 2)
 			{
 				if (!Outputs[0].Type.HasUndefinedGenerics)
@@ -51,7 +51,7 @@ namespace NodeDev.Core.Nodes.Math
 				else
 					resultingType = typeof(int);
 
-				Outputs[0].UpdateType(TypeFactory.Get(resultingType, null));
+				Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(resultingType, null), overrideInitialType: true);
 
 				return new() { Outputs[0] };
 			}
@@ -64,7 +64,7 @@ namespace NodeDev.Core.Nodes.Math
 
 				if(correctOne != null)
 				{
-					Outputs[0].UpdateType(TypeFactory.Get(correctOne.ReturnType, null));
+					Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(correctOne.ReturnType, null), overrideInitialType: true);
 					return new() { Outputs[0] };
 				}
 			}

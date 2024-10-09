@@ -29,6 +29,6 @@ public class GraphPortModel: PortModel
         if(Alignment == otherPort.Alignment) // can't plug input to input or output to output
             return false;
 
-        return Connection.Type.IsAssignableTo(otherPort.Connection.Type, out _);
+        return Connection.Type.IsAssignableTo(otherPort.Connection.Type, out _, out _);
     }
 }

@@ -28,7 +28,13 @@ public class RealType : TypeBase
 	private TypeBase[]? _Interfaces;
 	public override TypeBase[] Interfaces => _Interfaces ?? InitializeInterfaces();
 
-	public override bool IsIn(int genericIndex) => BackendType.GetGenericArguments()[genericIndex].IsGenericParameter && (BackendType.GetGenericArguments()[genericIndex].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Contravariant) != System.Reflection.GenericParameterAttributes.None;
+    public override bool IsArray => BackendType.IsArray;
+
+    public override TypeBase ArrayType => TypeFactory.Get(BackendType.MakeArrayType(), Generics);
+
+    public override TypeBase ArrayInnerType => IsArray ? TypeFactory.Get(BackendType.GetElementType()!, Generics) : throw new Exception("Can't call ArrayInnerType on non-array type");
+
+    public override bool IsIn(int genericIndex) => BackendType.GetGenericArguments()[genericIndex].IsGenericParameter && (BackendType.GetGenericArguments()[genericIndex].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Contravariant) != System.Reflection.GenericParameterAttributes.None;
 
 	public override bool IsOut(int genericIndex) => BackendType.GetGenericArguments()[genericIndex].IsGenericParameter && (BackendType.GetGenericArguments()[genericIndex].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Covariant) != System.Reflection.GenericParameterAttributes.None;
 

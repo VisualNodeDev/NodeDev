@@ -34,13 +34,19 @@ namespace NodeDev.Core.Class
 
         public Graph Graph { get; }
 
+        public TypeFactory TypeFactory => Class.TypeFactory;
+
         public bool IsStatic { get; set; }
 
         public TypeBase DeclaringType => Class.ClassTypeBase;
 
         public bool HasReturnValue => ReturnType != Class.TypeFactory.Void;
 
-        public void Rename(string newName)
+		public EntryNode? EntryNode => Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
+
+		public IEnumerable<ReturnNode> ReturnNodes => Graph.Nodes.Values.OfType<ReturnNode>();
+
+		public void Rename(string newName)
         {
             if (string.IsNullOrWhiteSpace(newName))
                 return;

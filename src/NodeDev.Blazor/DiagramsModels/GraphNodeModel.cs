@@ -24,11 +24,6 @@ namespace NodeDev.Blazor.DiagramsModels
 
         public GraphPortModel GetPort(Connection connection) => Ports.OfType<GraphPortModel>().First( x=> x.Connection == connection);
 
-        internal void UpdateNodeBaseInfo(Node node)
-        {
-
-        }
-
 		internal void OnNodeExecuted(Connection exec)
 		{
 
