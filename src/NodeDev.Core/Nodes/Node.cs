@@ -61,18 +61,18 @@ namespace NodeDev.Core.Nodes
 		/// </summary>
 		public int GraphIndex { get; set; } = -1;
 
-		public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
+		public IEnumerable<string> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
 
 		public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
-		public virtual IEnumerable<AlternateOverload> AlternatesOverloads => Enumerable.Empty<AlternateOverload>();
+		public virtual IEnumerable<AlternateOverload> AlternatesOverloads => [];
 
 		/// <summary>
 		/// returns a list of changed connections, if any
 		/// </summary>
 		/// <param name="connection">The connection that was generic, it is not generic anymore</param>
-		public virtual List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase baseType)
-		{
-			return new();
+		public virtual List<Connection> GenericConnectionTypeDefined(Connection connection)
+        {
+			return [];
 		}
 
 		public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)

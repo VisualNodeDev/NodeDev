@@ -87,7 +87,14 @@ public class Hooks
             Headless = Environment.GetEnvironmentVariable("HEADLESS") == "true" // -> Use this option to be able to see your test running
         });
         //Setup a browser context
-        var context1 = await browser.NewContextAsync();
+        var context1 = await browser.NewContextAsync(new()
+		{
+			ViewportSize = new()
+			{
+				Width = 1900,
+				Height = 1000
+			}
+		});
 
         //Initialise a page on the browser context.
         User = await context1.NewPageAsync();

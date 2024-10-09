@@ -68,7 +68,7 @@ namespace NodeDev.Core
 
                     // only keep the methods that are using the startConnection type, if provided
                     if (startConnection?.Type?.IsExec == false)
-                        methods = methods.Where(x => x.GetParameters().Any(y => startConnection.Type.IsAssignableTo(y.ParameterType, out _)));
+                        methods = methods.Where(x => x.GetParameters().Any(y => startConnection.Type.IsAssignableTo(y.ParameterType, out _, out _)));
 
                     results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
 
@@ -123,7 +123,7 @@ namespace NodeDev.Core
                         .GetTypes()
                         .Where(type => !type.IsGenericType)
                         .SelectMany(x => x.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
-                        .Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && t.IsAssignableTo(typeFactory.Get(method.GetParameters()[0].ParameterType, null), out _))
+                        .Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && t.IsAssignableTo(typeFactory.Get(method.GetParameters()[0].ParameterType, null), out _, out _))
                         .Select(x => new RealMethodInfo(typeFactory, x, typeFactory.Get(x.DeclaringType!, null)))
                         .ToList();
                 });

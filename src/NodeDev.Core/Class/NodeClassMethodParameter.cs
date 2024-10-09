@@ -73,7 +73,7 @@ namespace NodeDev.Core.Class
                 {
                     methodCall.SelectOverload(((IMethodInfo)Method).AlternateOverload(), out var newConnections, out var removedConnections);
 
-                    methodCall.Graph.MergedRemovedConnectionsWithNewConnections(newConnections, removedConnections);
+                    methodCall.Graph.MergeRemovedConnectionsWithNewConnections(newConnections, removedConnections);
                 }
             }
         }

@@ -16,7 +16,7 @@
 			<span class="ml-1">&lt;</span>
 			@foreach (var undefinedGeneric in undefinedGenerics)
 			{
-				<span class="ml-1 undefined-generic" @onclick="() => GraphCanvas.OnGenericTypeSelectionMenuAsked(Node, undefinedGeneric)">@(undefinedGeneric.Name + (undefinedGeneric == undefinedGenerics[^1] ? "" : ", "))</span>
+				<span class="ml-1 undefined-generic" @onclick="() => GraphCanvas.OnGenericTypeSelectionMenuAsked(Node, undefinedGeneric)">@(undefinedGeneric + (undefinedGeneric == undefinedGenerics[^1] ? "" : ", "))</span>
 			}
 			<span class="ml-1">&gt;</span>
 		}

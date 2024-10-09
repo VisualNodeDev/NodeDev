@@ -24,7 +24,13 @@ namespace NodeDev.Core.Types
 
 		public override TypeBase[] Interfaces => throw new NotImplementedException();
 
-		public override IEnumerable<IMemberInfo> GetMembers() => throw new NotImplementedException();
+        public override bool IsArray => false;
+
+        public override TypeBase ArrayInnerType => throw new Exception("Can't call ArrayInnerType on ExecType");
+
+        public override TypeBase ArrayType => throw new Exception("Can't call ArrayType on ExecType");
+
+        public override IEnumerable<IMemberInfo> GetMembers() => throw new NotImplementedException();
 
 		public override IEnumerable<IMethodInfo> GetMethods() => [];
 

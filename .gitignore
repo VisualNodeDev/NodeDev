@@ -25,6 +25,6 @@
 /src/NodeDev.Core.Types.Tests/bin
 /src/NodeDev.Core.Types.Tests/obj
 /src/NodeDev.Core.Types/bin
-/src/NodeDev.EndToEndTests/bin/Debug/net8.0
+/src/NodeDev.EndToEndTests/bin
 /src/NodeDev.EndToEndTests/obj
 /src/NodeDev.Blazor.Server/project_backup.json
