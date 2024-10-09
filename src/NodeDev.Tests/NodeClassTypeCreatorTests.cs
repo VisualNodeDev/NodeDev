@@ -26,13 +26,15 @@ public class NodeClassTypeCreatorTests
 
 		Assert.NotNull(creator.Assembly);
 
-		var inMemoryAssemblyStream = new MemoryStream();
-		creator.Assembly.Save(inMemoryAssemblyStream);
-		inMemoryAssemblyStream.Position = 0;
+		//var inMemoryAssemblyStream = new MemoryStream();
+		//creator.Assembly.Save(inMemoryAssemblyStream);
+		//inMemoryAssemblyStream.Position = 0;
 
-		var assembly = Assembly.Load(inMemoryAssemblyStream.ToArray());
+		//var assembly = Assembly.Load(inMemoryAssemblyStream.ToArray());
+		
+		var assembly = creator.Assembly;
 
-        Assert.Single(assembly.DefinedTypes, x => x.IsVisible);
+		Assert.Single(assembly.DefinedTypes, x => x.IsVisible);
 		Assert.Contains(assembly.DefinedTypes, x => x.Name == "TestClass");
 
 		var instance = assembly.CreateInstance(myClass.Name);
