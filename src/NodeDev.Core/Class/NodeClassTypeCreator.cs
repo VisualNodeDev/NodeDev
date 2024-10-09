@@ -15,7 +15,7 @@ public class NodeClassTypeCreator
     public static string HiddenName(string name) => $"_hidden_{name}";
     private static GeneratedType CreateGeneratedType(ModuleBuilder mb, string name) => new(mb.DefineType(name, TypeAttributes.Public | TypeAttributes.Class), mb.DefineType(HiddenName(name), TypeAttributes.NotPublic | TypeAttributes.Class | TypeAttributes.Sealed), []);
 
-    public Assembly? Assembly { get; private set; }
+    public PersistedAssemblyBuilder? Assembly { get; private set; }
 
     public readonly Project Project;
 
@@ -34,11 +34,11 @@ public class NodeClassTypeCreator
     public void CreateProjectClassesAndAssembly()
     {
         // https://learn.microsoft.com/en-us/dotnet/api/system.reflection.emit.assemblybuilder?view=net-7.0
-        var ab = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), AssemblyBuilderAccess.RunAndCollect);
-        Assembly = ab;
+        var persisted = new PersistedAssemblyBuilder(new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly);
+        Assembly = persisted;
 
         // The module name is usually the same as the assembly name.
-        var mb = ab.DefineDynamicModule(ab.GetName().Name!);
+        var mb = persisted.DefineDynamicModule(persisted.GetName().Name!);
 
         // Creating all the types early so they are all accessible during expression tree generation
         foreach (var nodeClass in Project.Classes)
@@ -48,7 +48,6 @@ public class NodeClassTypeCreator
                 generatedType = GeneratedTypes[Project.GetNodeClassType(nodeClass)];
             else
                 GeneratedTypes[Project.GetNodeClassType(nodeClass)] = generatedType = CreateGeneratedType(mb, nodeClass.Name);
-
         }
 
         // Create the properties and methods in the real type

@@ -11,6 +11,7 @@
     <MudAppBar Elevation="1" data-test-id="appBar">
         <MudButton OnClick="NewProject" Class="ml-3" data-test-id="newProject">New Project</MudButton>
         <MudButton OnClick="Save" Class="ml-3" data-test-id="Save">Save</MudButton>
+        <MudButton OnClick="Build" Class="ml-3" data-test-id="Build">Build</MudButton>
         <MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
         <MudButton OnClick="Run" Class="ml-3">Run</MudButton>
         <MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
@@ -183,6 +184,11 @@
     private void Add()
     {
         //GraphCanvas?.ShowAddNode();
+    }
+
+    public void Build()
+    {
+        Project.Build(Project.IsLiveDebuggingEnabled ? Core.BuildOptions.Debug : Core.BuildOptions.Release);
     }
 
     public void Run()

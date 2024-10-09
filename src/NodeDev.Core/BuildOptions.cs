@@ -2,9 +2,9 @@
 
 namespace NodeDev.Core;
 
-public record class BuildOptions(BuildExpressionOptions BuildExpressionOptions, bool PreBuildOnly)
+public record class BuildOptions(BuildExpressionOptions BuildExpressionOptions, bool PreBuildOnly, string OutputPath)
 {
-    public static readonly BuildOptions Debug = new(BuildExpressionOptions.Debug, false);
+    public static readonly BuildOptions Debug = new(BuildExpressionOptions.Debug, false, "bin/Debug");
 
-    public static readonly BuildOptions Release = new(BuildExpressionOptions.Release, false);
+    public static readonly BuildOptions Release = new(BuildExpressionOptions.Release, false, "bin/Release");
 }
