@@ -56,7 +56,7 @@ public class GraphExecutorTests
 	{
 		// Now that the fake method is created we need to create the real Main method, taking string[] as input and converting the first two elements to TIn
 		var graph = new Graph();
-		var mainMethod = new NodeClassMethod(nodeClass, "Main", nodeClass.TypeFactory.Get<int>(), graph, true);
+		var mainMethod = new NodeClassMethod(nodeClass, "Main", nodeClass.TypeFactory.Void, graph, true);
 		nodeClass.Methods.Add(mainMethod);
 		graph.SelfMethod = mainMethod;
 
@@ -65,7 +65,6 @@ public class GraphExecutorTests
 		var entryNode = new EntryNode(graph);
 
 		var returnNode = new ReturnNode(graph);
-		returnNode.Inputs.Add(new("Result", entryNode, nodeClass.TypeFactory.Get<int>()));
 
 		var internalMethodCall = new MethodCall(graph);
 		internalMethodCall.SetMethodTarget(internalMethod);
@@ -94,7 +93,7 @@ public class GraphExecutorTests
 			graph.AddNode(arrayGet, false);
 
 			// Connect the array to the array get node
-			graph.Connect(entryNode.Outputs[index], arrayGet.Inputs[0], false); // Since we already incremented the index, this skips the "Exec" output of the entry node
+			graph.Connect(entryNode.Outputs[1], arrayGet.Inputs[0], false); // Since we already incremented the index, this skips the "Exec" output of the entry node
 
 			// Connect the array get to the parse method call
 			graph.Connect(arrayGet.Outputs[0], parseNode.Inputs[1], false);
@@ -144,7 +143,6 @@ public class GraphExecutorTests
 
 		// Connect the output of the internal method call to the return node
 		graph.Connect(internalMethodCall.Outputs[1], writeLine.Inputs[1], false);
-		graph.Connect(internalMethodCall.Outputs[1], returnNode.Inputs[1], false);
 
 
 		return graph;
@@ -204,7 +202,7 @@ public class GraphExecutorTests
 	{
 		var graph = CreateSimpleAddGraph<int, int>(out _, out _, out _);
 
-		var output = graph.Project.Run(options, [1, 2]);
+		var output = Run<int>(graph.Project, options, [1, 2]);
 
 		Assert.Equal(3, output);
 	}
@@ -215,7 +213,7 @@ public class GraphExecutorTests
 	{
 		var graph = CreateSimpleAddGraph<float, float>(out _, out _, out _);
 
-		var output = graph.Project.Run(options, [1.5f, 2f]);
+		var output = Run<float>(graph.Project, options, [1.5f, 2f]);
 
 		Assert.Equal(3.5f, output);
 	}
@@ -249,10 +247,10 @@ public class GraphExecutorTests
 		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0], false);
 		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0], false);
 
-		var output = graph.Project.Run(options, [1, 2]);
+		var output = Run<int>(graph.Project, options, [1, 2]);
 		Assert.Equal(0, output);
 
-		output = graph.Project.Run(options, [1, -2]);
+		output = Run<int>(graph.Project, options, [1, -2]);
 		Assert.Equal(1, output);
 	}
 
@@ -285,11 +283,11 @@ public class GraphExecutorTests
 		graph.Connect(branchNode.Outputs[0], returnNode1.Inputs[0], false);
 		graph.Connect(branchNode.Outputs[1], returnNode2.Inputs[0], false);
 
-		var output = graph.SelfClass.Project.Run(options, [1, 2]);
+		var output = Run<int>(graph.Project, options, [1, 2]);
 
 		Assert.Equal(0, output);
 
-		output = graph.SelfClass.Project.Run(options, [-1, -2]);
+		output = Run<int>(graph.Project, options, [-1, -2]);
 		Assert.Equal(1, output);
 	}
 }
