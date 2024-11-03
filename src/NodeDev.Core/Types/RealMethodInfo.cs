@@ -43,4 +43,6 @@ public class RealMethodInfo : IMethodInfo
 	{
 		return Method.GetParameters().Select(x => new RealMethodParameterInfo(x, TypeFactory, DeclaringRealType));
 	}
+
+	public MethodAttributes Attributes => Method.Attributes;
 }

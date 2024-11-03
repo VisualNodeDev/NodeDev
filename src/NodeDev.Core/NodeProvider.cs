@@ -47,9 +47,9 @@ namespace NodeDev.Core
             IEnumerable<NodeSearchResult> GetPropertiesAndFields(TypeBase type, string text)
             {
                 IEnumerable<IMemberInfo> members = type.GetMembers();
-                members = members.Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase)); // filter with the name
+                members = members.Where(x => (x.IsProperty || x.IsField) && x.Name.Contains(text, StringComparison.OrdinalIgnoreCase)); // filter with the name
 
-                IEnumerable<NodeSearchResult> results = members.Where(x => x.CanSet).Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x));
+                IEnumerable<NodeSearchResult> results = members.Where(x => x.CanGet).Select(x => new GetPropertyOrFieldNode(typeof(GetPropertyOrField), x));
                 results = results.Concat(members.Where(x => x.CanSet).Select(x => new SetPropertyOrFieldNode(typeof(SetPropertyOrField), x)));
 
                 return results;
@@ -79,9 +79,14 @@ namespace NodeDev.Core
             else if (startConnection?.Type.IsExec == false)
             {
                 // find if the method exists
-                var methods = startConnection.Type.GetMethods().Where(x => x.Name.Contains(text, StringComparison.OrdinalIgnoreCase) && !x.IsStatic);
-                // get extensions methods for the realType.BackendType
+                var methods = startConnection.Type
+					.GetMethods()
+					.Where(x => 
+						!x.Attributes.HasFlag(MethodAttributes.HideBySig) &&  // hide methods such as get/set of properties. Not sure if there's a better way to efficiently do this?
+						x.Name.Contains(text, StringComparison.OrdinalIgnoreCase) &&  // search with the text ignoring case
+						!x.IsStatic); // Since we're dragging out of a connection, we're expected to only want to execute instance methods
 
+                // get extensions methods for the realType.BackendType
                 methods = methods.Concat(GetExtensionMethods(startConnection.Type, project.TypeFactory)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
 
                 results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));

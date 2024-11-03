@@ -24,6 +24,8 @@ public interface IMethodInfo
     /// </summary>
     /// <returns></returns>
 	public MethodInfo CreateMethodInfo();
+
+	public MethodAttributes Attributes { get; }
 }
 
 public interface IMethodParameterInfo
