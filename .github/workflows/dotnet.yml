@@ -83,7 +83,7 @@ jobs:
       run: chmod -R +x ./src/NodeDev.Blazor.Server/bin
 
     - name: Ensure browsers are installed
-      run: pwsh ./src/NodeDev.EndToEndTests/bin/Debug/net8.0/playwright.ps1 install --with-deps
+      run: pwsh ./src/NodeDev.EndToEndTests/bin/Debug/net9.0/playwright.ps1 install --with-deps
 
     - name: Test
       env:

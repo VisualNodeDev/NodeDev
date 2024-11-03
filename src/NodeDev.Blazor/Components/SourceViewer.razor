@@ -94,7 +94,7 @@ else
 
         try
         {
-            Creator = Method.Graph.Project.CreateNodeClassTypeCreator(new(Core.Nodes.BuildExpressionOptions.Release, true));
+            Creator = Method.Graph.Project.CreateNodeClassTypeCreator(Core.BuildOptions.Debug with { PreBuildOnly = true });
             Creator.CreateProjectClassesAndAssembly();
 
             try

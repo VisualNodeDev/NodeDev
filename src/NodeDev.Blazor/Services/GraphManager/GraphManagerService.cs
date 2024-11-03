@@ -59,6 +59,8 @@ public class GraphManagerService
     /// <param name="initiatingConnection">The connection that initiated the propagation. This is used to avoid reupdating back and forth, sometimes erasing information in the process.</param>
     public void PropagateNewGeneric(Node node, IReadOnlyDictionary<string, TypeBase> changedGenerics, bool useInitialTypes, Connection? initiatingConnection, bool overrideInitialTypes)
     {
+		node.OnBeforeGenericTypeDefined(changedGenerics);
+
         bool hadAnyChanges = false;
         foreach (var port in node.InputsAndOutputs) // check if any of the ports have the generic we just solved
         {

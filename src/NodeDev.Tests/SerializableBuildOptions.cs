@@ -26,5 +26,6 @@ public class SerializableBuildOptions : IXunitSerializable
     }
 
     // implicit conversion between SerializableBuildOptions and BuildOptions
-    public static implicit operator BuildOptions(SerializableBuildOptions options) => options.Debug ? BuildOptions.Debug : BuildOptions.Release;
+    public static implicit operator BuildOptions(SerializableBuildOptions options) => 
+		new (options.Debug ? BuildExpressionOptions.Debug : BuildExpressionOptions.Release, false, Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()));
 }

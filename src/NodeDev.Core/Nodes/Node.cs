@@ -61,7 +61,13 @@ namespace NodeDev.Core.Nodes
 		/// </summary>
 		public int GraphIndex { get; set; } = -1;
 
-		public IEnumerable<string> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
+		public virtual IEnumerable<string> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
+
+		/// <summary>
+		/// Called before the generic type are set on every connections
+		/// </summary>
+		public virtual void OnBeforeGenericTypeDefined(IReadOnlyDictionary<string, TypeBase> changedGenerics) {}
+
 
 		public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
 		public virtual IEnumerable<AlternateOverload> AlternatesOverloads => [];
@@ -291,7 +297,6 @@ namespace NodeDev.Core.Nodes
 				Outputs.Add(connection);
 			}
 		}
-
 
 		#endregion
 	}

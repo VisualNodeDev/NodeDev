@@ -20,27 +20,25 @@ public class NodeClassTypeCreatorTests
 
 		myClass.Properties.Add(new(myClass, "MyProp", project.TypeFactory.Get<float>()));
 
-		var creator = project.CreateNodeClassTypeCreator(options);
+		var buildOptions = (BuildOptions)options;
+		var path = project.Build(buildOptions);
+		try
+		{
+			var assembly = Assembly.Load(File.ReadAllBytes(path));
 
-		creator.CreateProjectClassesAndAssembly();
+			Assert.Single(assembly.DefinedTypes, x => x.IsVisible);
+			Assert.Contains(assembly.DefinedTypes, x => x.Name == "TestClass");
 
-		Assert.NotNull(creator.Assembly);
+			var instance = assembly.CreateInstance(myClass.Name);
 
-		//var inMemoryAssemblyStream = new MemoryStream();
-		//creator.Assembly.Save(inMemoryAssemblyStream);
-		//inMemoryAssemblyStream.Position = 0;
-
-		//var assembly = Assembly.Load(inMemoryAssemblyStream.ToArray());
-		
-		var assembly = creator.Assembly;
-
-		Assert.Single(assembly.DefinedTypes, x => x.IsVisible);
-		Assert.Contains(assembly.DefinedTypes, x => x.Name == "TestClass");
-
-		var instance = assembly.CreateInstance(myClass.Name);
-
-		Assert.NotNull(instance);
-		Assert.Equal(creator.GeneratedTypes[project.GetNodeClassType(myClass)].Type.FullName!, instance.GetType().FullName);
+			Assert.NotNull(instance);
+			Assert.NotNull(project.NodeClassTypeCreator);
+			Assert.Equal(project.NodeClassTypeCreator.GeneratedTypes[project.GetNodeClassType(myClass)].Type.FullName!, instance.GetType().FullName);
+		}
+		finally
+		{
+			Directory.Delete(buildOptions.OutputPath, true);
+		}
 	}
 
 	[Fact]
@@ -52,9 +50,9 @@ public class NodeClassTypeCreatorTests
 	}
 
 
-    [Theory]
-    [MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
-    public void SimpleAddGenerationTest(SerializableBuildOptions options)
+	[Theory]
+	[MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
+	public void SimpleAddGenerationTest(SerializableBuildOptions options)
 	{
 		var graph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
 
@@ -62,9 +60,9 @@ public class NodeClassTypeCreatorTests
 		creator.CreateProjectClassesAndAssembly();
 	}
 
-    [Theory]
-    [MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
-    public void TestNewGetSet(SerializableBuildOptions options)
+	[Theory]
+	[MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
+	public async Task TestNewGetSet(SerializableBuildOptions options)
 	{
 		var project = new Project(Guid.NewGuid());
 
@@ -75,10 +73,10 @@ public class NodeClassTypeCreatorTests
 		myClass.Properties.Add(prop);
 
 		var graph = new Graph();
-		var method = new NodeClassMethod(myClass, "Main", myClass.TypeFactory.Get<int>(), graph);
+		var method = new NodeClassMethod(myClass, "MainInternal", myClass.TypeFactory.Get<int>(), graph);
 		method.IsStatic = true;
 		myClass.Methods.Add(method);
-		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method));
+		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method)); // TODO REMOVE
 
 		var entryNode = new EntryNode(graph);
 
@@ -111,7 +109,9 @@ public class NodeClassTypeCreatorTests
 		graph.Connect(newNode.Outputs[1], getProp.Inputs[0], false);
 		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1], false);
 
-		var result = project.Run(options, [10]);
+		GraphExecutorTests.CreateStaticMainWithConversion(myClass, method);
+
+		var result = GraphExecutorTests.Run<int>(project, options, 10);
 
 		Assert.Equal(10, result);
 	}
