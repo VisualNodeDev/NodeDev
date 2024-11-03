@@ -325,7 +325,7 @@ public class GraphExecutorTests
         graph.Connect(tryCatchNode.Outputs[1], catchReturnNode.Inputs[0], false);
 
         var parseNode = new Core.Nodes.MethodCall(graph);
-        parseNode.SetMethodTarget(typeof(int).GetMethod("Parse", new[] { typeof(string) })!);
+        parseNode.SetMethodTarget(new RealMethodInfo(nodeClass.TypeFactory, typeof(int).GetMethod("Parse", new[] { typeof(string) })!, nodeClass.TypeFactory.Get<int>()));
         parseNode.Inputs[0].UpdateTextboxText("invalid");
         graph.AddNode(parseNode, false);
         graph.Connect(tryCatchNode.Outputs[0], parseNode.Inputs[0], false);
