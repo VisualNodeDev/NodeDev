@@ -38,7 +38,7 @@ public class TryCatchNode : FlowNode
         var finallyBlock = Expression.Block(Graph.BuildExpression(subChunks[Outputs[2]], info));
 
         var exceptionVariable = Expression.Variable(typeof(Exception), "ex");
-        info.LocalVariables[3] = exceptionVariable; // Make sure other pieces of code use the right variable for that exception
+        info.LocalVariables[Outputs[3]] = exceptionVariable; // Make sure other pieces of code use the right variable for that exception
 
         var catchClause = Expression.Catch(exceptionVariable, catchBlock);
 
