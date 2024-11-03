@@ -195,4 +195,43 @@ public class GraphExecutorTests
 
         Assert.Equal(1, output);
     }
+
+    // This test validates the ThrowNode by simulating a scenario where an exception is thrown.
+    // The test sets up a graph with an entry node, a ThrowNode, and a return node.
+    // The ThrowNode throws an exception, which is expected to break the flow.
+    // The test asserts that the exception is thrown and caught outside the graph execution.
+    [Theory]
+    [MemberData(nameof(GetBuildOptions))]
+    public void TestThrowNode(SerializableBuildOptions options)
+    {
+        var project = new Project(Guid.NewGuid());
+        var nodeClass = new NodeClass("Program", "Test", project);
+        project.Classes.Add(nodeClass);
+
+        var graph = new Graph();
+        var method = new NodeClassMethod(nodeClass, "Main", nodeClass.TypeFactory.Get<int>(), graph);
+        method.IsStatic = true;
+        nodeClass.Methods.Add(method);
+        graph.SelfMethod = nodeClass.Methods.First();
+
+        var entryNode = new Core.Nodes.Flow.EntryNode(graph);
+        var throwNode = new Core.Nodes.Flow.ThrowNode(graph);
+
+        graph.AddNode(entryNode, false);
+        graph.AddNode(throwNode, false);
+
+        var newNode = new Core.Nodes.New(graph);
+        newNode.Outputs[0].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<Exception>(), overrideInitialType: true);
+        newNode.Inputs.Add(new("Message", newNode, nodeClass.TypeFactory.Get<string>()));
+        newNode.Inputs[1].UpdateTextboxText("Test Exception");
+        graph.AddNode(newNode, false);
+
+        graph.Connect(entryNode.Outputs[0], newNode.Inputs[0], false);
+        graph.Connect(newNode.Outputs[0], throwNode.Inputs[0], false);
+        graph.Connect(newNode.Outputs[1], throwNode.Inputs[1], false);
+
+        var output = Assert.Throws<Exception>(() => graph.Project.Run(options));
+
+        Assert.Equal("Test Exception", output.Message);
+    }
 }

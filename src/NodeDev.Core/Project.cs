@@ -1,4 +1,4 @@
-﻿using NodeDev.Core.Class;
+using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
 using NodeDev.Core.Migrations;
 using NodeDev.Core.Nodes;
@@ -114,10 +114,6 @@ public class Project
 
             var main = program.GetType().GetMethod("Main")!;
             return main.Invoke(program, inputs);
-        }
-        catch (Exception ex)
-        {
-            return null;
         }
         finally
         {
