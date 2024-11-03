@@ -23,12 +23,12 @@ public class ArrayGet : NoFlowNode
 		Outputs.Add(new("Obj", this, undefinedT));
 	}
 
-	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
+	internal override void BuildInlineExpression(BuildExpressionInfo info)
 	{
 		if (!Inputs[0].Type.IsArray)
 			throw new Exception("ArrayGet.Inputs[0] should be an array type");
 
 		var arrayIndex = Expression.ArrayIndex(info.LocalVariables[Inputs[0]], info.LocalVariables[Inputs[1]]);
-        return Expression.Assign(info.LocalVariables[Outputs[1]], arrayIndex);
+		info.LocalVariables[Outputs[0]] = arrayIndex;
 	}
 }

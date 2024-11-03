@@ -79,9 +79,10 @@ public class Hooks
     [BeforeScenario] // -> Notice how we're doing these steps before each scenario
     public async Task RegisterSingleInstancePractitioner()
     {
-        //Initialise Playwright
+        //Initialize Playwright
         var playwright = await Playwright.CreateAsync();
-        //Initialise a browser - 'Chromium' can be changed to 'Firefox' or 'Webkit'
+
+        //Initialize a browser - 'Chromium' can be changed to 'Firefox' or 'Web kit
         var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
             Headless = Environment.GetEnvironmentVariable("HEADLESS") == "true" // -> Use this option to be able to see your test running
@@ -96,7 +97,7 @@ public class Hooks
 			}
 		});
 
-        //Initialise a page on the browser context.
+        //Initialize a page on the browser context.
         User = await context1.NewPageAsync();
 
         for (int i = 0; ; ++i)

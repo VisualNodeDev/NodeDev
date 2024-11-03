@@ -30,7 +30,7 @@ public class SerializationTests
     [MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
     public void TestSerializationMethodCall(SerializableBuildOptions options)
 	{
-		var simpleGraph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _, isStatic: false);
+		var simpleGraph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
 		var project = simpleGraph.SelfClass.Project;
 
 		var testClass = new NodeClass("MyClass2", "Test", project);

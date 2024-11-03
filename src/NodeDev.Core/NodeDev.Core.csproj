@@ -16,5 +16,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Dis2Msil\Dis2Msil\Dis2Msil.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="Dependencies\System.Reflection.Emit.dll">
+    </EmbeddedResource>
+  </ItemGroup>
 
 </Project>

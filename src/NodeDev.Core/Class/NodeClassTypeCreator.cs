@@ -15,7 +15,7 @@ public class NodeClassTypeCreator
     public static string HiddenName(string name) => $"_hidden_{name}";
     private static GeneratedType CreateGeneratedType(ModuleBuilder mb, string name) => new(mb.DefineType(name, TypeAttributes.Public | TypeAttributes.Class), mb.DefineType(HiddenName(name), TypeAttributes.NotPublic | TypeAttributes.Class | TypeAttributes.Sealed), []);
 
-    public PersistedAssemblyBuilder? Assembly { get; private set; }
+    public AssemblyBuilder? Assembly { get; private set; }
 
     public readonly Project Project;
 
@@ -31,14 +31,28 @@ public class NodeClassTypeCreator
         Options = buildOptions;
     }
 
+	private static Assembly TemporaryReflectionAssembly;
     public void CreateProjectClassesAndAssembly()
-    {
-        // https://learn.microsoft.com/en-us/dotnet/api/system.reflection.emit.assemblybuilder?view=net-7.0
-        var persisted = new PersistedAssemblyBuilder(new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly);
-        Assembly = persisted;
+	{
+		// TODO Remove this when the new System.Reflection.Emit is available in .NET 10
+		if (TemporaryReflectionAssembly == null)
+		{
+			var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+			using var stream = assembly.GetManifestResourceStream("NodeDev.Core.Dependencies.System.Reflection.Emit.dll")!;
+			var bytes = new byte[stream.Length];
+			stream.ReadExactly(bytes);
+			TemporaryReflectionAssembly = System.Reflection.Assembly.Load(bytes);
+		}
+		var persisted = Activator.CreateInstance(TemporaryReflectionAssembly.ExportedTypes.First(), new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly, null)!;
+		Assembly = (AssemblyBuilder)persisted;
 
-        // The module name is usually the same as the assembly name.
-        var mb = persisted.DefineDynamicModule(persisted.GetName().Name!);
+
+		// https://learn.microsoft.com/en-us/dotnet/api/system.reflection.emit.assemblybuilder?view=net-7.0
+		//var persisted = new PersistedAssemblyBuilder(new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly);
+		//Assembly = persisted;
+
+		// The module name is usually the same as the assembly name.
+		var mb = Assembly.DefineDynamicModule(Assembly.GetName().Name!);
 
         // Creating all the types early so they are all accessible during expression tree generation
         foreach (var nodeClass in Project.Classes)

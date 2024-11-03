@@ -62,9 +62,9 @@ public class NodeClassTypeCreatorTests
 		creator.CreateProjectClassesAndAssembly();
 	}
 
-    [Theory]
+	[Theory]
     [MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
-    public void TestNewGetSet(SerializableBuildOptions options)
+    public async Task TestNewGetSet(SerializableBuildOptions options)
 	{
 		var project = new Project(Guid.NewGuid());
 
@@ -75,10 +75,10 @@ public class NodeClassTypeCreatorTests
 		myClass.Properties.Add(prop);
 
 		var graph = new Graph();
-		var method = new NodeClassMethod(myClass, "Main", myClass.TypeFactory.Get<int>(), graph);
+		var method = new NodeClassMethod(myClass, "MainInternal", myClass.TypeFactory.Get<int>(), graph);
 		method.IsStatic = true;
 		myClass.Methods.Add(method);
-		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method));
+		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method)); // TODO REMOVE
 
 		var entryNode = new EntryNode(graph);
 
@@ -111,7 +111,9 @@ public class NodeClassTypeCreatorTests
 		graph.Connect(newNode.Outputs[1], getProp.Inputs[0], false);
 		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1], false);
 
-		var result = project.Run(options, [10]);
+		GraphExecutorTests.CreateStaticMainWithConversion(myClass, method);
+
+		var result = GraphExecutorTests.Run<int>(project, options, 10);
 
 		Assert.Equal(10, result);
 	}
