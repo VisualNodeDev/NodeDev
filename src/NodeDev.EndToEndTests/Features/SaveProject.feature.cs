@@ -28,34 +28,41 @@ namespace NodeDev.EndToEndTests.Features
         
         private static string[] featureTags = ((string[])(null));
         
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Save a project to file system", null, global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        
 #line 1 "SaveProject.feature"
 #line hidden
         
         [NUnit.Framework.OneTimeSetUpAttribute()]
-        public virtual async System.Threading.Tasks.Task FeatureSetupAsync()
+        public static async System.Threading.Tasks.Task FeatureSetupAsync()
         {
-            testRunner = global::Reqnroll.TestRunnerManager.GetTestRunnerForAssembly();
-            global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Save a project to file system", null, global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
-            await testRunner.OnFeatureStartAsync(featureInfo);
         }
         
         [NUnit.Framework.OneTimeTearDownAttribute()]
-        public virtual async System.Threading.Tasks.Task FeatureTearDownAsync()
+        public static async System.Threading.Tasks.Task FeatureTearDownAsync()
         {
-            await testRunner.OnFeatureEndAsync();
-            global::Reqnroll.TestRunnerManager.ReleaseTestRunner(testRunner);
-            testRunner = null;
         }
         
         [NUnit.Framework.SetUpAttribute()]
         public async System.Threading.Tasks.Task TestInitializeAsync()
         {
+            testRunner = global::Reqnroll.TestRunnerManager.GetTestRunnerForAssembly(featureHint: featureInfo);
+            if (((testRunner.FeatureContext != null) 
+                        && (testRunner.FeatureContext.FeatureInfo.Equals(featureInfo) == false)))
+            {
+                await testRunner.OnFeatureEndAsync();
+            }
+            if ((testRunner.FeatureContext == null))
+            {
+                await testRunner.OnFeatureStartAsync(featureInfo);
+            }
         }
         
         [NUnit.Framework.TearDownAttribute()]
         public async System.Threading.Tasks.Task TestTearDownAsync()
         {
             await testRunner.OnScenarioEndAsync();
+            global::Reqnroll.TestRunnerManager.ReleaseTestRunner(testRunner);
         }
         
         public void ScenarioInitialize(global::Reqnroll.ScenarioInfo scenarioInfo)
