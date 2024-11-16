@@ -95,13 +95,12 @@ else
         try
         {
             var temp = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            //var assemblyPath = Method.Graph.Project.Build(Core.BuildOptions.Debug with { OutputPath = temp });
-            Method.Graph.Project.BuildAndGetAssembly(Core.BuildOptions.Debug);
+            var assemblyPath = Method.Graph.Project.Build(Core.BuildOptions.Debug with { OutputPath = temp });
             Creator = Method.Graph.Project.NodeClassTypeCreator;
 
             try
             {
-                Creator!.GetBodyAsCsAndMsilCode("", Method, out CodeCs, out CodeMsil);
+                Creator!.GetBodyAsCsAndMsilCode(assemblyPath, Method, out CodeCs, out CodeMsil);
 
                 CodeCs = $"// Pseudo code for debugging.{System.Environment.NewLine}// This is not the actual code executed, we execute IL directly!{System.Environment.NewLine}{CodeCs}";
 

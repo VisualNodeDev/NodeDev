@@ -190,7 +190,8 @@ public class GraphExecutorTests
 		finally
 		{
 			// Clean up
-			Directory.Delete(buildOptions.OutputPath, true);
+			if(Directory.Exists(buildOptions.OutputPath))
+				Directory.Delete(buildOptions.OutputPath, true);
 		}
 	}
 
@@ -346,7 +347,6 @@ public class GraphExecutorTests
 
         Assert.Equal(1, output);
     }
-}
 
 	[Theory]
 	[MemberData(nameof(GetBuildOptions))]
@@ -367,12 +367,13 @@ public class GraphExecutorTests
 		graph.AddNode(entryNode, false);
 
 		var declareVariableNode = new DeclareVariableNode(graph, "Variable");
-		declareVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true);
-		declareVariableNode.Outputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true);
+		declareVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Initial value
+		declareVariableNode.Outputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Variable
 		graph.AddNode(declareVariableNode, false);
 
 		var setVariableValueNode = new SetVariableValueNode(graph, "SetVariable");
-		setVariableValueNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true);
+		setVariableValueNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Variable
+		setVariableValueNode.Inputs[2].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Value
 		graph.AddNode(setVariableValueNode, false);
 
 		var returnNode = new ReturnNode(graph);
@@ -380,9 +381,10 @@ public class GraphExecutorTests
 
 		graph.Connect(entryNode.Outputs[0], declareVariableNode.Inputs[0], false);
 		graph.Connect(declareVariableNode.Outputs[0], setVariableValueNode.Inputs[0], false);
-		graph.Connect(entryNode.Outputs[1], setVariableValueNode.Inputs[1], false);
+		graph.Connect(declareVariableNode.Outputs[1], setVariableValueNode.Inputs[1], false);
+		graph.Connect(entryNode.Outputs[1], setVariableValueNode.Inputs[2], false);
 		graph.Connect(setVariableValueNode.Outputs[0], returnNode.Inputs[0], false);
-		graph.Connect(declareVariableNode.Outputs[0], returnNode.Inputs[1], false);
+		graph.Connect(declareVariableNode.Outputs[1], returnNode.Inputs[1], false);
 
 		CreateStaticMainWithConversion(nodeClass, method);
 
