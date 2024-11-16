@@ -190,7 +190,8 @@ public class GraphExecutorTests
 		finally
 		{
 			// Clean up
-			Directory.Delete(buildOptions.OutputPath, true);
+			if(Directory.Exists(buildOptions.OutputPath))
+				Directory.Delete(buildOptions.OutputPath, true);
 		}
 	}
 
@@ -317,33 +318,133 @@ public class GraphExecutorTests
         graph.AddNode(entryNode, false);
         graph.AddNode(tryCatchNode, false);
 
-        graph.Connect(entryNode.Outputs[0], tryCatchNode.Inputs[0], false);
+		// Create local variable
+		var declareVariableNode = new DeclareVariableNode(graph);
+		declareVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Initial value
+		declareVariableNode.Outputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Variable
+		graph.AddNode(declareVariableNode, false);
 
-		var catchReturnNode = new ReturnNode(graph);
-        catchReturnNode.Inputs.Add(new("Result", catchReturnNode, nodeClass.TypeFactory.Get<int>()));
-        catchReturnNode.Inputs[1].UpdateTextboxText("1");
-        graph.AddNode(catchReturnNode, false);
-        graph.Connect(tryCatchNode.Outputs[1], catchReturnNode.Inputs[0], false);
+		graph.Connect(entryNode.Outputs[0], declareVariableNode.Inputs[0], false);
+		graph.Connect(declareVariableNode.Outputs[0], tryCatchNode.Inputs[0], false);
 
-        var parseNode = new MethodCall(graph);
+		var returnNode = new ReturnNode(graph);
+		graph.Connect(declareVariableNode.Outputs[1], returnNode.Inputs[1], false);
+		graph.AddNode(returnNode, false);
+
+		// Create the catch block body
+		var catchVariableNode = new SetVariableValueNode(graph);
+		catchVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Variable
+		catchVariableNode.Inputs[2].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Value
+		catchVariableNode.Inputs[2].UpdateTextboxText("2");
+        graph.AddNode(catchVariableNode, false);
+        graph.Connect(tryCatchNode.Outputs[1], catchVariableNode.Inputs[0], false);
+		graph.Connect(declareVariableNode.Outputs[1], catchVariableNode.Inputs[1], false);
+		graph.Connect(catchVariableNode.Outputs[0], returnNode.Inputs[0], false);
+
+		// Create the try block body
+		var parseNode = new MethodCall(graph);
         parseNode.SetMethodTarget(new RealMethodInfo(nodeClass.TypeFactory, typeof(int).GetMethod("Parse", new[] { typeof(string) })!, nodeClass.TypeFactory.Get<int>()));
-        parseNode.Inputs[0].UpdateTextboxText("invalid");
+        parseNode.Inputs[1].UpdateTextboxText("invalid");
         graph.AddNode(parseNode, false);
         graph.Connect(tryCatchNode.Outputs[0], parseNode.Inputs[0], false);
 
-        var tryReturnNode = new ReturnNode(graph);
-        tryReturnNode.Inputs.Add(new("Result", tryReturnNode, nodeClass.TypeFactory.Get<int>()));
-        tryReturnNode.Inputs[1].UpdateTextboxText("0");
-        graph.AddNode(tryReturnNode, false);
-		// Both the try and finally merge to the same "return", as there is nothing to actually put in the "finally" we can reuse the same return for simplicity
-        graph.Connect(parseNode.Outputs[0], tryReturnNode.Inputs[0], false);
-        graph.Connect(tryCatchNode.Outputs[2], tryReturnNode.Inputs[0], false);
+		var tryVariableNode = new SetVariableValueNode(graph);
+		tryVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Variable
+		tryVariableNode.Inputs[2].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Value
+		tryVariableNode.Inputs[2].UpdateTextboxText("1");
+		graph.AddNode(tryVariableNode, false);
 
+		graph.Connect(parseNode.Outputs[0], tryVariableNode.Inputs[0], false);
+		graph.Connect(declareVariableNode.Outputs[1], tryVariableNode.Inputs[1], false);
+		graph.Connect(tryVariableNode.Outputs[0], returnNode.Inputs[0], false);
 
 		CreateStaticMainWithConversion(nodeClass, method);
 		
 		var output = Run<int>(project, options);
 
-        Assert.Equal(1, output);
+        Assert.Equal(2, output);
     }
+
+	[Theory]
+	[MemberData(nameof(GetBuildOptions))]
+	public void TestDeclareAndSetVariable(SerializableBuildOptions options)
+	{
+		var project = new Project(Guid.NewGuid());
+		var nodeClass = new NodeClass("Program", "Test", project);
+		project.Classes.Add(nodeClass);
+
+		var graph = new Graph();
+		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph, true);
+		nodeClass.Methods.Add(method);
+		graph.SelfMethod = method;
+
+		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<int>(), method));
+
+		var entryNode = new EntryNode(graph);
+		graph.AddNode(entryNode, false);
+
+		var declareVariableNode = new DeclareVariableNode(graph);
+		declareVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Initial value
+		declareVariableNode.Outputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Variable
+		graph.AddNode(declareVariableNode, false);
+
+		var setVariableValueNode = new SetVariableValueNode(graph);
+		setVariableValueNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Variable
+		setVariableValueNode.Inputs[2].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Value
+		graph.AddNode(setVariableValueNode, false);
+
+		var returnNode = new ReturnNode(graph);
+		graph.AddNode(returnNode, false);
+
+		graph.Connect(entryNode.Outputs[0], declareVariableNode.Inputs[0], false);
+		graph.Connect(declareVariableNode.Outputs[0], setVariableValueNode.Inputs[0], false);
+		graph.Connect(declareVariableNode.Outputs[1], setVariableValueNode.Inputs[1], false);
+		graph.Connect(entryNode.Outputs[1], setVariableValueNode.Inputs[2], false);
+		graph.Connect(setVariableValueNode.Outputs[0], returnNode.Inputs[0], false);
+		graph.Connect(declareVariableNode.Outputs[1], returnNode.Inputs[1], false);
+
+		CreateStaticMainWithConversion(nodeClass, method);
+
+		var output = Run<int>(graph.Project, options, [5]);
+
+		Assert.Equal(5, output);
+	}
+
+	[Theory]
+	[MemberData(nameof(GetBuildOptions))]
+	public void TestDeclareVariableDefaultValue(SerializableBuildOptions options)
+	{
+		var project = new Project(Guid.NewGuid());
+		var nodeClass = new NodeClass("Program", "Test", project);
+		project.Classes.Add(nodeClass);
+
+		var graph = new Graph();
+		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph, true);
+		nodeClass.Methods.Add(method);
+		graph.SelfMethod = method;
+
+		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<int>(), method));
+
+		var entryNode = new EntryNode(graph);
+		graph.AddNode(entryNode, false);
+
+		var declareVariableNode = new DeclareVariableNode(graph);
+		declareVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true);
+		declareVariableNode.Outputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true);
+		graph.AddNode(declareVariableNode, false);
+
+		var returnNode = new ReturnNode(graph);
+		graph.AddNode(returnNode, false);
+
+		graph.Connect(entryNode.Outputs[0], declareVariableNode.Inputs[0], false);
+		graph.Connect(entryNode.Outputs[1], declareVariableNode.Inputs[1], false);
+		graph.Connect(declareVariableNode.Outputs[0], returnNode.Inputs[0], false);
+		graph.Connect(declareVariableNode.Outputs[1], returnNode.Inputs[1], false);
+
+		CreateStaticMainWithConversion(nodeClass, method);
+
+		var output = Run<int>(graph.Project, options, [5]);
+
+		Assert.Equal(5, output);
+	}
 }
