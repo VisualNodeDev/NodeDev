@@ -5,6 +5,7 @@ using FastExpressionCompiler;
 using Dis2Msil;
 using System.Text;
 using System.Runtime.Loader;
+using System.Linq.Expressions;
 
 namespace NodeDev.Core.Class;
 
@@ -46,7 +47,6 @@ public class NodeClassTypeCreator
 		}
 		var persisted = Activator.CreateInstance(TemporaryReflectionAssembly.ExportedTypes.First(), new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly, null)!;
 		Assembly = (AssemblyBuilder)persisted;
-
 
 		// https://learn.microsoft.com/en-us/dotnet/api/system.reflection.emit.assemblybuilder?view=net-7.0
 		//var persisted = new PersistedAssemblyBuilder(new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly);

@@ -116,16 +116,11 @@ else
 
                 CodeCs += $"{System.Environment.NewLine}*/";
             }
-            catch (Exception ex)
-            {
-                CodeCs = $"/* Error during code generation: {System.Environment.NewLine}{ex}{System.Environment.NewLine}*/";
-                CodeMsil = "";
-            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            Creator = null;
-            return;
+            CodeCs = $"/* Error during code generation: {System.Environment.NewLine}{ex}{System.Environment.NewLine}*/";
+            CodeMsil = "";
         }
     }
 }

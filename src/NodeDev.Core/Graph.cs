@@ -73,6 +73,9 @@ public class Graph
     {
         internal bool ContainOutput(Connection output)
         {
+			if (OutputStartPoint == output)
+				return true;
+
             foreach (var part in Chunks)
             {
                 if (part.ContainOutput(output))
@@ -107,8 +110,33 @@ public class Graph
         {
             if (currentInput.Parent.Outputs.Count(x => x.Type.IsExec) <= 1) // we can keep adding to the straight path. It's either a dead end or the path keeps going
             {
-                // find the next output node to follow
-                var output = currentInput.Parent.Outputs.FirstOrDefault(x => x.Type.IsExec && x != execOutput);
+				if (currentInput.Connections.Count != 1)
+				{
+					// We reached a merging point. We need to validate if this merging point was already validated by the last chunk. It is possible that we are in a junction like so :
+					// if(...)
+					// {
+					//    if(...)
+					//    {
+					//       ...
+					//    }
+					//    else
+					//    {
+					//       ...
+					//    }
+					// }
+					// else
+					// {
+					//    ...
+					// }
+					// ... <- we are here
+					// If we are indeed in this scenario, everything from the first "if" should be in the "chunks"
+					// We can check any merge point of the last chunk. They should all either be the same of null
+					if(chunks.LastOrDefault()?.SubChunk?.Values?.FirstOrDefault(x => x.InputMergePoint != null)?.InputMergePoint != currentInput)
+						return new NodePathChunks(execOutput, chunks, currentInput, null); // we reached a merging point
+				}
+
+				// find the next output node to follow
+				var output = currentInput.Parent.Outputs.FirstOrDefault(x => x.Type.IsExec && x != execOutput);
                 var nextInput = output?.Connections.FirstOrDefault(); // get the next input, there's either 1 or none
 
                 if (nextInput == null)
@@ -280,7 +308,7 @@ public class Graph
             .Distinct() // lots of inputs use the same variable as another node's output, make sure we only declare them once
             .Except(info.MethodParametersExpression.Values); // Remove the method parameters as they are declared later and not here
 
-        var expressionBlock = Expression.Block(localVariables, expressions.Append(Expression.Label(returnLabelTarget, Expression.Default(returnLabelTarget.Type))));
+        var expressionBlock = Expression.Block(localVariables, expressions.Append(returnLabel));
 
         var parameters = SelfMethod.IsStatic ? info.MethodParametersExpression.Values : info.MethodParametersExpression.Values.Prepend(info.ThisExpression!);
         var lambdaExpression = Expression.Lambda(expressionBlock, parameters);
