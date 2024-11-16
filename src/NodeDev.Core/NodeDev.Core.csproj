@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="FastExpressionCompiler" Version="4.2.2" />
-    <PackageReference Include="NuGet.Versioning" Version="6.11.1" />
+    <PackageReference Include="NuGet.Versioning" Version="6.12.1" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
 
