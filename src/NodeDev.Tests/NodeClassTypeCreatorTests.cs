@@ -81,7 +81,6 @@ public class NodeClassTypeCreatorTests
 		var entryNode = new EntryNode(graph);
 
 		var returnNode = new ReturnNode(graph);
-		returnNode.Inputs.Add(new("Result", entryNode, myClass.TypeFactory.Get<int>()));
 
 		var newNode = new New(graph);
 		newNode.Outputs[1].UpdateTypeAndTextboxVisibility(myClass.ClassTypeBase, overrideInitialType: true);

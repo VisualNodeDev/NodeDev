@@ -29,7 +29,6 @@ public class GraphExecutorTests
 		entryNode = new EntryNode(graph);
 
 		returnNode = new ReturnNode(graph);
-		returnNode.Inputs.Add(new("Result", entryNode, nodeClass.TypeFactory.Get<TOut>()));
 
 		addNode = new Core.Nodes.Math.Add(graph);
 
@@ -236,7 +235,6 @@ public class GraphExecutorTests
 		graph.Connect(addNode.Outputs[0], smallerThan.Inputs[0], false);
 
 		var returnNode2 = new Core.Nodes.Flow.ReturnNode(graph);
-		returnNode2.Inputs.Add(new("Result", entryNode, graph.SelfClass.TypeFactory.Get<int>()));
 		returnNode2.Inputs[1].UpdateTextboxText("0");
 		graph.AddNode(returnNode2, false);
 
@@ -273,7 +271,6 @@ public class GraphExecutorTests
 
 		var returnNode2 = new Core.Nodes.Flow.ReturnNode(graph);
 		graph.AddNode(returnNode2, false);
-		returnNode2.Inputs.Add(new("Result", entryNode, graph.SelfClass.TypeFactory.Get<int>()));
 		returnNode2.Inputs[1].UpdateTextboxText("0");
 
 		var branchNode = new Core.Nodes.Flow.Branch(graph);
