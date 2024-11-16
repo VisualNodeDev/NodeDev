@@ -81,11 +81,11 @@ public class Project
 
 		var programClass = new NodeClass("Program", "NewProject", project);
 
-		main = new NodeClassMethod(programClass, "Main", project.TypeFactory.Get(typeof(void), null), new Graph());
-		main.IsStatic = true;
+		main = new NodeClassMethod(programClass, "Main", project.TypeFactory.Get<int>(), new Graph(), true);
 
 		var entry = new EntryNode(main.Graph);
 		var returnNode = new ReturnNode(main.Graph);
+		returnNode.Inputs[1].UpdateTextboxText("0");
 		main.Graph.AddNode(entry, false);
 		main.Graph.AddNode(returnNode, false);
 		programClass.Methods.Add(main);
@@ -165,7 +165,7 @@ public class Project
 		return "";
 	}
 
-	private AssemblyBuilder BuildAndGetAssembly(BuildOptions buildOptions)
+	public AssemblyBuilder BuildAndGetAssembly(BuildOptions buildOptions)
 	{
 		CreateNodeClassTypeCreator(buildOptions);
 

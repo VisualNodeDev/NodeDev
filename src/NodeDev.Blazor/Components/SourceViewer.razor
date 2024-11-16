@@ -95,12 +95,13 @@ else
         try
         {
             var temp = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            var assemblyPath = Method.Graph.Project.Build(Core.BuildOptions.Debug with { OutputPath = temp });
+            //var assemblyPath = Method.Graph.Project.Build(Core.BuildOptions.Debug with { OutputPath = temp });
+            Method.Graph.Project.BuildAndGetAssembly(Core.BuildOptions.Debug);
             Creator = Method.Graph.Project.NodeClassTypeCreator;
 
             try
             {
-                Creator!.GetBodyAsCsAndMsilCode(assemblyPath, Method, out CodeCs, out CodeMsil);
+                Creator!.GetBodyAsCsAndMsilCode("", Method, out CodeCs, out CodeMsil);
 
                 CodeCs = $"// Pseudo code for debugging.{System.Environment.NewLine}// This is not the actual code executed, we execute IL directly!{System.Environment.NewLine}{CodeCs}";
 
@@ -116,16 +117,11 @@ else
 
                 CodeCs += $"{System.Environment.NewLine}*/";
             }
-            catch (Exception ex)
-            {
-                CodeCs = $"/* Error during code generation: {System.Environment.NewLine}{ex}{System.Environment.NewLine}*/";
-                CodeMsil = "";
-            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            Creator = null;
-            return;
+            CodeCs = $"/* Error during code generation: {System.Environment.NewLine}{ex}{System.Environment.NewLine}*/";
+            CodeMsil = "";
         }
     }
 }

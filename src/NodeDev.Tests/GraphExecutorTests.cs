@@ -305,32 +305,33 @@ public class GraphExecutorTests
         project.Classes.Add(nodeClass);
 
         var graph = new Graph();
-        var method = new NodeClassMethod(nodeClass, "Main", nodeClass.TypeFactory.Get<int>(), graph);
+        var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph);
         method.IsStatic = true;
         nodeClass.Methods.Add(method);
         graph.SelfMethod = nodeClass.Methods.First();
 
-        var entryNode = new Core.Nodes.Flow.EntryNode(graph);
-        var tryCatchNode = new Core.Nodes.Flow.TryCatchNode(graph);
+        var entryNode = new EntryNode(graph);
+        var tryCatchNode = new TryCatchNode(graph);
+		tryCatchNode.Outputs[3].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<Exception>(), overrideInitialType: true);
 
         graph.AddNode(entryNode, false);
         graph.AddNode(tryCatchNode, false);
 
         graph.Connect(entryNode.Outputs[0], tryCatchNode.Inputs[0], false);
 
-        var catchReturnNode = new Core.Nodes.Flow.ReturnNode(graph);
+		var catchReturnNode = new ReturnNode(graph);
         catchReturnNode.Inputs.Add(new("Result", catchReturnNode, nodeClass.TypeFactory.Get<int>()));
         catchReturnNode.Inputs[1].UpdateTextboxText("1");
         graph.AddNode(catchReturnNode, false);
         graph.Connect(tryCatchNode.Outputs[1], catchReturnNode.Inputs[0], false);
 
-        var parseNode = new Core.Nodes.MethodCall(graph);
+        var parseNode = new MethodCall(graph);
         parseNode.SetMethodTarget(new RealMethodInfo(nodeClass.TypeFactory, typeof(int).GetMethod("Parse", new[] { typeof(string) })!, nodeClass.TypeFactory.Get<int>()));
         parseNode.Inputs[0].UpdateTextboxText("invalid");
         graph.AddNode(parseNode, false);
         graph.Connect(tryCatchNode.Outputs[0], parseNode.Inputs[0], false);
 
-        var tryReturnNode = new Core.Nodes.Flow.ReturnNode(graph);
+        var tryReturnNode = new ReturnNode(graph);
         tryReturnNode.Inputs.Add(new("Result", tryReturnNode, nodeClass.TypeFactory.Get<int>()));
         tryReturnNode.Inputs[1].UpdateTextboxText("0");
         graph.AddNode(tryReturnNode, false);
@@ -338,7 +339,10 @@ public class GraphExecutorTests
         graph.Connect(parseNode.Outputs[0], tryReturnNode.Inputs[0], false);
         graph.Connect(tryCatchNode.Outputs[2], tryReturnNode.Inputs[0], false);
 
-        var output = graph.Project.Run(options, Array.Empty<object>());
+
+		CreateStaticMainWithConversion(nodeClass, method);
+		
+		var output = Run<int>(project, options);
 
         Assert.Equal(1, output);
     }

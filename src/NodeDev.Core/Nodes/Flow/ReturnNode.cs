@@ -16,6 +16,8 @@ public class ReturnNode : FlowNode
 		Name = "Return";
 
 		Inputs.Add(new("Exec", this, TypeFactory.ExecType));
+
+		Refresh();
 	}
 
 	private bool HasReturnValue => Graph.SelfMethod.ReturnType != TypeFactory.Void;
