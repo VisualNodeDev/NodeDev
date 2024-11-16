@@ -290,4 +290,42 @@ public class GraphExecutorTests
 		output = Run<int>(graph.Project, options, [-1, -2]);
 		Assert.Equal(1, output);
 	}
+
+	[Theory]
+	[MemberData(nameof(GetBuildOptions))]
+	public void TestDeclareAndSetVariable(SerializableBuildOptions options)
+	{
+		var project = new Project(Guid.NewGuid());
+		var nodeClass = new NodeClass("Program", "Test", project);
+		project.Classes.Add(nodeClass);
+
+		var graph = new Graph();
+		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph, true);
+		nodeClass.Methods.Add(method);
+		graph.SelfMethod = method;
+
+		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<int>(), method));
+
+		var entryNode = new EntryNode(graph);
+		var declareVariableNode = new DeclareVariableNode(graph, "Variable", nodeClass.TypeFactory.Get<int>());
+		var setVariableValueNode = new SetVariableValueNode(graph, "SetVariable");
+		var returnNode = new ReturnNode(graph);
+
+		graph.AddNode(entryNode, false);
+		graph.AddNode(declareVariableNode, false);
+		graph.AddNode(setVariableValueNode, false);
+		graph.AddNode(returnNode, false);
+
+		graph.Connect(entryNode.Outputs[0], declareVariableNode.Inputs[0], false);
+		graph.Connect(declareVariableNode.Outputs[0], setVariableValueNode.Inputs[0], false);
+		graph.Connect(entryNode.Outputs[1], setVariableValueNode.Inputs[1], false);
+		graph.Connect(setVariableValueNode.Outputs[0], returnNode.Inputs[0], false);
+		graph.Connect(declareVariableNode.Outputs[0], returnNode.Inputs[1], false);
+
+		CreateStaticMainWithConversion(nodeClass, method);
+
+		var output = Run<int>(graph.Project, options, [5]);
+
+		Assert.Equal(5, output);
+	}
 }
