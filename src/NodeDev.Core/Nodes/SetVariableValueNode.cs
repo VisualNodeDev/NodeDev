@@ -6,9 +6,9 @@ namespace NodeDev.Core.Nodes;
 
 public class SetVariableValueNode : NormalFlowNode
 {
-    public SetVariableValueNode(Graph graph, string name, string? id = null) : base(graph, id)
+    public SetVariableValueNode(Graph graph, string? id = null) : base(graph, id)
     {
-        Name = name;
+        Name = "Set Variable";
 
         var type = new UndefinedGenericType("T");
         Inputs.Add(new Connection("Variable", this, type));

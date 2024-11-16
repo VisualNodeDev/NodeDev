@@ -6,9 +6,9 @@ namespace NodeDev.Core.Nodes;
 
 public class DeclareVariableNode : NormalFlowNode
 {
-    public DeclareVariableNode(Graph graph, string name, string? id = null) : base(graph, id)
+	public DeclareVariableNode(Graph graph, string? id = null) : base(graph, id)
     {
-        Name = name;
+		Name = "Declare Variable";
 
         var t = new UndefinedGenericType("T");
         Outputs.Add(new Connection("Variable", this, t));
