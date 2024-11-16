@@ -5,6 +5,7 @@ using FastExpressionCompiler;
 using Dis2Msil;
 using System.Text;
 using System.Runtime.Loader;
+using System.Linq.Expressions;
 
 namespace NodeDev.Core.Class;
 
@@ -36,17 +37,18 @@ public class NodeClassTypeCreator
 	public void CreateProjectClassesAndAssembly()
 	{
 		// TODO Remove this when the new System.Reflection.Emit is available in .NET 10
-		if (TemporaryReflectionAssembly == null)
-		{
-			var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-			using var stream = assembly.GetManifestResourceStream("NodeDev.Core.Dependencies.System.Reflection.Emit.dll")!;
-			var bytes = new byte[stream.Length];
-			stream.ReadExactly(bytes);
-			TemporaryReflectionAssembly = System.Reflection.Assembly.Load(bytes);
-		}
-		var persisted = Activator.CreateInstance(TemporaryReflectionAssembly.ExportedTypes.First(), new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly, null)!;
-		Assembly = (AssemblyBuilder)persisted;
+		//if (TemporaryReflectionAssembly == null)
+		//{
+		//	var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+		//	using var stream = assembly.GetManifestResourceStream("NodeDev.Core.Dependencies.System.Reflection.Emit.dll")!;
+		//	var bytes = new byte[stream.Length];
+		//	stream.ReadExactly(bytes);
+		//	TemporaryReflectionAssembly = System.Reflection.Assembly.Load(bytes);
+		//}
+		//var persisted = Activator.CreateInstance(TemporaryReflectionAssembly.ExportedTypes.First(), new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly, null)!;
+		//Assembly = (AssemblyBuilder)persisted;
 
+		Assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), AssemblyBuilderAccess.RunAndCollect);
 
 		// https://learn.microsoft.com/en-us/dotnet/api/system.reflection.emit.assemblybuilder?view=net-7.0
 		//var persisted = new PersistedAssemblyBuilder(new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly);
@@ -148,7 +150,8 @@ public class NodeClassTypeCreator
 
 			cs = str.ToString();
 
-			var assembly = context.LoadFromAssemblyPath(assemblyPath);
+			//var assembly = context.LoadFromAssemblyPath(assemblyPath);
+			var assembly = Assembly;
 			var type = assembly.GetType(HiddenName(method.Class.Name));
 			if(type == null)
 			{
@@ -180,6 +183,24 @@ public class NodeClassTypeCreator
 		// Generate the expression tree for the method
 		var expression = method.Graph.BuildExpression(Options.BuildExpressionOptions);
 
+
+		var returnLabelTarget = Expression.Label(typeof(int), "ReturnLabel");
+
+		var tryBody = Expression.Call(typeof(Console).GetMethod("Clear")!);
+		var catchBody = Expression.Return(returnLabelTarget, Expression.Constant(10));
+
+		var tryCatch = Expression.TryCatch(tryBody, Expression.Catch(typeof(Exception), catchBody));
+
+		var afterCatch = Expression.Block(
+			Expression.Call(typeof(Console).GetMethod("Clear")!),
+			Expression.Return(returnLabelTarget, Expression.Constant(5)),
+			Expression.Label(returnLabelTarget, Expression.Constant(0)));
+
+		var body = Expression.Block(tryCatch, afterCatch);
+
+		expression = Expression.Lambda(body);
+
+		var v = expression.CompileFast();
 		var ilGenerator = methodBuilder.GetILGenerator();
 		var result = expression.CompileFastToIL(ilGenerator, CompilerFlags.ThrowOnNotSupportedExpression);
 

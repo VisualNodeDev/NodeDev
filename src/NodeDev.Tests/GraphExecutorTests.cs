@@ -291,6 +291,63 @@ public class GraphExecutorTests
 		Assert.Equal(1, output);
 	}
 
+    // This test validates the TryCatchNode by simulating a scenario where an exception is thrown and caught.
+    // The test sets up a graph with an entry node, a TryCatchNode, and return nodes for both try and catch blocks.
+    // The try block attempts to parse an invalid integer string, which throws an exception.
+    // The catch block returns 1, indicating that the exception was caught.
+    // The test asserts that the output is 1, confirming that the exception was caught and handled correctly.
+    [Theory]
+    [MemberData(nameof(GetBuildOptions))]
+    public void TestTryCatchNode(SerializableBuildOptions options)
+    {
+        var project = new Project(Guid.NewGuid());
+        var nodeClass = new NodeClass("Program", "Test", project);
+        project.Classes.Add(nodeClass);
+
+        var graph = new Graph();
+        var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph);
+        method.IsStatic = true;
+        nodeClass.Methods.Add(method);
+        graph.SelfMethod = nodeClass.Methods.First();
+
+        var entryNode = new EntryNode(graph);
+        var tryCatchNode = new TryCatchNode(graph);
+		tryCatchNode.Outputs[3].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<Exception>(), overrideInitialType: true);
+
+        graph.AddNode(entryNode, false);
+        graph.AddNode(tryCatchNode, false);
+
+        graph.Connect(entryNode.Outputs[0], tryCatchNode.Inputs[0], false);
+
+		var catchReturnNode = new ReturnNode(graph);
+        catchReturnNode.Inputs.Add(new("Result", catchReturnNode, nodeClass.TypeFactory.Get<int>()));
+        catchReturnNode.Inputs[1].UpdateTextboxText("1");
+        graph.AddNode(catchReturnNode, false);
+        graph.Connect(tryCatchNode.Outputs[1], catchReturnNode.Inputs[0], false);
+
+        var parseNode = new MethodCall(graph);
+        parseNode.SetMethodTarget(new RealMethodInfo(nodeClass.TypeFactory, typeof(int).GetMethod("Parse", new[] { typeof(string) })!, nodeClass.TypeFactory.Get<int>()));
+        parseNode.Inputs[0].UpdateTextboxText("invalid");
+        graph.AddNode(parseNode, false);
+        graph.Connect(tryCatchNode.Outputs[0], parseNode.Inputs[0], false);
+
+        var tryReturnNode = new ReturnNode(graph);
+        tryReturnNode.Inputs.Add(new("Result", tryReturnNode, nodeClass.TypeFactory.Get<int>()));
+        tryReturnNode.Inputs[1].UpdateTextboxText("0");
+        graph.AddNode(tryReturnNode, false);
+		// Both the try and finally merge to the same "return", as there is nothing to actually put in the "finally" we can reuse the same return for simplicity
+        graph.Connect(parseNode.Outputs[0], tryReturnNode.Inputs[0], false);
+        graph.Connect(tryCatchNode.Outputs[2], tryReturnNode.Inputs[0], false);
+
+
+		CreateStaticMainWithConversion(nodeClass, method);
+		
+		var output = Run<int>(project, options);
+
+        Assert.Equal(1, output);
+    }
+}
+
 	[Theory]
 	[MemberData(nameof(GetBuildOptions))]
 	public void TestDeclareAndSetVariable(SerializableBuildOptions options)
