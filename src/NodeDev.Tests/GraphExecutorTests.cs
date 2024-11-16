@@ -307,13 +307,18 @@ public class GraphExecutorTests
 		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<int>(), method));
 
 		var entryNode = new EntryNode(graph);
-		var declareVariableNode = new DeclareVariableNode(graph, "Variable", nodeClass.TypeFactory.Get<int>());
-		var setVariableValueNode = new SetVariableValueNode(graph, "SetVariable");
-		var returnNode = new ReturnNode(graph);
-
 		graph.AddNode(entryNode, false);
+
+		var declareVariableNode = new DeclareVariableNode(graph, "Variable");
+		declareVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true);
+		declareVariableNode.Outputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true);
 		graph.AddNode(declareVariableNode, false);
+
+		var setVariableValueNode = new SetVariableValueNode(graph, "SetVariable");
+		setVariableValueNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true);
 		graph.AddNode(setVariableValueNode, false);
+
+		var returnNode = new ReturnNode(graph);
 		graph.AddNode(returnNode, false);
 
 		graph.Connect(entryNode.Outputs[0], declareVariableNode.Inputs[0], false);
@@ -321,6 +326,44 @@ public class GraphExecutorTests
 		graph.Connect(entryNode.Outputs[1], setVariableValueNode.Inputs[1], false);
 		graph.Connect(setVariableValueNode.Outputs[0], returnNode.Inputs[0], false);
 		graph.Connect(declareVariableNode.Outputs[0], returnNode.Inputs[1], false);
+
+		CreateStaticMainWithConversion(nodeClass, method);
+
+		var output = Run<int>(graph.Project, options, [5]);
+
+		Assert.Equal(5, output);
+	}
+
+	[Theory]
+	[MemberData(nameof(GetBuildOptions))]
+	public void TestDeclareVariableDefaultValue(SerializableBuildOptions options)
+	{
+		var project = new Project(Guid.NewGuid());
+		var nodeClass = new NodeClass("Program", "Test", project);
+		project.Classes.Add(nodeClass);
+
+		var graph = new Graph();
+		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph, true);
+		nodeClass.Methods.Add(method);
+		graph.SelfMethod = method;
+
+		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<int>(), method));
+
+		var entryNode = new EntryNode(graph);
+		graph.AddNode(entryNode, false);
+
+		var declareVariableNode = new DeclareVariableNode(graph, "Variable");
+		declareVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true);
+		declareVariableNode.Outputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true);
+		graph.AddNode(declareVariableNode, false);
+
+		var returnNode = new ReturnNode(graph);
+		graph.AddNode(returnNode, false);
+
+		graph.Connect(entryNode.Outputs[0], declareVariableNode.Inputs[0], false);
+		graph.Connect(entryNode.Outputs[1], declareVariableNode.Inputs[1], false);
+		graph.Connect(declareVariableNode.Outputs[0], returnNode.Inputs[0], false);
+		graph.Connect(declareVariableNode.Outputs[1], returnNode.Inputs[1], false);
 
 		CreateStaticMainWithConversion(nodeClass, method);
 
