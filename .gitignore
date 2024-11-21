@@ -28,3 +28,5 @@
 /src/NodeDev.EndToEndTests/bin
 /src/NodeDev.EndToEndTests/obj
 /src/NodeDev.Blazor.Server/project_backup.json
+/src/NodeDev.Blazor.MAUI/bin/Debug/net9.0-windows10.0.19041.0/win10-x64
+/src/NodeDev.Blazor.MAUI/obj

@@ -35,6 +35,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeDev.EndToEndTests", "No
 		{A73FFB19-1791-4E6E-829C-A6B85E1BD8F2} = {A73FFB19-1791-4E6E-829C-A6B85E1BD8F2}
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeDev.Blazor.MAUI", "NodeDev.Blazor.MAUI\NodeDev.Blazor.MAUI.csproj", "{68D35641-7DBF-4984-A939-22C944328E54}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -73,6 +75,10 @@ Global
 		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68D35641-7DBF-4984-A939-22C944328E54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68D35641-7DBF-4984-A939-22C944328E54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68D35641-7DBF-4984-A939-22C944328E54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68D35641-7DBF-4984-A939-22C944328E54}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
