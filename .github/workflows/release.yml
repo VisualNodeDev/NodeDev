@@ -5,14 +5,14 @@ name: .Create Release Packages
 
 on:
   release:
-    types: [created, published]
+    types: [published]
 
 permissions: 
   contents: write
 
 jobs:
   build:
-    name: Builds the entire solution
+    name: Build the entire solution
     runs-on: windows-latest
 
     steps:
@@ -101,7 +101,7 @@ jobs:
         retention-days: 7
 
   publish:
-    name: Publish the application and create the packages
+    name: Publish and package
     runs-on: windows-latest
     needs: [build, tests, e2e-tests]
     
