@@ -26,6 +26,8 @@ namespace NodeDev.Core.Nodes
 
 		public virtual string Name { get; set; } = "";
 
+		public virtual bool AllowEditingName { get; } = false;
+
 		public Graph Graph { get; }
 
 		public abstract string TitleColor { get; }
