@@ -5,7 +5,7 @@ name: .Create Release Packages
 
 on:
   release:
-    types: [created]
+    types: [created, published]
 
 jobs:
   build:
