@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using NodeDev.Core;
-using System.Diagnostics;
 using System.Reactive.Subjects;
-using System.Text;
 
 
 namespace NodeDev.Blazor.Components;
@@ -29,7 +27,7 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 		base.OnInitialized();
 
 		RefreshRequiredDisposable = RefreshRequiredSubject.AcceptThenSample(TimeSpan.FromMilliseconds(100)).Subscribe(_ => InvokeAsync(StateHasChanged));
-		
+
 		GraphExecutionChangedDisposable = Project.GraphExecutionChanged.Subscribe(OnGraphExecutionChanged);
 	}
 

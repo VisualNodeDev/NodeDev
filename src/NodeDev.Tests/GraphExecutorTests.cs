@@ -1,7 +1,5 @@
-using MudBlazor;
 using NodeDev.Core;
 using NodeDev.Core.Class;
-using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Debug;
 using NodeDev.Core.Nodes.Flow;
@@ -171,7 +169,7 @@ public class GraphExecutorTests
 
 			process.WaitForExit();
 
-			string? line= null;
+			string? line = null;
 			while (true)
 			{
 				var newLine = process.StandardOutput.ReadLine();
@@ -189,7 +187,7 @@ public class GraphExecutorTests
 		finally
 		{
 			// Clean up
-			if(Directory.Exists(buildOptions.OutputPath))
+			if (Directory.Exists(buildOptions.OutputPath))
 				Directory.Delete(buildOptions.OutputPath, true);
 		}
 	}
@@ -289,31 +287,31 @@ public class GraphExecutorTests
 		Assert.Equal(1, output);
 	}
 
-    // This test validates the TryCatchNode by simulating a scenario where an exception is thrown and caught.
-    // The test sets up a graph with an entry node, a TryCatchNode, and return nodes for both try and catch blocks.
-    // The try block attempts to parse an invalid integer string, which throws an exception.
-    // The catch block returns 1, indicating that the exception was caught.
-    // The test asserts that the output is 1, confirming that the exception was caught and handled correctly.
-    [Theory]
-    [MemberData(nameof(GetBuildOptions))]
-    public void TestTryCatchNode(SerializableBuildOptions options)
-    {
-        var project = new Project(Guid.NewGuid());
-        var nodeClass = new NodeClass("Program", "Test", project);
-        project.Classes.Add(nodeClass);
+	// This test validates the TryCatchNode by simulating a scenario where an exception is thrown and caught.
+	// The test sets up a graph with an entry node, a TryCatchNode, and return nodes for both try and catch blocks.
+	// The try block attempts to parse an invalid integer string, which throws an exception.
+	// The catch block returns 1, indicating that the exception was caught.
+	// The test asserts that the output is 1, confirming that the exception was caught and handled correctly.
+	[Theory]
+	[MemberData(nameof(GetBuildOptions))]
+	public void TestTryCatchNode(SerializableBuildOptions options)
+	{
+		var project = new Project(Guid.NewGuid());
+		var nodeClass = new NodeClass("Program", "Test", project);
+		project.Classes.Add(nodeClass);
 
-        var graph = new Graph();
-        var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph);
-        method.IsStatic = true;
-        nodeClass.Methods.Add(method);
-        graph.SelfMethod = nodeClass.Methods.First();
+		var graph = new Graph();
+		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph);
+		method.IsStatic = true;
+		nodeClass.Methods.Add(method);
+		graph.SelfMethod = nodeClass.Methods.First();
 
-        var entryNode = new EntryNode(graph);
-        var tryCatchNode = new TryCatchNode(graph);
+		var entryNode = new EntryNode(graph);
+		var tryCatchNode = new TryCatchNode(graph);
 		tryCatchNode.Outputs[3].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<Exception>(), overrideInitialType: true);
 
-        graph.AddNode(entryNode, false);
-        graph.AddNode(tryCatchNode, false);
+		graph.AddNode(entryNode, false);
+		graph.AddNode(tryCatchNode, false);
 
 		// Create local variable
 		var declareVariableNode = new DeclareVariableNode(graph);
@@ -333,17 +331,17 @@ public class GraphExecutorTests
 		catchVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Variable
 		catchVariableNode.Inputs[2].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Value
 		catchVariableNode.Inputs[2].UpdateTextboxText("2");
-        graph.AddNode(catchVariableNode, false);
-        graph.Connect(tryCatchNode.Outputs[1], catchVariableNode.Inputs[0], false);
+		graph.AddNode(catchVariableNode, false);
+		graph.Connect(tryCatchNode.Outputs[1], catchVariableNode.Inputs[0], false);
 		graph.Connect(declareVariableNode.Outputs[1], catchVariableNode.Inputs[1], false);
 		graph.Connect(catchVariableNode.Outputs[0], returnNode.Inputs[0], false);
 
 		// Create the try block body
 		var parseNode = new MethodCall(graph);
-        parseNode.SetMethodTarget(new RealMethodInfo(nodeClass.TypeFactory, typeof(int).GetMethod("Parse", new[] { typeof(string) })!, nodeClass.TypeFactory.Get<int>()));
-        parseNode.Inputs[1].UpdateTextboxText("invalid");
-        graph.AddNode(parseNode, false);
-        graph.Connect(tryCatchNode.Outputs[0], parseNode.Inputs[0], false);
+		parseNode.SetMethodTarget(new RealMethodInfo(nodeClass.TypeFactory, typeof(int).GetMethod("Parse", new[] { typeof(string) })!, nodeClass.TypeFactory.Get<int>()));
+		parseNode.Inputs[1].UpdateTextboxText("invalid");
+		graph.AddNode(parseNode, false);
+		graph.Connect(tryCatchNode.Outputs[0], parseNode.Inputs[0], false);
 
 		var tryVariableNode = new SetVariableValueNode(graph);
 		tryVariableNode.Inputs[1].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<int>(), true); // Variable
@@ -356,11 +354,11 @@ public class GraphExecutorTests
 		graph.Connect(tryVariableNode.Outputs[0], returnNode.Inputs[0], false);
 
 		CreateStaticMainWithConversion(nodeClass, method);
-		
+
 		var output = Run<int>(project, options);
 
-        Assert.Equal(2, output);
-    }
+		Assert.Equal(2, output);
+	}
 
 	[Theory]
 	[MemberData(nameof(GetBuildOptions))]

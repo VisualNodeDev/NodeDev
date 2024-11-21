@@ -1,15 +1,7 @@
-﻿using NodeDev.Core.Class;
-using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace NodeDev.Core.Nodes
 {
@@ -68,7 +60,7 @@ namespace NodeDev.Core.Nodes
 		/// <summary>
 		/// Called before the generic type are set on every connections
 		/// </summary>
-		public virtual void OnBeforeGenericTypeDefined(IReadOnlyDictionary<string, TypeBase> changedGenerics) {}
+		public virtual void OnBeforeGenericTypeDefined(IReadOnlyDictionary<string, TypeBase> changedGenerics) { }
 
 
 		public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
@@ -79,7 +71,7 @@ namespace NodeDev.Core.Nodes
 		/// </summary>
 		/// <param name="connection">The connection that was generic, it is not generic anymore</param>
 		public virtual List<Connection> GenericConnectionTypeDefined(Connection connection)
-        {
+		{
 			return [];
 		}
 
@@ -125,11 +117,11 @@ namespace NodeDev.Core.Nodes
 
 		public abstract bool DoesOutputPathAllowMerge(Connection execOutput);
 
-        /// <summary>
-        /// Returns true if this node breaks a dead end. These are usually "Return", "Break", "Continue", etc.
-        /// This will allow a dead end in places where it shouldn't be allowed, such as a "Branch" node.
-        /// </summary>
-        public virtual bool BreaksDeadEnd => false;
+		/// <summary>
+		/// Returns true if this node breaks a dead end. These are usually "Return", "Break", "Continue", etc.
+		/// This will allow a dead end in places where it shouldn't be allowed, such as a "Branch" node.
+		/// </summary>
+		public virtual bool BreaksDeadEnd => false;
 
 		public class InfiniteLoopException(Node node) : Exception
 		{

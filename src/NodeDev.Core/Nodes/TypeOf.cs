@@ -51,7 +51,7 @@ public class TypeOf : NoFlowNode
 
 	public override void OnBeforeGenericTypeDefined(IReadOnlyDictionary<string, TypeBase> changedGenerics)
 	{
-		if(Type is not UndefinedGenericType undefined)
+		if (Type is not UndefinedGenericType undefined)
 			return;
 
 		if (changedGenerics.TryGetValue(undefined.Name, out var newType))

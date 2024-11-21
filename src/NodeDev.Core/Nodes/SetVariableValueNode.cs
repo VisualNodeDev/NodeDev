@@ -6,16 +6,16 @@ namespace NodeDev.Core.Nodes;
 
 public class SetVariableValueNode : NormalFlowNode
 {
-    public SetVariableValueNode(Graph graph, string? id = null) : base(graph, id)
-    {
-        Name = "Set Variable";
+	public SetVariableValueNode(Graph graph, string? id = null) : base(graph, id)
+	{
+		Name = "Set Variable";
 
-        var type = new UndefinedGenericType("T");
-        Inputs.Add(new Connection("Variable", this, type));
-        Inputs.Add(new Connection("Value", this, type));
-    }
+		var type = new UndefinedGenericType("T");
+		Inputs.Add(new Connection("Variable", this, type));
+		Inputs.Add(new Connection("Value", this, type));
+	}
 
-	public override string Name 
+	public override string Name
 	{
 		get
 		{
@@ -33,7 +33,7 @@ public class SetVariableValueNode : NormalFlowNode
 	}
 
 	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
-    {
-        return Expression.Assign(info.LocalVariables[Inputs[1]], info.LocalVariables[Inputs[2]]);
-    }
+	{
+		return Expression.Assign(info.LocalVariables[Inputs[1]], info.LocalVariables[Inputs[2]]);
+	}
 }

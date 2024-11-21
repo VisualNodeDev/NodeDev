@@ -1,14 +1,12 @@
 using NodeDev.Core;
-using NodeDev.Core.Class;
-using NodeDev.Core.Nodes;
 
 namespace NodeDev.Tests;
 
 public class SerializationTests
 {
-    [Theory]
-    [MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
-    public void TestBasicSerialization(SerializableBuildOptions options)
+	[Theory]
+	[MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
+	public void TestBasicSerialization(SerializableBuildOptions options)
 	{
 		var graph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
 		var project = graph.SelfClass.Project;

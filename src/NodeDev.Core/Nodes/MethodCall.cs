@@ -4,7 +4,6 @@ using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
 using System.Buffers;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text.Json;
 
 namespace NodeDev.Core.Nodes;
@@ -161,12 +160,12 @@ public class MethodCall : NormalFlowNode
 	{
 		Inputs.Add(new Connection(newParameter.Name, this, newParameter.ParameterType));
 
-        Graph.RaiseGraphChanged(true);
-    }
+		Graph.RaiseGraphChanged(true);
+	}
 
-    #endregion
+	#endregion
 
-    internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
+	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
 	{
 		if (subChunks != null)
 			throw new Exception("MethodCall.BuildExpression: subChunks should be null as MethodCall never has multiple output paths");

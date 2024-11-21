@@ -1,5 +1,4 @@
 using NodeDev.Core.Types;
-using System.Text.Json;
 
 namespace NodeDev.Tests;
 
@@ -65,25 +64,25 @@ public class TypeBaseTests
 		Assert.Null(changedGenericsRight);
 
 		Assert.True(childList.IsAssignableTo(parentEnumerable, out changedGenericsLeft, out changedGenericsRight));
-        Assert.Empty(changedGenericsLeft);
-        Assert.Empty(changedGenericsRight);
+		Assert.Empty(changedGenericsLeft);
+		Assert.Empty(changedGenericsRight);
 
-        Assert.False(parentEnumerable.IsAssignableTo(childList, out changedGenericsLeft, out changedGenericsRight));
-        Assert.Null(changedGenericsLeft);
-        Assert.Null(changedGenericsRight);
+		Assert.False(parentEnumerable.IsAssignableTo(childList, out changedGenericsLeft, out changedGenericsRight));
+		Assert.Null(changedGenericsLeft);
+		Assert.Null(changedGenericsRight);
 
-        Assert.True(childListList.IsAssignableTo(parentReadOnlyEnumerable, out changedGenericsLeft, out changedGenericsRight));
-        Assert.Empty(changedGenericsLeft);
-        Assert.Empty(changedGenericsRight);
+		Assert.True(childListList.IsAssignableTo(parentReadOnlyEnumerable, out changedGenericsLeft, out changedGenericsRight));
+		Assert.Empty(changedGenericsLeft);
+		Assert.Empty(changedGenericsRight);
 
-        Assert.False(parentReadOnlyEnumerable.IsAssignableTo(childListList, out changedGenericsLeft, out changedGenericsRight));
-        Assert.Null(changedGenericsLeft);
-        Assert.Null(changedGenericsRight);
+		Assert.False(parentReadOnlyEnumerable.IsAssignableTo(childListList, out changedGenericsLeft, out changedGenericsRight));
+		Assert.Null(changedGenericsLeft);
+		Assert.Null(changedGenericsRight);
 
-        Assert.False(childListList.IsAssignableTo(parentListEnumerable, out changedGenericsLeft, out changedGenericsRight));
-        Assert.Null(changedGenericsLeft);
-        Assert.Null(changedGenericsRight);
-    }
+		Assert.False(childListList.IsAssignableTo(parentListEnumerable, out changedGenericsLeft, out changedGenericsRight));
+		Assert.Null(changedGenericsLeft);
+		Assert.Null(changedGenericsRight);
+	}
 
 	[Fact]
 	public void Assignations_IsDirectlyAssignable_InOut()
@@ -97,9 +96,9 @@ public class TypeBaseTests
 		Assert.Empty(changedGenericsRight);
 
 		Assert.False(parentEnumerable.IsDirectlyAssignableTo(childEnumerable, true, out changedGenericsLeft, out changedGenericsRight, out _));
-        Assert.Null(changedGenericsLeft);
-        Assert.Null(changedGenericsRight);
-    }
+		Assert.Null(changedGenericsLeft);
+		Assert.Null(changedGenericsRight);
+	}
 
 	[Fact]
 	public void Assignations_IsDirectlyAssignable_Basic()
@@ -109,32 +108,32 @@ public class TypeBaseTests
 		var type = typeFactory.Get(typeof(List<int>), null);
 
 		Assert.True(type.IsDirectlyAssignableTo(type, true, out var changedGenericsLeft, out var changedGenericsRight, out _));
-        Assert.Empty(changedGenericsLeft);
-        Assert.Empty(changedGenericsRight);
+		Assert.Empty(changedGenericsLeft);
+		Assert.Empty(changedGenericsRight);
 
-        Assert.True(type.IsDirectlyAssignableTo(typeFactory.Get(typeof(List<>), [new UndefinedGenericType("T")]), true, out changedGenericsLeft, out changedGenericsRight, out _));
-        Assert.Empty(changedGenericsLeft);
+		Assert.True(type.IsDirectlyAssignableTo(typeFactory.Get(typeof(List<>), [new UndefinedGenericType("T")]), true, out changedGenericsLeft, out changedGenericsRight, out _));
+		Assert.Empty(changedGenericsLeft);
 		Assert.Single(changedGenericsRight);
 		Assert.Equal("T", changedGenericsRight.First().Key);
 		Assert.Equal(typeof(int), changedGenericsRight.First().Value.MakeRealType());
 
 		Assert.False(type.IsDirectlyAssignableTo(typeFactory.Get(typeof(IEnumerable<>), [new UndefinedGenericType("T")]), true, out changedGenericsLeft, out changedGenericsRight, out _));
-        Assert.Null(changedGenericsLeft);
-        Assert.Null(changedGenericsRight);
+		Assert.Null(changedGenericsLeft);
+		Assert.Null(changedGenericsRight);
 
-        Assert.True(type.IsDirectlyAssignableTo(new UndefinedGenericType("T"), true, out changedGenericsLeft, out changedGenericsRight, out _));
-        Assert.Empty(changedGenericsLeft);
+		Assert.True(type.IsDirectlyAssignableTo(new UndefinedGenericType("T"), true, out changedGenericsLeft, out changedGenericsRight, out _));
+		Assert.Empty(changedGenericsLeft);
 		Assert.Single(changedGenericsRight);
 		Assert.Equal("T", changedGenericsRight.First().Key);
 		Assert.Same(type, changedGenericsRight.First().Value);
 
 		Assert.True(new UndefinedGenericType("T").IsDirectlyAssignableTo(type, true, out changedGenericsLeft, out changedGenericsRight, out _));
-        Assert.Empty(changedGenericsRight);
-        Assert.Single(changedGenericsLeft);
-        Assert.Equal("T", changedGenericsLeft.First().Key);
-        Assert.Same(type, changedGenericsLeft.First().Value);
+		Assert.Empty(changedGenericsRight);
+		Assert.Single(changedGenericsLeft);
+		Assert.Equal("T", changedGenericsLeft.First().Key);
+		Assert.Same(type, changedGenericsLeft.First().Value);
 
-        Assert.True(new UndefinedGenericType("T").IsDirectlyAssignableTo(new UndefinedGenericType("T2"), true, out changedGenericsLeft, out changedGenericsRight, out _));
+		Assert.True(new UndefinedGenericType("T").IsDirectlyAssignableTo(new UndefinedGenericType("T2"), true, out changedGenericsLeft, out changedGenericsRight, out _));
 		Assert.Empty(changedGenericsLeft);
 		Assert.Empty(changedGenericsRight);
 	}
@@ -164,26 +163,26 @@ public class TypeBaseTests
 		Assert.True(typeArr.IsDirectlyAssignableTo(undefined, true, out changedGenericsLeft, out changedGenericsRight, out _));
 		Assert.Empty(changedGenericsLeft);
 		Assert.Single(changedGenericsRight);
-        Assert.Equal("T", changedGenericsRight.First().Key);
+		Assert.Equal("T", changedGenericsRight.First().Key);
 		Assert.Same(typeArr, changedGenericsRight.First().Value);
 
 		// int[] -> T[]
 		Assert.True(typeArr.IsDirectlyAssignableTo(undefinedArr, true, out changedGenericsLeft, out changedGenericsRight, out _));
-        Assert.Empty(changedGenericsLeft);
-        Assert.Single(changedGenericsRight);
-        Assert.Equal("T", changedGenericsRight.First().Key);
+		Assert.Empty(changedGenericsLeft);
+		Assert.Single(changedGenericsRight);
+		Assert.Equal("T", changedGenericsRight.First().Key);
 		Assert.Same(typeArr.ArrayInnerType, changedGenericsRight.First().Value);
 
 		// T -> int[]
 		Assert.True(undefined.IsDirectlyAssignableTo(typeArr, true, out changedGenericsLeft, out changedGenericsRight, out _));
-        Assert.Empty(changedGenericsRight);
+		Assert.Empty(changedGenericsRight);
 		Assert.Single(changedGenericsLeft);
-        Assert.Equal("T", changedGenericsLeft.First().Key);
+		Assert.Equal("T", changedGenericsLeft.First().Key);
 		Assert.Same(typeArr, changedGenericsLeft.First().Value);
 
 		// T[] -> int[]
 		Assert.True(undefinedArr.IsDirectlyAssignableTo(typeArr, true, out changedGenericsLeft, out changedGenericsRight, out _));
-        Assert.Empty(changedGenericsRight);
+		Assert.Empty(changedGenericsRight);
 		Assert.Single(changedGenericsLeft);
 		Assert.Equal("T", changedGenericsLeft.First().Key);
 		Assert.Same(typeArr.ArrayInnerType, changedGenericsLeft.First().Value);
@@ -192,7 +191,7 @@ public class TypeBaseTests
 		Assert.True(undefinedArr.IsDirectlyAssignableTo(undefinedArr, true, out changedGenericsLeft, out changedGenericsRight, out _));
 		Assert.Empty(changedGenericsLeft);
 		Assert.Empty(changedGenericsRight);
-    }
+	}
 
 	[Fact]
 	public void Assignations_IsAssignableTo_BasicArray()
@@ -212,8 +211,8 @@ public class TypeBaseTests
 		Assert.Empty(changedGenericsLeft);
 		Assert.Empty(changedGenericsRight);
 
-        // List<int[]> -> List<int>
-        Assert.False(typeArr.IsAssignableTo(type, out _, out _));
+		// List<int[]> -> List<int>
+		Assert.False(typeArr.IsAssignableTo(type, out _, out _));
 
 		// List<int> -> List<int[]>
 		Assert.False(type.IsAssignableTo(typeArr, out _, out _));
@@ -222,7 +221,7 @@ public class TypeBaseTests
 		Assert.True(typeArr.IsAssignableTo(undefined, out changedGenericsLeft, out changedGenericsRight));
 		Assert.Empty(changedGenericsLeft);
 		Assert.Single(changedGenericsRight);
-        Assert.Equal("T", changedGenericsRight.First().Key);
+		Assert.Equal("T", changedGenericsRight.First().Key);
 		Assert.Same(typeArr.Generics[0], changedGenericsRight.First().Value);
 
 		// List<int[]> -> List<T[]>
@@ -274,29 +273,29 @@ public class TypeBaseTests
 		Assert.Empty(changedGenericsLeft);
 		Assert.Empty(changedGenericsRight);
 
-        // List<int[]> -> IEnumerable<int>
-        Assert.False(typeArr.IsAssignableTo(typeImpl, out _, out _));
+		// List<int[]> -> IEnumerable<int>
+		Assert.False(typeArr.IsAssignableTo(typeImpl, out _, out _));
 
 		// List<int> -> IEnumerable<int[]>
 		Assert.False(type.IsAssignableTo(typeImplArr, out _, out _));
 
-        // IEnumerable<int[]> -> List<int>
-        Assert.False(typeImplArr.IsAssignableTo(type, out _, out _));
+		// IEnumerable<int[]> -> List<int>
+		Assert.False(typeImplArr.IsAssignableTo(type, out _, out _));
 
-        // IEnumerable<int> -> List<int[]>
-        Assert.False(typeImpl.IsAssignableTo(typeArr, out _, out _));
+		// IEnumerable<int> -> List<int[]>
+		Assert.False(typeImpl.IsAssignableTo(typeArr, out _, out _));
 
-        // IEnumerable<int[]> -> List<int[]>
-        Assert.False(typeImplArr.IsAssignableTo(typeArr, out _, out _));
+		// IEnumerable<int[]> -> List<int[]>
+		Assert.False(typeImplArr.IsAssignableTo(typeArr, out _, out _));
 
-        // IEnumerable<int> -> List<int>
-        Assert.False(typeImpl.IsAssignableTo(type, out _, out _));
+		// IEnumerable<int> -> List<int>
+		Assert.False(typeImpl.IsAssignableTo(type, out _, out _));
 
-        // List<int[]> -> IEnumerable<T>
-        Assert.True(typeArr.IsAssignableTo(undefinedImpl, out changedGenericsLeft, out changedGenericsRight));
+		// List<int[]> -> IEnumerable<T>
+		Assert.True(typeArr.IsAssignableTo(undefinedImpl, out changedGenericsLeft, out changedGenericsRight));
 		Assert.Empty(changedGenericsLeft);
 		Assert.Single(changedGenericsRight);
-        Assert.Equal("T", changedGenericsRight.First().Key);
+		Assert.Equal("T", changedGenericsRight.First().Key);
 		Assert.Same(typeArr.Generics[0], changedGenericsRight.First().Value);
 
 		// List<int[]> -> IEnumerable<T[]>

@@ -1,12 +1,6 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NodeDev.Core
 {
@@ -141,7 +135,7 @@ namespace NodeDev.Core
 
 		private Span<object?> GetNodeInputs(object? self, Node node)
 		{
-			if(node.Inputs.Count == 0)
+			if (node.Inputs.Count == 0)
 				return Array.Empty<object?>();
 
 			var inputs = Connections.AsSpan(node.Inputs[0].GraphIndex, node.Inputs.Count);

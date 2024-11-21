@@ -35,11 +35,11 @@ public class Branch : FlowNode
 		var ifTrue = Graph.BuildExpression(subChunks[Outputs[0]], info);
 		var ifFalse = Graph.BuildExpression(subChunks[Outputs[1]], info);
 
-		if(ifTrue.Length == 0 && ifFalse.Length == 0)
+		if (ifTrue.Length == 0 && ifFalse.Length == 0)
 			throw new InvalidOperationException("Branch node must have at least a 'IfTrue' of 'IfFalse' statement.");
-		else if(ifTrue.Length == 0) // NOT the operation, instead of "if(condition){} else { ...}" we'll have if(!condition) { ... }
+		else if (ifTrue.Length == 0) // NOT the operation, instead of "if(condition){} else { ...}" we'll have if(!condition) { ... }
 			return Expression.IfThen(Expression.Not(info.LocalVariables[Inputs[1]]), Expression.Block(ifFalse));
-		else if(ifFalse.Length == 0)
+		else if (ifFalse.Length == 0)
 			return Expression.IfThen(info.LocalVariables[Inputs[1]], Expression.Block(ifTrue));
 		else
 			return Expression.IfThenElse(info.LocalVariables[Inputs[1]], Expression.Block(ifTrue), Expression.Block(ifFalse));

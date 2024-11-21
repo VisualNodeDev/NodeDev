@@ -1,5 +1,4 @@
-﻿using NodeDev.Core.Connections;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 
 namespace NodeDev.Core.Nodes.Math;
 

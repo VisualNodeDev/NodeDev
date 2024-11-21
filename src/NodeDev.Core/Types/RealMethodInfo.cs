@@ -20,7 +20,7 @@ public class RealMethodInfo : IMethodInfo
 	{
 		get
 		{
-			if(Method.ReturnType.IsGenericParameter)
+			if (Method.ReturnType.IsGenericParameter)
 				return DeclaringRealType.Generics[Method.ReturnType.GenericParameterPosition];
 			return TypeFactory.Get(Method.ReturnType, null);
 		}

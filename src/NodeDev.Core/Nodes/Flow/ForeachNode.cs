@@ -44,7 +44,7 @@ public class ForeachNode : FlowNode
 
 	public override bool DoesOutputPathAllowMerge(Connection execOutput) => execOutput == Outputs[2]; // The ExecOut path allows merging but not the loop. The loop is always a dead end.
 
-    private readonly string LabelName = $"break_{Random.Shared.Next(0, 100000)}";
+	private readonly string LabelName = $"break_{Random.Shared.Next(0, 100000)}";
 	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
 	{
 		ArgumentNullException.ThrowIfNull(subChunks);
