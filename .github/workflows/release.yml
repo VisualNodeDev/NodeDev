@@ -1,0 +1,147 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: .NET
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    name: Builds the entire solution
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Restore .NET dependencies
+      working-directory: ./src
+      run: dotnet restore
+
+    - name: Build
+      working-directory: ./src
+      run: dotnet build --no-restore
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: buildArtifact
+        path: ./src
+        retention-days: 7
+        
+  tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: buildArtifact
+        path: ./src
+
+    - name: Test
+      working-directory: ./src/NodeDev.Tests
+      run: dotnet test --no-build --verbosity normal
+
+  e2e-tests:
+    name: Run End To End Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+
+    - uses: actions/download-artifact@master
+      with:
+        name: buildArtifact
+        path: ./src
+
+    - name: Build Necessary for Playwright
+      working-directory: ./src/NodeDev.EndToEndTests
+      run: dotnet build
+    
+    - name: Allow run
+      run: chmod -R +x ./src/NodeDev.Blazor.Server/bin
+
+    - name: Ensure browsers are installed
+      run: pwsh ./src/NodeDev.EndToEndTests/bin/Debug/net9.0/playwright.ps1 install --with-deps
+
+    - name: Test
+      env:
+        HEADLESS: true
+      working-directory: ./src/NodeDev.EndToEndTests
+      run: dotnet test --no-build --verbosity normal
+      
+    - name: Upload std Artifact
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logServer
+        path: ./src/NodeDev.Blazor.Server/logs
+        retention-days: 7
+
+  publish:
+    name: Publish the application and create the packages
+    runs-on: windows-latest
+    needs: [build, tests, e2e-tests]
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+        
+    - name: Publish Web Server framework dependent (Windows)
+      working-directory: ./src/NodeDev.Blazor.Server
+      run: dotnet publish -c Release --runtime win-x64 --self-contained false -p:PublishSingleFile=true
+
+    - name: Publish Web Server framework dependent (Linux)
+      working-directory: ./src/NodeDev.Blazor.Server
+      run: dotnet publish -c Release --runtime linux-x64 --self-contained false -p:PublishSingleFile=true
+
+    - name: Publish Desktop framework dependent (Windows)
+      working-directory: ./src/NodeDev.Blazor.MAUI
+      shell: pwsh
+      run: ./publishAndCleanup.ps1
+      
+    - name: Zip Web Server framework dependent (Windows)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/win-x64/publish/* -DestinationPath ./Windows_x64_WebServer.zip
+      
+    - name: Zip Desktop framework dependent (Windows)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.MAUI/bin/Release/net9.0-windows10.0.19041.0/win-x64/publish/* -DestinationPath ./Windows_x64_DesktopApp.zip
+      
+    - name: Zip Web Server framework dependent (Linux)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/linux-x64/publish/* -DestinationPath ./Linux_x64_WebServer.zip
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          ./Windows_x64_WebServer.zip
+          ./Windows_x64_DesktopApp.zip
+          ./Linux_x64_WebServer.zip
+
