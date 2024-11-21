@@ -2,56 +2,79 @@
 
 <div class="drop-shadow-lg bg-white border my-node" @ondblclick="OnDoubleClick">
 
-	<div class="bg-main pa-2 mb-1 font-semibold text-white uppercase title relative">
-		@if (Node.Node.AlternatesOverloads.Take(2).Count() == 2)
-		{
-			<MudIconButton Class="overload-icon" Icon="@Icons.Material.Filled.ChangeCircle" OnClick="() => GraphCanvas.OnOverloadSelectionRequested(Node)" />
-		}
-		@{
-			var undefinedGenerics = Node.Node.GetUndefinedGenericTypes().ToList();
-		}
-		<span>@Node.Node.Name</span>
-		@if (undefinedGenerics.Count != 0)
-		{
-			<span class="ml-1">&lt;</span>
-			@foreach (var undefinedGeneric in undefinedGenerics)
-			{
-				<span class="ml-1 undefined-generic" @onclick="() => GraphCanvas.OnGenericTypeSelectionMenuAsked(Node, undefinedGeneric)">@(undefinedGeneric + (undefinedGeneric == undefinedGenerics[^1] ? "" : ", "))</span>
-			}
-			<span class="ml-1">&gt;</span>
-		}
-	</div>
+    <div class="bg-main pa-2 mb-1 font-semibold text-white title relative">
+        @if (Node.Node.AlternatesOverloads.Take(2).Count() == 2)
+        {
+            <MudIconButton Class="overload-icon" Icon="@Icons.Material.Filled.ChangeCircle" OnClick="() => GraphCanvas.OnOverloadSelectionRequested(Node)" />
+        }
+        @{
+            var undefinedGenerics = Node.Node.GetUndefinedGenericTypes().ToList();
+        }
 
-	@{
-		var inputs = Node.Ports.OfType<GraphPortModel>().Where(x => x.Alignment == PortAlignment.Left).OrderBy(x => Node.Node.ReOrderExecInputsAndOutputs ? !x.Connection.Type.IsExec : true).ToList();
-		var outputs = Node.Ports.OfType<GraphPortModel>().Where(x => x.Alignment == PortAlignment.Right).OrderBy(x => Node.Node.ReOrderExecInputsAndOutputs ? !x.Connection.Type.IsExec : true).ToList();
-		var nbRows = Math.Max(inputs.Count, outputs.Count);
-	}
-	@for (int i = 0; i < nbRows; ++i)
-	{
-		<div class="row">
-			@if (i < inputs.Count)
-			{
-				<GraphNodeWidgetPort GraphCanvas="GraphCanvas" Node="Node" IsInput="true" SharingRow="i < outputs.Count" Port="inputs[i]"></GraphNodeWidgetPort>
-			}
-			@if (i < outputs.Count)
-			{
-				<GraphNodeWidgetPort GraphCanvas="GraphCanvas" Node="Node" IsInput="false" SharingRow="i < inputs.Count" Port="outputs[i]"></GraphNodeWidgetPort>
-			}
-		</div>
-	}
+        @if (Node.IsEditingName)
+        {
+            <MudTextField T="string" @bind-Value="Node.Node.Name" @bind-Value:after="OnAfterNodeRenamed" OnKeyDown="OnKeyDown" AutoFocus="true" />
+        }
+        else
+        {
+            <span>@Node.Node.Name</span>
+        }
+
+        @if (undefinedGenerics.Count != 0)
+        {
+            <span class="ml-1">&lt;</span>
+            @foreach (var undefinedGeneric in undefinedGenerics)
+            {
+                <span class="ml-1 undefined-generic" @onclick="() => GraphCanvas.OnGenericTypeSelectionMenuAsked(Node, undefinedGeneric)">@(undefinedGeneric + (undefinedGeneric == undefinedGenerics[^1] ? "" : ", "))</span>
+            }
+            <span class="ml-1">&gt;</span>
+        }
+    </div>
+
+    @{
+        var inputs = Node.Ports.OfType<GraphPortModel>().Where(x => x.Alignment == PortAlignment.Left).OrderBy(x => Node.Node.ReOrderExecInputsAndOutputs ? !x.Connection.Type.IsExec : true).ToList();
+        var outputs = Node.Ports.OfType<GraphPortModel>().Where(x => x.Alignment == PortAlignment.Right).OrderBy(x => Node.Node.ReOrderExecInputsAndOutputs ? !x.Connection.Type.IsExec : true).ToList();
+        var nbRows = Math.Max(inputs.Count, outputs.Count);
+    }
+    @for (int i = 0; i < nbRows; ++i)
+    {
+        <div class="row">
+            @if (i < inputs.Count)
+            {
+                <GraphNodeWidgetPort GraphCanvas="GraphCanvas" Node="Node" IsInput="true" SharingRow="i < outputs.Count" Port="inputs[i]"></GraphNodeWidgetPort>
+            }
+            @if (i < outputs.Count)
+            {
+                <GraphNodeWidgetPort GraphCanvas="GraphCanvas" Node="Node" IsInput="false" SharingRow="i < inputs.Count" Port="outputs[i]"></GraphNodeWidgetPort>
+            }
+        </div>
+    }
 </div>
 
 @code {
 
-	[Parameter]
-	public GraphNodeModel Node { get; set; } = null!;
+    [Parameter]
+    public GraphNodeModel Node { get; set; } = null!;
 
-	[CascadingParameter]
-	public GraphCanvas GraphCanvas { get; set; } = null!;
+    [CascadingParameter]
+    public GraphCanvas GraphCanvas { get; set; } = null!;
 
-	private void OnDoubleClick()
-	{
-		GraphCanvas.OnNodeDoubleClick(Node.Node);
-	}
+
+    private void OnDoubleClick()
+    {
+        GraphCanvas.OnNodeDoubleClick(Node.Node);
+    }
+
+    private void OnAfterNodeRenamed()
+    {
+        GraphCanvas.OnNodeRenamed(Node);
+    }
+
+    private void OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            Node.IsEditingName = false;
+        }
+    }
 }

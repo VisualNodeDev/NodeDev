@@ -15,9 +15,14 @@ namespace NodeDev.Blazor.DiagramsModels
     {
         internal readonly Node Node;
 
-		
+		/// <summary>
+		/// Set to true by the canvas when the user hit "f2" to edit the node name.
+		/// Set back to false when completed editing or when the node loses focus.
+		/// </summary>
+		internal bool IsEditingName { get; set; }
 
-        public GraphNodeModel(Node node) : base(new(node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero)).X, node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero)).Y))
+
+		public GraphNodeModel(Node node) : base(new(node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero)).X, node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero)).Y))
         {
             Node = node;
         }
