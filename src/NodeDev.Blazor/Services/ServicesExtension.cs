@@ -8,13 +8,13 @@ namespace NodeDev.Blazor.Services
 
 		public static IServiceCollection AddNodeDev(this IServiceCollection services)
 		{
-            services
+			services
 				.AddMudServices()
 				.AddScoped<DebuggedPathService>()
 				.AddSingleton<ProjectService>()
-				.AddSingleton(new AppOptionsContainer ("AppOptions.json"));
+				.AddSingleton(new AppOptionsContainer("AppOptions.json"));
 
-            return services;
+			return services;
 		}
 
 	}

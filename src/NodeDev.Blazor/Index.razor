@@ -105,8 +105,11 @@
 
     private void OnProjectChanged()
 	{
-        DebuggedPathService.ChangeProject(ProjectService.Project);
-        NavigationManager.Refresh(true);
+		_ = InvokeAsync(() =>
+		{
+            DebuggedPathService.ChangeProject(ProjectService.Project);
+            NavigationManager.Refresh(true);
+		});
 	}
 
     private void SwitchSourceViewerGraph()

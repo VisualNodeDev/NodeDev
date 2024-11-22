@@ -34,8 +34,8 @@
 	{
 		try
 		{
-			var projectPath = Path.Combine(AppOptionsContainer.AppOptions.ProjectsDirectory!, $"{ProjectName}.ndproj");
-			ProjectService.SaveProjectToFile(projectPath);
+			ProjectService.Project.Settings.ProjectName = ProjectName!;
+			ProjectService.SaveProjectToFile();
 			Snackbar.Add("Project saved", Severity.Success);
 			MudDialog.Close(DialogResult.Ok(ProjectName));
 		}

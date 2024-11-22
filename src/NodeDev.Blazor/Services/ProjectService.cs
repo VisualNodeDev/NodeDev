@@ -1,63 +1,58 @@
-﻿using MudBlazor;
-using NodeDev.Core;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using NodeDev.Core;
 
 namespace NodeDev.Blazor.Services
 {
-    /// <summary>
-    /// Service used to keep a singleton of the project throughout the application.
-    /// </summary>
-    public class ProjectService
-    {
-        public Project Project { get; private set; }
+	/// <summary>
+	/// Service used to keep a singleton of the project throughout the application.
+	/// </summary>
+	public class ProjectService
+	{
+		public Project Project { get; private set; }
 
-        public delegate void ProjectChangedHandler();
-        /// <summary>
-        /// Event used to notify subscribers when the current project has changed.
-        /// </summary>
-        public event ProjectChangedHandler? ProjectChanged;
+		private readonly AppOptionsContainer AppOptionsContainer;
 
-        /// <summary>
-        /// Instanciates a default project as the current project.
-        /// </summary>
-        public ProjectService()
-        {
-            Project = Project.CreateNewDefaultProject();
-            
-        }
+		public delegate void ProjectChangedHandler();
+		/// <summary>
+		/// Event used to notify subscribers when the current project has changed.
+		/// </summary>
+		public event ProjectChangedHandler? ProjectChanged;
 
-        /// <summary>
-        /// Changes the current project and notifies all subscribers of <see cref="ProjectChanged" />.
-        /// </summary>
-        /// <param name="project"></param>
-        public void ChangeProject(Project project)
-        {
-            Project = project;
-            ProjectChanged?.Invoke();
-        }
+		/// <summary>
+		/// Instanciates a default project as the current project.
+		/// </summary>
+		public ProjectService(AppOptionsContainer appOptionsContainer)
+		{
+			Project = Project.CreateNewDefaultProject();
+			AppOptionsContainer = appOptionsContainer;
+		}
 
-        public async Task LoadProjectFromFileAsync(string file)
-        {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(file);
+		/// <summary>
+		/// Changes the current project and notifies all subscribers of <see cref="ProjectChanged" />.
+		/// </summary>
+		/// <param name="project"></param>
+		public void ChangeProject(Project project)
+		{
+			Project = project;
+			ProjectChanged?.Invoke();
+		}
 
-            var json = await File.ReadAllTextAsync(file);
-            var project = Project.Deserialize(json);
-            project.Settings.ProjectName = Path.GetFileNameWithoutExtension(file);
-            ChangeProject(project);
-        }
+		public async Task LoadProjectFromFileAsync(string file)
+		{
+			ArgumentNullException.ThrowIfNullOrWhiteSpace(file);
 
-        public void SaveProjectToFile(string file)
-        {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(file);
+			var json = await File.ReadAllTextAsync(file);
+			var project = Project.Deserialize(json);
+			project.Settings.ProjectName = Path.GetFileNameWithoutExtension(file);
+			ChangeProject(project);
+		}
 
-            string content = Project.Serialize();
-            File.WriteAllText(file, content);
+		public void SaveProjectToFile()
+		{
+			ArgumentNullException.ThrowIfNullOrWhiteSpace(Project.Settings.ProjectName);
+			var projectPath = Path.Combine(AppOptionsContainer.AppOptions.ProjectsDirectory!, $"{Project.Settings.ProjectName}.ndproj");
+			string content = Project.Serialize();
+			File.WriteAllText(projectPath, content);
 
-        }
-    }
+		}
+	}
 }

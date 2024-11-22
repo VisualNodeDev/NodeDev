@@ -10,13 +10,10 @@
 	<DialogContent>
 		<MudStack>
 			<MudPaper Class="full-width">
-				<MudList T="string" SelectedValue="ProjectName" SelectedValueChanged="SelectProject" ReadOnly="false">
-					@if (RecentProjects is not null)
+				<MudList T="string" @bind-SelectedValue="ProjectName" ReadOnly="false">
+					@foreach (var item in RecentProjects)
 					{
-						@foreach (var item in RecentProjects)
-						{
-							<MudListItem Text="@item"></MudListItem>
-						}
+						<MudListItem Text="@item"></MudListItem>
 					}
 				</MudList>
 			</MudPaper>
@@ -32,8 +29,8 @@
 	[CascadingParameter]
 	private MudDialogInstance MudDialog { get; set; } = null!;
 
-	public string? ProjectName { get; set; }
-	public List<string> RecentProjects { get; set; } = new List<string>();
+	private string? ProjectName { get; set; }
+	private List<string> RecentProjects { get; set; } = new List<string>();
 
 	private void Close() => MudDialog.Close(DialogResult.Ok(true));
 
@@ -45,17 +42,15 @@
 
 	private List<string> ListRecentProjects()
 	{
-		List<string> recentProjects = new List<string>();
 		if (AppOptionsContainer.AppOptions.ProjectsDirectory is null)
 		{
-			return recentProjects;
+			return [];
 		}
 		if (!Directory.Exists(AppOptionsContainer.AppOptions.ProjectsDirectory))
 		{
-			return recentProjects;
+			return [];
 		}
-		recentProjects = Directory.GetFiles(AppOptionsContainer.AppOptions.ProjectsDirectory, "*.ndproj").Select(x => Path.GetFileNameWithoutExtension(x)).ToList();
-		return recentProjects;
+		return Directory.EnumerateFiles(AppOptionsContainer.AppOptions.ProjectsDirectory, "*.ndproj").Select(Path.GetFileNameWithoutExtension).ToList()!;
 	}
 
 	private async Task LoadProject()
@@ -75,11 +70,6 @@
 			Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
 			Snackbar.Add(ex.Message, Severity.Error);
 		}
-		MudDialog.Close(DialogResult.Ok(ProjectName));
-	}
-
-	private void SelectProject(string projectName)
-	{
-		ProjectName = projectName;
+		MudDialog.Close(DialogResult.Ok(true));
 	}
 }

@@ -1,5 +1,6 @@
-﻿@inject IDialogService DialogService
-@inject AppOptionsContainer AppOptionsContainer
+﻿@using NodeDev.Blazor.Services
+@inject IDialogService DialogService
+@inject Services.AppOptionsContainer AppOptionsContainer
 
 <MudDialog>
     <TitleContent>
@@ -23,8 +24,7 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-
-        AppOptions = AppOptionsContainer.AppOptions;
+        AppOptions = AppOptionsContainer.AppOptions with { };
     }
 
     private void Accept()

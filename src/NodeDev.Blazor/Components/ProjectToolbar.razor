@@ -37,10 +37,9 @@
             return SaveAs();
         }
 
-        var projectPath = Path.Combine(AppOptionsContainer.AppOptions.ProjectsDirectory!, $"{Project.Settings.ProjectName}.ndproj");
         try
         {
-            ProjectService.SaveProjectToFile(projectPath);
+            ProjectService.SaveProjectToFile();
             Snackbar.Add("Project saved", Severity.Success);
         }
         catch (Exception ex)
