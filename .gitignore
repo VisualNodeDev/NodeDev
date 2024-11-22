@@ -29,3 +29,4 @@
 /src/NodeDev.EndToEndTests/bin/Release/net8.0
 /src/NodeDev.EndToEndTests/obj
 /src/NodeDev.Blazor.Server/project_backup.json
+/src/NodeDev.Blazor.Server/AppOptions.json
