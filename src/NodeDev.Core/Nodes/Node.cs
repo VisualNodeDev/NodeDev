@@ -1,15 +1,7 @@
-﻿using NodeDev.Core.Class;
-using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace NodeDev.Core.Nodes
 {
@@ -25,6 +17,8 @@ namespace NodeDev.Core.Nodes
 		public string Id { get; }
 
 		public virtual string Name { get; set; } = "";
+
+		public virtual bool AllowEditingName { get; } = false;
 
 		public Graph Graph { get; }
 
@@ -61,18 +55,24 @@ namespace NodeDev.Core.Nodes
 		/// </summary>
 		public int GraphIndex { get; set; } = -1;
 
-		public IEnumerable<UndefinedGenericType> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
+		public virtual IEnumerable<string> GetUndefinedGenericTypes() => InputsAndOutputs.SelectMany(x => x.Type.GetUndefinedGenericTypes()).Distinct();
+
+		/// <summary>
+		/// Called before the generic type are set on every connections
+		/// </summary>
+		public virtual void OnBeforeGenericTypeDefined(IReadOnlyDictionary<string, TypeBase> changedGenerics) { }
+
 
 		public record class AlternateOverload(TypeBase ReturnType, List<IMethodParameterInfo> Parameters);
-		public virtual IEnumerable<AlternateOverload> AlternatesOverloads => Enumerable.Empty<AlternateOverload>();
+		public virtual IEnumerable<AlternateOverload> AlternatesOverloads => [];
 
 		/// <summary>
 		/// returns a list of changed connections, if any
 		/// </summary>
 		/// <param name="connection">The connection that was generic, it is not generic anymore</param>
-		public virtual List<Connection> GenericConnectionTypeDefined(UndefinedGenericType previousType, Connection connection, TypeBase baseType)
+		public virtual List<Connection> GenericConnectionTypeDefined(Connection connection)
 		{
-			return new();
+			return [];
 		}
 
 		public virtual void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
@@ -117,11 +117,11 @@ namespace NodeDev.Core.Nodes
 
 		public abstract bool DoesOutputPathAllowMerge(Connection execOutput);
 
-        /// <summary>
-        /// Returns true if this node breaks a dead end. These are usually "Return", "Break", "Continue", etc.
-        /// This will allow a dead end in places where it shouldn't be allowed, such as a "Branch" node.
-        /// </summary>
-        public virtual bool BreaksDeadEnd => false;
+		/// <summary>
+		/// Returns true if this node breaks a dead end. These are usually "Return", "Break", "Continue", etc.
+		/// This will allow a dead end in places where it shouldn't be allowed, such as a "Branch" node.
+		/// </summary>
+		public virtual bool BreaksDeadEnd => false;
 
 		public class InfiniteLoopException(Node node) : Exception
 		{
@@ -291,7 +291,6 @@ namespace NodeDev.Core.Nodes
 				Outputs.Add(connection);
 			}
 		}
-
 
 		#endregion
 	}

@@ -1,12 +1,7 @@
 ﻿using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace NodeDev.Core.Connections
 {
@@ -20,6 +15,11 @@ namespace NodeDev.Core.Connections
 		public Node Parent { get; }
 
 		public TypeBase Type { get; private set; }
+
+		/// <summary>
+		/// Initial type of the connection. Used to remember the type before generics were resolved in case we need to re-resolve them differently.
+		/// </summary>
+		public TypeBase InitialType { get; private set; }
 
 		internal readonly List<Connection> _Connections = [];
 
@@ -47,12 +47,16 @@ namespace NodeDev.Core.Connections
 		/// </summary>
 		public Connection? LinkedExec { get; }
 
+		public bool IsInput => Parent.Inputs.Contains(this);
+		public bool IsOutput => Parent.Outputs.Contains(this);
+
 		public Connection(string name, Node parent, TypeBase type, string? id = null, Connection? linkedExec = null)
 		{
 			Id = id ?? Guid.NewGuid().ToString();
 			Name = name;
 			Parent = parent;
 			Type = type;
+			InitialType = type;
 			LinkedExec = linkedExec;
 		}
 
@@ -73,7 +77,7 @@ namespace NodeDev.Core.Connections
 		{
 			// Find the LinkedExec connection, if any
 			Connection? linkedExec = null;
-			if(linkedExec != null)
+			if (linkedExec != null)
 				linkedExec = parent.Graph.Nodes.SelectMany(x => x.Value.InputsAndOutputs).FirstOrDefault(x => x.Id == serializedConnectionObj.LinkedExec);
 
 			var type = TypeBase.Deserialize(parent.TypeFactory, serializedConnectionObj.SerializedType);
@@ -103,6 +107,37 @@ namespace NodeDev.Core.Connections
 
 		#endregion
 
+		public bool IsAssignableTo(Connection other, bool alsoValidateInitialTypeSource, bool alsoValidateInitialTypeDestination, [MaybeNullWhen(false)] out Dictionary<string, TypeBase> changedGenericsLeft, [MaybeNullWhen(false)] out Dictionary<string, TypeBase> changedGenericsRight, out bool usedInitialTypes)
+		{
+			if (Type.IsAssignableTo(other.Type, out var changedGenericsLeft1, out var changedGenericsRight1, out var depth1))
+			{
+				if (alsoValidateInitialTypeSource || alsoValidateInitialTypeDestination)
+				{
+					var initialType = alsoValidateInitialTypeSource ? InitialType : Type;
+					var otherInitialType = alsoValidateInitialTypeDestination ? other.InitialType : other.Type;
+					if ((initialType != Type || otherInitialType != other.Type) && initialType.IsAssignableTo(otherInitialType, out var changedGenericsLeft2, out var changedGenericsRight2, out var depth2))
+					{
+						if ((changedGenericsLeft2.Count != 0 || changedGenericsRight2.Count != 0) && depth2 < depth1)
+						{
+							changedGenericsLeft = changedGenericsLeft2;
+							changedGenericsRight = changedGenericsRight2;
+							usedInitialTypes = true;
+							return true;
+						}
+					}
+				}
+
+				changedGenericsLeft = changedGenericsLeft1;
+				changedGenericsRight = changedGenericsRight1;
+				usedInitialTypes = false;
+				return true;
+			}
+
+			changedGenericsLeft = changedGenericsRight = null;
+			usedInitialTypes = false;
+			return false;
+		}
+
 		public void UpdateVertices(IEnumerable<Vector2> vertices)
 		{
 			Vertices.Clear();
@@ -110,9 +145,12 @@ namespace NodeDev.Core.Connections
 		}
 
 
-		public void UpdateType(TypeBase newType)
+		public void UpdateTypeAndTextboxVisibility(TypeBase newType, bool overrideInitialType)
 		{
 			Type = newType;
+
+			if (overrideInitialType)
+				InitialType = newType;
 
 			if (Type.AllowTextboxEdit)
 				TextboxValue = Type.DefaultTextboxValue;

@@ -1,9 +1,4 @@
 ﻿using NodeDev.Core.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NodeDev.Core.Class
 {
@@ -49,13 +44,13 @@ namespace NodeDev.Core.Class
 				Methods.Add(NodeClassMethod.Deserialize(this, method));
 		}
 
-        internal void Deserialize_Step3()
+		internal void Deserialize_Step3()
 		{
 			foreach (var method in Methods)
 				method.Deserialize_Step3();
 		}
 
-        internal SerializedNodeClass Serialize()
+		internal SerializedNodeClass Serialize()
 		{
 			var serializedNodeClass = new SerializedNodeClass(Name, Namespace, Methods.Select(x => x.Serialize()).ToList(), Properties.Select(x => x.Serialize()).ToList());
 

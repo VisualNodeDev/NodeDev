@@ -1,5 +1,4 @@
-﻿using NodeDev.Core.Connections;
-using NodeDev.Core.Types;
+﻿using NodeDev.Core.Types;
 using System.Linq.Expressions;
 
 namespace NodeDev.Core.Nodes.Math;
@@ -12,7 +11,7 @@ public class Equals : TwoOperationMath
 	{
 		Name = "Equals";
 
-		Outputs[0].UpdateType(TypeFactory.Get(typeof(bool), null));
+		Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(typeof(bool), null), overrideInitialType: true);
 	}
 
 	internal override void BuildInlineExpression(BuildExpressionInfo info)

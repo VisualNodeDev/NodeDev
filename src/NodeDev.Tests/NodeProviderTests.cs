@@ -1,12 +1,10 @@
 using NodeDev.Core;
-using NodeDev.Core.Class;
-using NodeDev.Core.Nodes.Flow;
 
 namespace NodeDev.Tests;
 
 public class NodeProviderTests
 {
-	
+
 	[Fact]
 	public void TestsNodeMethod()
 	{
@@ -15,11 +13,11 @@ public class NodeProviderTests
 
 		project.Classes.Add(graph.SelfClass);
 
-		var methods  = NodeProvider.Search(project, graph.SelfMethod.Name, null);
+		var methods = NodeProvider.Search(project, graph.SelfMethod.Name, null);
 
 		Assert.Contains(methods, x => x is NodeProvider.MethodCallNode methodCall && methodCall.MethodInfo == graph.SelfMethod);
 
-		methods  = NodeProvider.Search(project, graph.SelfMethod.Name + "asd", null);
+		methods = NodeProvider.Search(project, graph.SelfMethod.Name + "asd", null);
 		Assert.DoesNotContain(methods, x => x is NodeProvider.MethodCallNode methodCall && methodCall.MethodInfo == graph.SelfMethod);
 	}
 

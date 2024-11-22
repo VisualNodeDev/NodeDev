@@ -37,13 +37,13 @@ public class EntryNode : FlowNode
 	{
 		Outputs[index + 1].Name = parameter.Name;
 		Graph.RaiseGraphChanged(true);
-    }
+	}
 
-    internal Connection UpdateParameterType(NodeClassMethodParameter parameter, int index)
+	internal Connection UpdateParameterType(NodeClassMethodParameter parameter, int index)
 	{
 		var connection = Outputs[index + 1];
 
-		connection.UpdateType(parameter.ParameterType);
+		connection.UpdateTypeAndTextboxVisibility(parameter.ParameterType, overrideInitialType: true);
 
 		return connection;
 	}
@@ -56,7 +56,7 @@ public class EntryNode : FlowNode
 		Outputs.RemoveRange(1, Outputs.Count - 1);
 		Outputs.AddRange(newConnections);
 
-		Graph.MergedRemovedConnectionsWithNewConnections(newConnections, removedConnections);
+		Graph.MergeRemovedConnectionsWithNewConnections(newConnections, removedConnections);
 	}
 
 	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)

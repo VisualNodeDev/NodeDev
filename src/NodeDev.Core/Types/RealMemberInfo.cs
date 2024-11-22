@@ -57,4 +57,6 @@ public class RealMemberInfo : IMemberInfo
 	};
 
 	public bool IsField => MemberInfo is FieldInfo;
+
+	public bool IsProperty => MemberInfo is PropertyInfo;
 }

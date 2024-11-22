@@ -1,9 +1,4 @@
 ﻿using NodeDev.Core.Class;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NodeDev.Core.Types
 {
@@ -30,9 +25,23 @@ namespace NodeDev.Core.Types
 
 		public override string FriendlyName => Name;
 
-		public override TypeBase[] Interfaces => Array.Empty<TypeBase>();
+		public override bool IsArray => false;
 
-		public override IEnumerable<IMemberInfo> GetMembers() =>NodeClass.Properties;
+		public override TypeBase ArrayInnerType => throw new NotImplementedException();
+
+		public override TypeBase ArrayType => new NodeClassArrayType(this, 1);
+
+		public override TypeBase[] Interfaces => [];
+
+		public override IEnumerable<IMemberInfo> GetMembers() => NodeClass.Properties;
+
+		public NodeClassType GetNonArray()
+		{
+			if (!IsArray)
+				return this;
+
+			return NodeClass.Project.GetNodeClassType(NodeClass, Generics);
+		}
 
 		internal protected override string Serialize()
 		{

@@ -16,6 +16,8 @@ public class ReturnNode : FlowNode
 		Name = "Return";
 
 		Inputs.Add(new("Exec", this, TypeFactory.ExecType));
+
+		Refresh();
 	}
 
 	private bool HasReturnValue => Graph.SelfMethod.ReturnType != TypeFactory.Void;
@@ -60,6 +62,6 @@ public class ReturnNode : FlowNode
 		Inputs.RemoveRange(1, Inputs.Count - 1);
 		Inputs.AddRange(newConnections);
 
-		Graph.MergedRemovedConnectionsWithNewConnections(newConnections, removedConnections);
+		Graph.MergeRemovedConnectionsWithNewConnections(newConnections, removedConnections);
 	}
 }

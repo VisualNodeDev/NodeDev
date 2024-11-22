@@ -25,8 +25,10 @@
 /src/NodeDev.Core.Types.Tests/bin
 /src/NodeDev.Core.Types.Tests/obj
 /src/NodeDev.Core.Types/bin
-/src/NodeDev.EndToEndTests/bin/Debug/net8.0
-/src/NodeDev.EndToEndTests/bin/Release/net8.0
+/src/NodeDev.EndToEndTests/bin
 /src/NodeDev.EndToEndTests/obj
 /src/NodeDev.Blazor.Server/project_backup.json
+/src/NodeDev.Blazor.MAUI/bin/Debug/net9.0-windows10.0.19041.0/win10-x64
+/src/NodeDev.Blazor.MAUI/obj
+/src/NodeDev.Blazor.MAUI/bin/Release/net9.0-windows10.0.19041.0/win-x64
 /src/NodeDev.Blazor.Server/AppOptions.json

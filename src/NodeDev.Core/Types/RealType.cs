@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NodeDev.Core.Types;
 
@@ -27,6 +22,12 @@ public class RealType : TypeBase
 
 	private TypeBase[]? _Interfaces;
 	public override TypeBase[] Interfaces => _Interfaces ?? InitializeInterfaces();
+
+	public override bool IsArray => BackendType.IsArray;
+
+	public override TypeBase ArrayType => TypeFactory.Get(BackendType.MakeArrayType(), Generics);
+
+	public override TypeBase ArrayInnerType => IsArray ? TypeFactory.Get(BackendType.GetElementType()!, Generics) : throw new Exception("Can't call ArrayInnerType on non-array type");
 
 	public override bool IsIn(int genericIndex) => BackendType.GetGenericArguments()[genericIndex].IsGenericParameter && (BackendType.GetGenericArguments()[genericIndex].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Contravariant) != System.Reflection.GenericParameterAttributes.None;
 
@@ -88,11 +89,11 @@ public class RealType : TypeBase
 
 	private List<RealMemberInfo> GetMembers_()
 	{
-        var properties = BackendType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-        var fields = BackendType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+		var properties = BackendType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+		var fields = BackendType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
 
-        return properties.Select(x => new RealMemberInfo(x, this)).Concat(fields.Select(x => new RealMemberInfo(x, this))).ToList();
-    }
+		return properties.Select(x => new RealMemberInfo(x, this)).Concat(fields.Select(x => new RealMemberInfo(x, this))).ToList();
+	}
 
 	public override TypeBase CloneWithGenerics(TypeBase[] newGenerics)
 	{
@@ -168,11 +169,11 @@ public class RealType : TypeBase
 	public override string FriendlyName => GetFriendlyName(BackendType);
 
 	private List<RealMethodInfo> GetMethods_()
-    {
-        return BackendType.GetMethods().Select(x => new RealMethodInfo(TypeFactory, x, this)).ToList();
-    }
+	{
+		return BackendType.GetMethods().Select(x => new RealMethodInfo(TypeFactory, x, this)).ToList();
+	}
 
-    public override IEnumerable<IMethodInfo> GetMethods()
+	public override IEnumerable<IMethodInfo> GetMethods()
 	{
 		return Methods.Value;
 	}
@@ -185,10 +186,10 @@ public class RealType : TypeBase
 	internal RealType(TypeFactory typeFactory, Type backendType, TypeBase[]? generics)
 	{
 		TypeFactory = typeFactory;
-        Members = new Lazy<List<RealMemberInfo>>(GetMembers_);
+		Members = new Lazy<List<RealMemberInfo>>(GetMembers_);
 		Methods = new Lazy<List<RealMethodInfo>>(GetMethods_);
 
-        if (generics == null)
+		if (generics == null)
 		{
 			if (backendType.IsGenericType && !backendType.IsConstructedGenericType)
 				throw new Exception("Unable to create real type with undefined generics. To do so you must manually specify the generics through the 'generics' parameter in the RealType constructor");

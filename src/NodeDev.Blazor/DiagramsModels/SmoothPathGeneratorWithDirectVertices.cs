@@ -93,9 +93,9 @@ public class SmoothPathGeneratorWithDirectVertices : PathGenerator
 		if (anchor is SinglePortAnchor spa)
 		{
 			PortAlignment portAlignment;
-			if((isFirstInRoute && first) || (isLastInRoute && !first))
+			if ((isFirstInRoute && first) || (isLastInRoute && !first))
 				portAlignment = spa.Port.Alignment;
-			else if(pX < cX)
+			else if (pX < cX)
 				portAlignment = PortAlignment.Right;
 			else
 				portAlignment = PortAlignment.Left;

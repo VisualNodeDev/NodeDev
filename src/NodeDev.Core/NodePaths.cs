@@ -58,7 +58,7 @@ public class NodePaths
 		}
 
 		return newPaths;
-	
+
 	}
 
 	/// <summary>

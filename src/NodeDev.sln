@@ -17,6 +17,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{848A596C-D848-46EB-BA9B-8A6D313BA602}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		..\.github\workflows\dotnet.yml = ..\.github\workflows\dotnet.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Blazor.Diagrams", "Blazor.Diagrams\src\Blazor.Diagrams\Blazor.Diagrams.csproj", "{2E39F6E8-637A-4EFE-970C-53CA5972BC90}"
@@ -33,6 +34,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.EndToEndTests", "No
 	ProjectSection(ProjectDependencies) = postProject
 		{A73FFB19-1791-4E6E-829C-A6B85E1BD8F2} = {A73FFB19-1791-4E6E-829C-A6B85E1BD8F2}
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeDev.Blazor.MAUI", "NodeDev.Blazor.MAUI\NodeDev.Blazor.MAUI.csproj", "{68D35641-7DBF-4984-A939-22C944328E54}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -72,6 +75,9 @@ Global
 		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68D35641-7DBF-4984-A939-22C944328E54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68D35641-7DBF-4984-A939-22C944328E54}.Release|Any CPU.ActiveCfg = Release|AnyCPU
+		{68D35641-7DBF-4984-A939-22C944328E54}.Release|Any CPU.Build.0 = Release|AnyCPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -79,8 +85,8 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{2E39F6E8-637A-4EFE-970C-53CA5972BC90} = {1F7402C9-C5FD-481F-95D0-F9646E68CD02}
 		{1F7402C9-C5FD-481F-95D0-F9646E68CD02} = {F19EB03F-8DAD-4553-B7BA-863B6B2F155F}
-		{13919421-1AE3-4B79-8CC9-7C084F74E718} = {1F7402C9-C5FD-481F-95D0-F9646E68CD02}
-		{9873F12D-9C5B-4756-B31C-B514664638CE} = {F19EB03F-8DAD-4553-B7BA-863B6B2F155F}
+		{13919421-1AE3-4B79-8CC9-7C084F74E718} = {F19EB03F-8DAD-4553-B7BA-863B6B2F155F}
+		{9873F12D-9C5B-4756-B31C-B514664638CE} = {1F7402C9-C5FD-481F-95D0-F9646E68CD02}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F82949DF-ABD0-4772-9022-5913ED3C6FB2}

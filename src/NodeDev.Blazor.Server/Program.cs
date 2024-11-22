@@ -1,12 +1,11 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
+using NodeDev.Blazor.Server;
 using NodeDev.Blazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor();
+builder.Services.AddRazorComponents()
+	.AddInteractiveServerComponents();
 
 builder.Services.AddNodeDev();
 
@@ -20,11 +19,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseAntiforgery();
+
 app.UseStaticFiles();
 
-app.UseRouting();
-
-app.MapBlazorHub();
-app.MapFallbackToPage("/_Host");
+app.MapRazorComponents<App>()
+	.AddInteractiveServerRenderMode();
 
 app.Run();

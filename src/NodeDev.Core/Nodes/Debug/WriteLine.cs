@@ -22,6 +22,6 @@ public class WriteLine : NormalFlowNode
 		if (method == null)
 			throw new Exception("Unable to find Console.WriteLine method");
 
-		return Expression.Call(null, method, info.LocalVariables[Inputs[1]]);
+		return Expression.Call(null, method, Expression.Convert(info.LocalVariables[Inputs[1]], typeof(object)));
 	}
 }

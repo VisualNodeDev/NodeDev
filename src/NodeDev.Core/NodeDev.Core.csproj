@@ -1,20 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FastExpressionCompiler" Version="4.2.1" />
-    <PackageReference Include="NuGet.Versioning" Version="6.10.1" />
+    <PackageReference Include="FastExpressionCompiler" Version="4.2.2" />
+    <PackageReference Include="NuGet.Versioning" Version="6.12.1" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Dis2Msil\Dis2Msil\Dis2Msil.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="Dependencies\System.Reflection.Emit.dll">
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

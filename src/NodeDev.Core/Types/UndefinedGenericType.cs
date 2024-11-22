@@ -6,14 +6,15 @@ namespace NodeDev.Core.Types;
 
 public class UndefinedGenericType : TypeBase
 {
-	private record class SerializedUndefinedGenericType(string Name);
+	private record class SerializedUndefinedGenericType(string Name, int NbArrayLevels = 0);
 
+	public int NbArrayLevels { get; }
 
 	public override string Name { get; }
 
 	public override string FullName { get; }
 
-	public override TypeBase[] Generics => Array.Empty<TypeBase>();
+	public override TypeBase[] Generics => [];
 
 	public override string FriendlyName => Name;
 
@@ -25,23 +26,56 @@ public class UndefinedGenericType : TypeBase
 
 	public override IEnumerable<IMemberInfo> GetMembers() => throw new NotImplementedException();
 
-	public UndefinedGenericType(string name)
+	public override bool IsArray => NbArrayLevels != 0;
+
+	public override UndefinedGenericType ArrayType => new(UndefinedGenericTypeName, NbArrayLevels + 1);
+
+	public override UndefinedGenericType ArrayInnerType => IsArray ? new UndefinedGenericType(UndefinedGenericTypeName, NbArrayLevels - 1) : throw new Exception("Can't call ArrayInnerType on non-array type");
+
+	public readonly string UndefinedGenericTypeName;
+
+	public UndefinedGenericType(string name, int nbArrayLevels = 0)
 	{
-		FullName = Name = name;
+		UndefinedGenericTypeName = name;
+		FullName = Name = name + NodeClassArrayType.GetArrayString(nbArrayLevels);
+		NbArrayLevels = nbArrayLevels;
 	}
+
+	/// <summary>
+	/// Simplifies the current undefined generic to match as easily as possible with the other type.
+	/// T[] to string[] will return string. T to string[] will return string[].
+	/// </summary>
+	public TypeBase SimplifyToMatchWith(TypeBase otherType)
+	{
+		var thisUndefined = this;
+		while (thisUndefined.IsArray)
+		{
+			if (!otherType.IsArray)
+				throw new Exception("Can't simplify array to non-array type");
+
+			thisUndefined = thisUndefined.ArrayInnerType;
+			otherType = otherType.ArrayInnerType;
+		}
+
+		return otherType;
+	}
+
 
 	public override IEnumerable<IMethodInfo> GetMethods() => [];
 
 	public override IEnumerable<IMethodInfo> GetMethods(string name) => [];
 
-	internal protected override string Serialize() => JsonSerializer.Serialize(new SerializedUndefinedGenericType(Name));
+	#region Serialize / Deserialize
 
-	public new static UndefinedGenericType Deserialize(TypeFactory typeFactory, string serialized)
+	internal protected override string Serialize() => JsonSerializer.Serialize(new SerializedUndefinedGenericType(UndefinedGenericTypeName, NbArrayLevels));
+	public static UndefinedGenericType Deserialize(TypeFactory typeFactory, string serialized)
 	{
 		var deserialized = JsonSerializer.Deserialize<SerializedUndefinedGenericType>(serialized) ?? throw new Exception("Unable to deserialize UndefinedGenericType");
 
-		return new(deserialized.Name);
+		return new UndefinedGenericType(deserialized.Name, deserialized.NbArrayLevels);
 	}
+
+	#endregion
 
 	public override Type MakeRealType()
 	{
@@ -50,6 +84,9 @@ public class UndefinedGenericType : TypeBase
 
 	public override bool IsSameBackend(TypeBase typeBase)
 	{
-		return Name == typeBase.Name;
+		if (typeBase is not UndefinedGenericType undefinedGenericType)
+			return false;
+
+		return Name == undefinedGenericType.Name;
 	}
 }

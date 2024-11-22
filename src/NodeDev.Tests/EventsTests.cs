@@ -1,7 +1,6 @@
 using NodeDev.Core;
 using NodeDev.Core.Class;
 using NodeDev.Core.Nodes;
-using NodeDev.Core.Nodes.Flow;
 using System.Reactive.Linq;
 
 namespace NodeDev.Tests;
@@ -31,7 +30,7 @@ public class EventsTests
 		returnNode.Inputs.Add(new("Result", entryNode, myClass.TypeFactory.Get<int>()));
 
 		var newNode = new New(graph);
-		newNode.Outputs[1].UpdateType(myClass.ClassTypeBase);
+		newNode.Outputs[1].UpdateTypeAndTextboxVisibility(myClass.ClassTypeBase, overrideInitialType: true);
 
 		var setProp = new SetPropertyOrField(graph);
 		setProp.SetMemberTarget(prop);

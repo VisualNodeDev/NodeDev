@@ -13,8 +13,8 @@ public class TypeFactory
 		"System.Text",
 		"System.Threading",
 		"System.Threading.Tasks",
-        "System.Diagnostics",
-    };
+		"System.Diagnostics",
+	};
 	private Dictionary<string, List<string>> TypeCorrespondances = new()
 	{
 		["System.Int32"] = new() { "int" },
@@ -96,6 +96,13 @@ public class TypeFactory
 
 	public string? CreateBaseFromUserInput(string typeName, out TypeBase? type)
 	{
+		int nbArray = 0;
+		while (typeName.EndsWith("[]"))
+		{
+			++nbArray;
+			typeName = typeName[..^2];
+		}
+
 		typeName = typeName.Replace(" ", "");
 		if (typeName.Count(c => c == '<') != typeName.Count(c => c == '>'))
 		{
@@ -119,6 +126,9 @@ public class TypeFactory
 			else if (currentRealType != null)
 			{
 				type = Get(currentRealType, null);
+				for (int i = 0; i < nbArray; ++i)
+					type = type.ArrayType;
+
 				return null;
 			}
 			else if (currentRealType == null)
@@ -127,6 +137,9 @@ public class TypeFactory
 				if (nodeClass != null)
 				{
 					type = nodeClass.ClassTypeBase;
+					for (int i = 0; i < nbArray; ++i)
+						type = type.ArrayType;
+
 					return null;
 				}
 			}
@@ -166,6 +179,9 @@ public class TypeFactory
 
 		// create the generic type
 		type = Get(baseType, genericArgsTypes);
+		for (int i = 0; i < nbArray; ++i)
+			type = type.ArrayType;
+
 		return null;
 	}
 
