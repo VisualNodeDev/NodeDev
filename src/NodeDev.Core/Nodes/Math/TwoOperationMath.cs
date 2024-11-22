@@ -1,11 +1,5 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NodeDev.Core.Nodes.Math
 {
@@ -22,7 +16,7 @@ namespace NodeDev.Core.Nodes.Math
 		}
 
 		public override List<Connection> GenericConnectionTypeDefined(Connection connection)
-        {
+		{
 			if (Inputs.Count(x => x.Type is RealType t && (t.BackendType.IsPrimitive || t.BackendType == typeof(string))) == 2)
 			{
 				if (!Outputs[0].Type.HasUndefinedGenerics)
@@ -34,7 +28,7 @@ namespace NodeDev.Core.Nodes.Math
 				Type resultingType;
 				// both inputs are basic types like int or float
 				// find the type with the highest precision
-				if(type1 == typeof(string) || type2 == typeof(string))
+				if (type1 == typeof(string) || type2 == typeof(string))
 					resultingType = typeof(string);
 				else if (type1 == typeof(decimal) || type2 == typeof(decimal))
 					resultingType = typeof(decimal);
@@ -44,9 +38,9 @@ namespace NodeDev.Core.Nodes.Math
 					resultingType = typeof(float);
 				else if (type1 == typeof(long) || type2 == typeof(long))
 					resultingType = typeof(long);
-				else if(type1 == typeof(uint) && type2 == typeof(uint))
+				else if (type1 == typeof(uint) && type2 == typeof(uint))
 					resultingType = typeof(uint);
-				else if((type1 == typeof(uint) && type2 == typeof(int)) || (type2 == typeof(uint) && type1 == typeof(int)))
+				else if ((type1 == typeof(uint) && type2 == typeof(int)) || (type2 == typeof(uint) && type1 == typeof(int)))
 					resultingType = typeof(long);
 				else
 					resultingType = typeof(int);
@@ -62,7 +56,7 @@ namespace NodeDev.Core.Nodes.Math
 
 				var correctOne = operations.FirstOrDefault(x => x.GetParameters().Length == 2 && x.GetParameters()[1].ParameterType == type2.BackendType);
 
-				if(correctOne != null)
+				if (correctOne != null)
 				{
 					Outputs[0].UpdateTypeAndTextboxVisibility(TypeFactory.Get(correctOne.ReturnType, null), overrideInitialType: true);
 					return new() { Outputs[0] };

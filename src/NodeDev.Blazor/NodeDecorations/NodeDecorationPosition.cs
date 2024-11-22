@@ -1,12 +1,7 @@
 ﻿using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace NodeDev.Blazor.NodeAttributes
 {
@@ -24,7 +19,7 @@ namespace NodeDev.Blazor.NodeAttributes
 
 
 		private record class SerializedNodeDecoration(float X, float Y);
-		
+
 		public string Serialize()
 		{
 			return JsonSerializer.Serialize(new SerializedNodeDecoration(X, Y));
@@ -36,5 +31,5 @@ namespace NodeDev.Blazor.NodeAttributes
 
 			return new NodeDecorationPosition(new(serializedNodeDecoration.X, serializedNodeDecoration.Y));
 		}
-    }
+	}
 }

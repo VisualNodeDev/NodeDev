@@ -1,7 +1,4 @@
-﻿using NodeDev.Core.Connections;
-using System.Linq.Expressions;
-
-namespace NodeDev.Core.Nodes;
+﻿namespace NodeDev.Core.Nodes;
 
 public class Self : NoFlowNode
 {

@@ -1,5 +1,4 @@
-﻿using NodeDev.Core.Class;
-using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
 using System.Linq.Expressions;
 using System.Reflection;

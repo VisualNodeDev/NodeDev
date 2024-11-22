@@ -37,9 +37,9 @@ public class EntryNode : FlowNode
 	{
 		Outputs[index + 1].Name = parameter.Name;
 		Graph.RaiseGraphChanged(true);
-    }
+	}
 
-    internal Connection UpdateParameterType(NodeClassMethodParameter parameter, int index)
+	internal Connection UpdateParameterType(NodeClassMethodParameter parameter, int index)
 	{
 		var connection = Outputs[index + 1];
 

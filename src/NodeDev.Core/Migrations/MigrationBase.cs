@@ -4,13 +4,13 @@ namespace NodeDev.Core.Migrations;
 
 internal abstract class MigrationBase
 {
-    internal abstract string Version { get; }
+	internal abstract string Version { get; }
 
-    internal virtual void PerformMigrationBeforeDeserialization(JsonObject document)
-    {
-    }
+	internal virtual void PerformMigrationBeforeDeserialization(JsonObject document)
+	{
+	}
 
-    internal virtual void PerformMigrationAfterClassesDeserialization(Project project)
-    {
-    }
+	internal virtual void PerformMigrationAfterClassesDeserialization(Project project)
+	{
+	}
 }

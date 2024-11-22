@@ -81,8 +81,8 @@ public class NodeClassProperty : IMemberInfo
 	{
 		var serializedNodeClassProperty = new SerializedNodeClassProperty(Name, PropertyType.SerializeWithFullTypeName());
 
-        return serializedNodeClassProperty;
-    }
+		return serializedNodeClassProperty;
+	}
 
 	#endregion
 }

@@ -26,7 +26,7 @@ public class RealMethodParameterInfo : IMethodParameterInfo
 		{
 			if (generic.IsGenericMethodParameter)
 				yield return TypeFactory.Get(generic, null);
-            else if (generic.IsGenericParameter)
+			else if (generic.IsGenericParameter)
 				yield return DeclaringRealType.Generics[generic.GenericParameterPosition];
 			else if (!generic.IsGenericType) // we've reached the end, that one is good, we can simply return it
 				yield return TypeFactory.Get(generic, null);
@@ -42,9 +42,9 @@ public class RealMethodParameterInfo : IMethodParameterInfo
 	{
 		get
 		{
-            if (ParameterInfo.ParameterType.IsGenericMethodParameter)
+			if (ParameterInfo.ParameterType.IsGenericMethodParameter)
 				return TypeFactory.Get(ParameterInfo.ParameterType, null);
-            else if (ParameterInfo.ParameterType.IsGenericParameter)
+			else if (ParameterInfo.ParameterType.IsGenericParameter)
 				return DeclaringRealType.Generics[ParameterInfo.ParameterType.GenericParameterPosition];
 			else if (ParameterInfo.ParameterType.IsGenericType)
 			{
@@ -56,5 +56,5 @@ public class RealMethodParameterInfo : IMethodParameterInfo
 		}
 	}
 
-    public bool IsOut => ParameterInfo.IsOut;
+	public bool IsOut => ParameterInfo.IsOut;
 }

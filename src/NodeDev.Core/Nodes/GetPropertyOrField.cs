@@ -87,7 +87,7 @@ public class GetPropertyOrField : NoFlowNode
 
 		var binding = BindingFlags.Public | BindingFlags.NonPublic | (TargetMember.IsStatic ? BindingFlags.Static : BindingFlags.Instance);
 
-		if(TargetMember.IsField)
+		if (TargetMember.IsField)
 		{
 			var field = type.GetField(TargetMember.Name, binding | BindingFlags.GetField) ?? throw new Exception($"Unable to find field: {TargetMember.Name}");
 

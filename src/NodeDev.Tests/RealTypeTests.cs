@@ -1,5 +1,4 @@
 using NodeDev.Core.Types;
-using System.Text.Json;
 
 namespace NodeDev.Tests;
 
@@ -38,7 +37,7 @@ public class RealTypeTests
 			type = new RealType(typeFactory, typeof(List<>), null); // this should throw an exception since we can't create a RealType with a generic without passing the UndefinedGenericType as argument
 		});
 
-		type = typeFactory.Get(typeof(List<int>), null); 
+		type = typeFactory.Get(typeof(List<int>), null);
 		Assert.Same(typeof(List<>), type.BackendType);
 	}
 

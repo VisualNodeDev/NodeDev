@@ -30,8 +30,8 @@ public class UndefinedGenericTypeTests
 
 		Assert.IsType<UndefinedGenericType>(deserialized);
 		Assert.Equal(undefinedGenericType.Name, ((UndefinedGenericType)deserialized).Name);
-        Assert.Equal(undefinedGenericType.NbArrayLevels, ((UndefinedGenericType)deserialized).NbArrayLevels);
-    }
+		Assert.Equal(undefinedGenericType.NbArrayLevels, ((UndefinedGenericType)deserialized).NbArrayLevels);
+	}
 
 
 }

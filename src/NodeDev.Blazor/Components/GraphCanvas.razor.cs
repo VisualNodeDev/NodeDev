@@ -7,15 +7,15 @@ using Blazor.Diagrams.Options;
 using Microsoft.AspNetCore.Components;
 using NodeDev.Blazor.DiagramsModels;
 using NodeDev.Blazor.NodeAttributes;
+using NodeDev.Blazor.Services;
+using NodeDev.Blazor.Services.GraphManager;
 using NodeDev.Core;
+using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
 using System.Numerics;
 using System.Reactive.Linq;
-using NodeDev.Core.Class;
-using NodeDev.Blazor.Services;
-using NodeDev.Blazor.Services.GraphManager;
 
 namespace NodeDev.Blazor.Components;
 

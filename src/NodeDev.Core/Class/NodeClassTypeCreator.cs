@@ -1,11 +1,10 @@
-﻿using System.Reflection.Emit;
-using System.Reflection;
-using NodeDev.Core.Types;
+﻿using Dis2Msil;
 using FastExpressionCompiler;
-using Dis2Msil;
-using System.Text;
+using NodeDev.Core.Types;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.Loader;
-using System.Linq.Expressions;
+using System.Text;
 
 namespace NodeDev.Core.Class;
 
@@ -150,7 +149,7 @@ public class NodeClassTypeCreator
 
 			var assembly = context.LoadFromAssemblyPath(assemblyPath);
 			var type = assembly.GetType(HiddenName(method.Class.Name));
-			if(type == null)
+			if (type == null)
 			{
 				msil = "type not found";
 				return;

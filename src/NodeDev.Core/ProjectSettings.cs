@@ -2,5 +2,5 @@
 
 public record class ProjectSettings()
 {
-    public static ProjectSettings Default { get; } = new();
+	public static ProjectSettings Default { get; } = new();
 }
