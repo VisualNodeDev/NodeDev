@@ -192,7 +192,7 @@ jobs:
     - name: Publish Desktop framework dependent (Windows x64)
       working-directory: ./src/NodeDev.Blazor.MAUI
       shell: pwsh
-      run: ./publishAndCleanup.ps1 -architecture "win-x64" -selfContained false
+      run: ./publishAndCleanup.ps1 -architecture "win-x64" -selfContained $False
 
     - name: Zip Web Server framework dependent (Windows x64)
       shell: pwsh
@@ -202,7 +202,7 @@ jobs:
     - name: Publish Desktop self contained (Windows x64)
       working-directory: ./src/NodeDev.Blazor.MAUI
       shell: pwsh
-      run: ./publishAndCleanup.ps1 -architecture "win-x64" -selfContained true
+      run: ./publishAndCleanup.ps1 -architecture "win-x64" -selfContained $True
 
     - name: Zip Web Server self contained (Windows x64)
       shell: pwsh
@@ -212,7 +212,7 @@ jobs:
     - name: Publish Desktop framework dependent (Windows arm64)
       working-directory: ./src/NodeDev.Blazor.MAUI
       shell: pwsh
-      run: ./publishAndCleanup.ps1 -architecture "win-arm64" -selfContained false
+      run: ./publishAndCleanup.ps1 -architecture "win-arm64" -selfContained $False
 
     - name: Zip Web Server framework dependent (Windows arm64)
       shell: pwsh
@@ -222,7 +222,7 @@ jobs:
     - name: Publish Desktop self contained (Windows arm64)
       working-directory: ./src/NodeDev.Blazor.MAUI
       shell: pwsh
-      run: ./publishAndCleanup.ps1 -architecture "win-arm64" -selfContained true
+      run: ./publishAndCleanup.ps1 -architecture "win-arm64" -selfContained $True
 
     - name: Zip Web Server self contained (Windows arm64)
       shell: pwsh
