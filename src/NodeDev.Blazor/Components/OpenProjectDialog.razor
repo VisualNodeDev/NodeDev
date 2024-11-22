@@ -1,0 +1,85 @@
+﻿@using System.Text.Json
+@using NodeDev.Blazor.Services
+@using NodeDev.Core
+@inject AppOptionsContainer AppOptionsContainer
+@inject IDialogService DialogService
+@inject ProjectService ProjectService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+	<DialogContent>
+		<MudStack>
+			<MudPaper Class="full-width">
+				<MudList T="string" SelectedValue="ProjectName" SelectedValueChanged="SelectProject" ReadOnly="false">
+					@if (RecentProjects is not null)
+					{
+						@foreach (var item in RecentProjects)
+						{
+							<MudListItem Text="@item"></MudListItem>
+						}
+					}
+				</MudList>
+			</MudPaper>
+		</MudStack>
+	</DialogContent>
+	<DialogActions>
+		<MudButton Color="Color.Primary" OnClick="LoadProject" Disabled="ProjectName is null">Open</MudButton>
+		<MudButton Color="Color.Primary" OnClick="Close">Cancel</MudButton>
+	</DialogActions>
+</MudDialog>
+
+@code {
+	[CascadingParameter]
+	private MudDialogInstance MudDialog { get; set; } = null!;
+
+	public string? ProjectName { get; set; }
+	public List<string> RecentProjects { get; set; } = new List<string>();
+
+	private void Close() => MudDialog.Close(DialogResult.Ok(true));
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+		RecentProjects = ListRecentProjects();
+	}
+
+	private List<string> ListRecentProjects()
+	{
+		List<string> recentProjects = new List<string>();
+		if (AppOptionsContainer.AppOptions.ProjectsDirectory is null)
+		{
+			return recentProjects;
+		}
+		if (!Directory.Exists(AppOptionsContainer.AppOptions.ProjectsDirectory))
+		{
+			return recentProjects;
+		}
+		recentProjects = Directory.GetFiles(AppOptionsContainer.AppOptions.ProjectsDirectory, "*.ndproj").Select(x => Path.GetFileNameWithoutExtension(x)).ToList();
+		return recentProjects;
+	}
+
+	private async Task LoadProject()
+	{
+		if (string.IsNullOrWhiteSpace(ProjectName))
+		{
+			return;
+		}
+		try
+		{
+			var projectPath = Path.Combine(AppOptionsContainer.AppOptions.ProjectsDirectory!, $"{ProjectName}.ndproj");
+			await ProjectService.LoadProjectFromFileAsync(projectPath);
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Configuration.VisibleStateDuration = 10000;
+			Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+			Snackbar.Add(ex.Message, Severity.Error);
+		}
+		MudDialog.Close(DialogResult.Ok(ProjectName));
+	}
+
+	private void SelectProject(string projectName)
+	{
+		ProjectName = projectName;
+	}
+}

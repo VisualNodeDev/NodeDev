@@ -3,18 +3,19 @@
 @using NodeDev.Core
 @inject ProjectService ProjectService
 @inject ISnackbar Snackbar
+@inject AppOptionsContainer AppOptionsContainer
+@inject IDialogService DialogService
 
-<MudFileUpload T="IBrowserFile" FilesChanged="Open">
-    <ActivatorContent>
-        <MudButton Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="openProject">Open Project</MudButton>
-    </ActivatorContent>
-</MudFileUpload>
+
+<MudButton OnClick="Open" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="openProject">Open</MudButton>
 <MudButton OnClick="NewProject" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="newProject">New Project</MudButton>
-<MudButton OnClick="Save" Class="ml-3" data-test-id="Save">Save</MudButton>
+<MudButton OnClick="Save" Class="ml-3" data-test-id="save">Save</MudButton>
+<MudButton OnClick="SaveAs" Class="ml-3" data-test-id="saveAs">Save As</MudButton>
 <MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
 <MudButton OnClick="Run" Class="ml-3">Run</MudButton>
 <MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
 <MudSpacer />
+<MudButton OnClick="OpenOptionsDialogAsync" Class="ml-3">Options</MudButton>
 <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
 
 
@@ -22,23 +23,38 @@
 
     private Project Project => ProjectService.Project;
 
-    private async Task Open(IBrowserFile file)
-    {
-        await using var stream = file.OpenReadStream();
-        using var reader = new StreamReader(stream);
-        var json = await reader.ReadToEndAsync();
+	private DialogOptions DialogOptions => new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
 
-        ProjectService.ChangeProject(Core.Project.Deserialize(json));
+    private Task Open()
+    {
+        return DialogService.ShowAsync<OpenProjectDialog>("Open Project", DialogOptions);
     }
 
-    private void Save()
+    private Task Save()
     {
-        // Until we have a proper save dialog, we just save the project to a file
-        string content = Project.Serialize();
-        System.IO.File.WriteAllText("project.json", content);
+        if (string.IsNullOrWhiteSpace(Project.Settings.ProjectName))
+        {
+            return SaveAs();
+        }
 
-        Snackbar.Add("Project saved", Severity.Success);
+        var projectPath = Path.Combine(AppOptionsContainer.AppOptions.ProjectsDirectory!, $"{Project.Settings.ProjectName}.ndproj");
+        try
+        {
+            ProjectService.SaveProjectToFile(projectPath);
+            Snackbar.Add("Project saved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        
+		return Task.CompletedTask;
     }
+
+	private Task SaveAs()
+	{
+        return DialogService.ShowAsync<SaveAsProjectDialog>("Save As Project", DialogOptions);
+	}
 
     private void NewProject()
     {
@@ -64,5 +80,10 @@
             Project.StopLiveDebugging();
         else
             Project.StartLiveDebugging();
+    }
+
+    private Task OpenOptionsDialogAsync()
+    {
+        return DialogService.ShowAsync<OptionsDialog>("Options", DialogOptions);
     }
 }
