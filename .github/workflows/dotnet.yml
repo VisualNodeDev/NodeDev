@@ -11,5 +11,5 @@ on:
 
 jobs:
   build-and-test:
-    uses: ./.github/workflows/workflow-build-and-test.yml
+    uses: ./.github/workflows/workflow-build-and-tests.yml
 
