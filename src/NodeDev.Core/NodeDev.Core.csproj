@@ -11,12 +11,9 @@
     <PackageReference Include="FastExpressionCompiler" Version="4.2.2" />
     <PackageReference Include="NuGet.Versioning" Version="6.12.1" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
+    <PackageReference Include="snakex64.Dis2Msil" Version="1.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Dis2Msil\Dis2Msil\Dis2Msil.csproj" />
-  </ItemGroup>
-  
   <ItemGroup>
     <EmbeddedResource Include="Dependencies\System.Reflection.Emit.dll">
     </EmbeddedResource>
