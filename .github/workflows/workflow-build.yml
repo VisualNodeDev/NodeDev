@@ -1,4 +1,4 @@
-name: .Build the entire solution
+run-name: .Build the entire solution
 
 on:
     workflow_call:
