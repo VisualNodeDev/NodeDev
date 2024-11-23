@@ -15,10 +15,10 @@
     <PackageReference Include="CodeBeam.MudBlazor.Extensions" Version="7.0.0-rc.1" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.0" />
     <PackageReference Include="MudBlazor" Version="7.2.0" />
+    <PackageReference Include="Snakex64.Z.Blazor.Diagrams" Version="99.0.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Blazor.Diagrams\src\Blazor.Diagrams\Blazor.Diagrams.csproj" />
     <ProjectReference Include="..\NodeDev.Core\NodeDev.Core.csproj" />
   </ItemGroup>
 
