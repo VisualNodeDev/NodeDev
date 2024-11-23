@@ -11,14 +11,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    uses: ./.github/workflows/workflow-build.yml
-        
-  tests:
-    uses: ./.github/workflows/workflow-tests.yml
-
-  e2e-tests:
-    uses: ./.github/workflows/workflow-e2e-tests.yml
+  build-and-test:
+    uses: ./.github/workflows/workflow-build-and-test.yml
 
   publish:
     name: Publish and package
