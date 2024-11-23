@@ -6,7 +6,6 @@ on:
 jobs:
     e2e-tests:
         runs-on: ubuntu-latest
-        needs: build
 
         steps:
         - name: Setup .NET

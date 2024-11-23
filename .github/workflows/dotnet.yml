@@ -10,6 +10,6 @@ on:
     branches: [ "master" ]
 
 jobs:
-  build-and-test:
+  build:
     uses: ./.github/workflows/workflow-build-and-tests.yml
 
