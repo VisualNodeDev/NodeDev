@@ -46,4 +46,21 @@ public sealed class MainPageStepDefinitions
 	{
 		await HomePage.SnackBarHasByText(text);
 	}
+
+	[Given("I set the projects directory to {string}")]
+	public async Task GivenISetTheProjectsDirectoryTo(string directory)
+	{
+		await HomePage.OpenOptionsDialog();
+		await HomePage.SetProjectsDirectory(directory);
+		await HomePage.AcceptOptions();
+	}
+
+	[Given("I save the current project as {string}")]
+	public async Task GivenISaveTheCurrentProjectAs(string projectName)
+	{
+		await HomePage.OpenSaveAsDialog();
+		await HomePage.SetProjectNameAs(projectName);
+		await HomePage.AcceptSaveAs();
+	}
+
 }

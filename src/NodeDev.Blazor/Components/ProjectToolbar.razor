@@ -15,7 +15,7 @@
 <MudButton OnClick="Run" Class="ml-3">Run</MudButton>
 <MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
 <MudSpacer />
-<MudButton OnClick="OpenOptionsDialogAsync" Class="ml-3">Options</MudButton>
+<MudButton OnClick="OpenOptionsDialogAsync" Class="ml-3" data-test-id="options">Options</MudButton>
 <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
 
 

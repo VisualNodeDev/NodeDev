@@ -7,11 +7,11 @@
         Options
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="AppOptions.ProjectsDirectory" Label="Projects Directory" Variant="Variant.Text" AutoGrow></MudTextField>
+        <MudTextField @bind-Value="AppOptions.ProjectsDirectory" Label="Projects Directory" Variant="Variant.Text" AutoGrow data-test-id="optionsProjectDirectory"></MudTextField>
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Primary" OnClick="Close">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Accept">Ok</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Close" data-test-id="optionsCancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Accept" data-test-id="optionsAccept">Ok</MudButton>
     </DialogActions>
 </MudDialog>
 

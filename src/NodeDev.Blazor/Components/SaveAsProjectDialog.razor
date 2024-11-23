@@ -8,11 +8,11 @@
 
 <MudDialog>
 	<DialogContent>
-		<MudTextField @bind-Value="ProjectName" Label="File Name" Variant="Variant.Text"></MudTextField>
+		<MudTextField @bind-Value="ProjectName" Label="File Name" Variant="Variant.Text" data-test-id="saveAsProjectName"></MudTextField>
 	</DialogContent>
 	<DialogActions>
-		<MudButton Color="Color.Primary" OnClick="SaveProject" Disabled="ProjectName is null">Save</MudButton>
-		<MudButton Color="Color.Primary" OnClick="Close">Cancel</MudButton>
+		<MudButton Color="Color.Primary" OnClick="SaveProject" Disabled="ProjectName is null" data-test-id="saveAsSave">Save</MudButton>
+		<MudButton Color="Color.Primary" OnClick="Close" data-test-id="saveAsCancel">Cancel</MudButton>
 	</DialogActions>
 </MudDialog>
 
