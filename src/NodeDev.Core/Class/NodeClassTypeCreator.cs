@@ -141,7 +141,7 @@ public class NodeClassTypeCreator
 			str.AppendLine(")");
 			str.AppendLine("{");
 			str.Append(new string(' ', 4));
-			expression.Body.ToCSharpString(str, lineIdent: 4);
+			expression.Body.ToCSharpString(str, indentSpaces: 4);
 			str.AppendLine();
 			str.Append('}');
 

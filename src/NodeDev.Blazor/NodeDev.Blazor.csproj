@@ -12,9 +12,9 @@
 
   <ItemGroup>
     <PackageReference Include="BlazorMonaco" Version="3.2.0" />
-    <PackageReference Include="CodeBeam.MudBlazor.Extensions" Version="7.0.0-rc.1" />
+    <PackageReference Include="CodeBeam.MudBlazor.Extensions" Version="7.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.0" />
-    <PackageReference Include="MudBlazor" Version="7.2.0" />
+    <PackageReference Include="MudBlazor" Version="7.15.0" />
     <PackageReference Include="Snakex64.Z.Blazor.Diagrams" Version="99.0.3" />
   </ItemGroup>
 
