@@ -3,7 +3,7 @@ using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
 
-namespace NodeDev.Blazor.Services.GraphManager;
+namespace NodeDev.Core.GraphManager;
 
 /// <summary>
 /// Contains the logic on how to manipulate Graphs and Nodes.

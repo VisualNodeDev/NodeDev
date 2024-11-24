@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Components;
 using NodeDev.Blazor.DiagramsModels;
 using NodeDev.Blazor.NodeAttributes;
 using NodeDev.Blazor.Services;
-using NodeDev.Blazor.Services.GraphManager;
+using NodeDev.Core.GraphManager;
 using NodeDev.Core;
 using NodeDev.Core.Class;
 using NodeDev.Core.Connections;

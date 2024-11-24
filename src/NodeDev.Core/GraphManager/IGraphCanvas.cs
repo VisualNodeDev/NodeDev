@@ -1,7 +1,7 @@
 ﻿using NodeDev.Core;
 using NodeDev.Core.Connections;
 
-namespace NodeDev.Blazor.Services.GraphManager;
+namespace NodeDev.Core.GraphManager;
 
 public interface IGraphCanvas
 {
