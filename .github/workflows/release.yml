@@ -11,14 +11,24 @@ permissions:
   contents: write
 
 jobs:
-  build-and-tests:
-    name: .Build and Tests
-    uses: ./.github/workflows/workflow-build-and-tests.yml
+  build:
+    name: .Build the entire solution
+    uses: ./.github/workflows/workflow-build.yml
+
+  tests:
+    name: .Run Unit Tests
+    needs: build
+    uses: ./.github/workflows/workflow-tests.yml
+
+  e2e-tests:
+    name: .Run End To End Tests
+    needs: build
+    uses: ./.github/workflows/workflow-e2e-tests.yml 
 
   publish:
     name: Publish and package
     runs-on: windows-latest
-    needs: [build-and-tests]
+    needs: [build,tests,e2e-tests]
     
     steps:
     - uses: actions/checkout@v4
