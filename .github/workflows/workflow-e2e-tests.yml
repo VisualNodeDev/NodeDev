@@ -1,4 +1,4 @@
-run-name: Run End To End Tests
+name: .Run End To End Tests
 
 on:
     workflow_call:

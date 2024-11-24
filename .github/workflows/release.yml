@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   build-and-tests:
+    name: .Build and Tests
     uses: ./.github/workflows/workflow-build-and-tests.yml
 
   publish:

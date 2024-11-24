@@ -5,12 +5,15 @@ on:
     
 jobs:
   build:
+    name: .Build the entire solution
     uses: ./.github/workflows/workflow-build.yml
 
   tests:
+    name: .Run Unit Tests
     needs: build
     uses: ./.github/workflows/workflow-tests.yml
 
   e2e-tests:
+    name: .Run End To End Tests
     needs: build
     uses: ./.github/workflows/workflow-e2e-tests.yml 
