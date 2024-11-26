@@ -15,7 +15,7 @@ public class NodeClassTypeCreatorTests
 		var project = new Project(Guid.NewGuid());
 
 		var myClass = new NodeClass("TestClass", "MyProject", project);
-		project.Classes.Add(myClass);
+		project.Manager.AddClass(myClass);
 
 		myClass.Properties.Add(new(myClass, "MyProp", project.TypeFactory.Get<float>()));
 
@@ -66,7 +66,7 @@ public class NodeClassTypeCreatorTests
 		var project = new Project(Guid.NewGuid());
 
 		var myClass = new NodeClass("Program", "MyProject", project);
-		project.Classes.Add(myClass);
+		project.Manager.AddClass(myClass);
 
 		var prop = new NodeClassProperty(myClass, "MyProp", project.TypeFactory.Get<int>());
 		myClass.Properties.Add(prop);

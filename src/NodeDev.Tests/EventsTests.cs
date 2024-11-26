@@ -13,7 +13,7 @@ public class EventsTests
 		var project = new Project(Guid.NewGuid());
 
 		var myClass = new NodeClass("Program", "MyProject", project);
-		project.Classes.Add(myClass);
+		project.Manager.AddClass(myClass);
 
 		var prop = new NodeClassProperty(myClass, "MyProp", project.TypeFactory.Get<int>());
 		myClass.Properties.Add(prop);

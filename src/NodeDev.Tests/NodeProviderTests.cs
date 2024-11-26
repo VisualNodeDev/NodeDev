@@ -11,7 +11,7 @@ public class NodeProviderTests
 		var graph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
 		var project = new Project(Guid.NewGuid());
 
-		project.Classes.Add(graph.SelfClass);
+		project.AddClass(graph.SelfClass);
 
 		var methods = NodeProvider.Search(project, graph.SelfMethod.Name, null);
 

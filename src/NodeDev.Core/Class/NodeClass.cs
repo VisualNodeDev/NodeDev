@@ -1,4 +1,6 @@
-﻿using NodeDev.Core.Types;
+﻿using NodeDev.Core.ManagerServices;
+using NodeDev.Core.Nodes.Flow;
+using NodeDev.Core.Types;
 
 namespace NodeDev.Core.Class
 {
@@ -14,7 +16,8 @@ namespace NodeDev.Core.Class
 
 		public string Namespace { get; set; }
 
-		public List<NodeClassMethod> Methods { get; } = new();
+		internal List<NodeClassMethod> _Methods = [];
+		public IReadOnlyList<NodeClassMethod> Methods => _Methods;
 
 		public List<NodeClassProperty> Properties { get; } = new();
 
@@ -24,6 +27,28 @@ namespace NodeDev.Core.Class
 			Namespace = @namespace;
 			Project = project;
 		}
+
+		#region AddMethod
+
+		public void AddMethod(NodeClassMethod nodeClassMethod, bool createEntryAndReturn)
+		{
+			_Methods.Add(nodeClassMethod);
+
+			if (!createEntryAndReturn)
+				return;
+
+			// Create entry and return node for the method
+			var entry = new EntryNode(nodeClassMethod.Graph);
+			var returnNode = new ReturnNode(nodeClassMethod.Graph);
+
+			nodeClassMethod.Manager.AddNode(entry);
+			nodeClassMethod.Manager.AddNode(returnNode);
+
+			// Link the execution path
+			nodeClassMethod.Manager.AddNewConnectionBetween(entry.Outputs[0], returnNode.Inputs[0]);
+		}
+
+		#endregion
 
 		#region Serialisation
 
@@ -41,7 +66,7 @@ namespace NodeDev.Core.Class
 				Properties.Add(NodeClassProperty.Deserialize(this, property));
 
 			foreach (var method in serializedNodeClass.Methods)
-				Methods.Add(NodeClassMethod.Deserialize(this, method));
+				_Methods.Add(NodeClassMethod.Deserialize(this, method));
 		}
 
 		internal void Deserialize_Step3()

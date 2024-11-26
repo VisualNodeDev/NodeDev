@@ -1,4 +1,5 @@
-﻿using NodeDev.Core.Nodes;
+﻿using NodeDev.Core.ManagerServices;
+using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using NodeDev.Core.Types;
 using System.Reflection;
@@ -40,6 +41,8 @@ namespace NodeDev.Core.Class
 		public EntryNode? EntryNode => Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
 
 		public IEnumerable<ReturnNode> ReturnNodes => Graph.Nodes.Values.OfType<ReturnNode>();
+
+		public GraphManagerService Manager => Graph.Manager;
 
 		public MethodAttributes Attributes
 		{

@@ -67,9 +67,10 @@ namespace NodeDev.Core.Nodes
 		public virtual IEnumerable<AlternateOverload> AlternatesOverloads => [];
 
 		/// <summary>
-		/// returns a list of changed connections, if any
+		/// Triggered when the generic type of the connection has been defined (found and applied already).
 		/// </summary>
 		/// <param name="connection">The connection that was generic, it is not generic anymore</param>
+		/// <returns>Returns a list of changed connections, if any.</returns>
 		public virtual List<Connection> GenericConnectionTypeDefined(Connection connection)
 		{
 			return [];

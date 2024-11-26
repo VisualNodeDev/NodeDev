@@ -62,6 +62,6 @@ public class ReturnNode : FlowNode
 		Inputs.RemoveRange(1, Inputs.Count - 1);
 		Inputs.AddRange(newConnections);
 
-		Graph.MergeRemovedConnectionsWithNewConnections(newConnections, removedConnections);
+		Graph.Manager.MergeRemovedConnectionsWithNewConnections(newConnections, removedConnections);
 	}
 }

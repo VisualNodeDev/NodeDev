@@ -156,6 +156,8 @@ namespace NodeDev.Core.Connections
 				TextboxValue = Type.DefaultTextboxValue;
 			else
 				TextboxValue = null;
+
+			Parent.Graph.GraphCanvas?.Refresh(Parent);
 		}
 
 		public void UpdateTextboxText(string? text)

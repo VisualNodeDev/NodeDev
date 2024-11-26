@@ -10,11 +10,11 @@ namespace NodeDev.Tests;
 
 public class GraphExecutorTests
 {
-	public static Graph CreateSimpleAddGraph<TIn, TOut>(out Core.Nodes.Flow.EntryNode entryNode, out Core.Nodes.Flow.ReturnNode returnNode, out Core.Nodes.Math.Add addNode)
+	public static Graph CreateSimpleAddGraph<TIn, TOut>(out EntryNode entryNode, out ReturnNode returnNode, out Core.Nodes.Math.Add addNode)
 	{
 		var project = new Project(Guid.NewGuid());
 		var nodeClass = new NodeClass("Program", "Test", project);
-		project.Classes.Add(nodeClass);
+		project.Manager.AddClass(nodeClass);
 
 		var graph = new Graph();
 		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<TOut>(), graph, true);
@@ -298,7 +298,7 @@ public class GraphExecutorTests
 	{
 		var project = new Project(Guid.NewGuid());
 		var nodeClass = new NodeClass("Program", "Test", project);
-		project.Classes.Add(nodeClass);
+		project.Manager.AddClass(nodeClass);
 
 		var graph = new Graph();
 		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph);
@@ -366,7 +366,7 @@ public class GraphExecutorTests
 	{
 		var project = new Project(Guid.NewGuid());
 		var nodeClass = new NodeClass("Program", "Test", project);
-		project.Classes.Add(nodeClass);
+		project.Manager.AddClass(nodeClass);
 
 		var graph = new Graph();
 		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph, true);
@@ -411,7 +411,7 @@ public class GraphExecutorTests
 	{
 		var project = new Project(Guid.NewGuid());
 		var nodeClass = new NodeClass("Program", "Test", project);
-		project.Classes.Add(nodeClass);
+		project.Manager.AddClass(nodeClass);
 
 		var graph = new Graph();
 		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph, true);

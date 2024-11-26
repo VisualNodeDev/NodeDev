@@ -1,4 +1,4 @@
-﻿using NodeDev.Core.GraphManager;
+﻿using NodeDev.Core.ManagerServices;
 using NodeDev.Core;
 using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
