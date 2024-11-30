@@ -1,6 +1,9 @@
-﻿@inject Services.DebuggedPathService DebuggedPathService
+﻿@using NodeDev.Blazor.Services
+@inject Services.DebuggedPathService DebuggedPathService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject ProjectService ProjectService
+@implements IDisposable
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -9,14 +12,7 @@
 
 <MudLayout Style="height: 100vh; width: 100%; overflow: hidden">
     <MudAppBar Elevation="1" data-test-id="appBar">
-        <MudButton OnClick="NewProject" Class="ml-3" data-test-id="newProject">New Project</MudButton>
-        <MudButton OnClick="Save" Class="ml-3" data-test-id="Save">Save</MudButton>
-        <MudButton OnClick="Build" Class="ml-3" data-test-id="Build">Build</MudButton>
-        <MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
-        <MudButton OnClick="Run" Class="ml-3">Run</MudButton>
-        <MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
-        <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+        <ProjectToolbar />
     </MudAppBar>
     <MudMainContent Style="width: 100%; height: 100%; overflow-y: hidden">
 
@@ -24,7 +20,7 @@
             <StartContent>
                 <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" data-test-id="ProjectExplorerSection">
                     <MudTabPanel Text="Project">
-                        <ProjectExplorer Project="Project" @bind-SelectedClass="SelectedClass"></ProjectExplorer>
+                        <ProjectExplorer Project="ProjectService.Project" @bind-SelectedClass="SelectedClass"></ProjectExplorer>
                     </MudTabPanel>
                     <MudTabPanel Text="Class">
                         @if (SelectedClass != null)
@@ -33,7 +29,6 @@
                         }
                     </MudTabPanel>
                 </MudTabs>
-
             </StartContent>
 
             <EndContent>
@@ -61,7 +56,7 @@
                                     </MudTabs>
                                 </CascadingValue>
 
-                                <DebuggerConsolePanel Project="Project" />
+                                <DebuggerConsolePanel Project="ProjectService.Project" />
 
                             </MudStack>
 
@@ -85,8 +80,6 @@
 
 @code {
 
-    private Core.Project Project { get; set; } = null!;
-
     private Core.Class.NodeClass? SelectedClass { get; set; }
 
     private List<Core.Class.NodeClassMethod> OpenedMethods { get; } = new();
@@ -105,13 +98,19 @@
 
     protected override void OnInitialized()
     {
-        if (File.Exists("project.json"))
-            Project = Core.Project.Deserialize(File.ReadAllText("project.json"));
-        else
-            Project = Core.Project.CreateNewDefaultProject();
+        ProjectService.ProjectChanged += OnProjectChanged;
 
-        DebuggedPathService.ChangeProject(Project);
+        DebuggedPathService.ChangeProject(ProjectService.Project);
     }
+
+    private void OnProjectChanged()
+	{
+		_ = InvokeAsync(() =>
+		{
+            DebuggedPathService.ChangeProject(ProjectService.Project);
+            NavigationManager.Refresh(true);
+		});
+	}
 
     private void SwitchSourceViewerGraph()
     {
@@ -144,7 +143,7 @@
         if (method == null)
         {
             // Find the main method
-            var program = Project.Classes.FirstOrDefault(x => x.Name == "Program");
+            var program = ProjectService.Project.Classes.FirstOrDefault(x => x.Name == "Program");
 
             // Find the main method in the program class
             method = program?.Methods.FirstOrDefault(x => x.Name == "Main");
@@ -164,46 +163,8 @@
         StateHasChanged();
     }
 
-    private void Save()
+    public void Dispose()
     {
-        var content = Project.Serialize();
-        File.WriteAllText("project.json", content);
-
-        Snackbar.Add("Project saved", Severity.Success);
-    }
-
-    private void NewProject()
-    {
-        if (File.Exists("project.json"))
-            File.Move("project.json", "project_backup.json", true);
-
-
-        NavigationManager.Refresh(true);
-    }
-
-    private void Add()
-    {
-        //GraphCanvas?.ShowAddNode();
-    }
-
-    public void Build()
-    {
-        Project.Build(Project.IsLiveDebuggingEnabled ? Core.BuildOptions.Debug : Core.BuildOptions.Release);
-    }
-
-    public void Run()
-    {
-        new Thread(() =>
-        {
-            Project.Run(Project.IsLiveDebuggingEnabled ? Core.BuildOptions.Debug : Core.BuildOptions.Release);
-        }).Start();
-    }
-
-    private void SwitchLiveDebugging()
-    {
-        if (Project.IsLiveDebuggingEnabled)
-            Project.StopLiveDebugging();
-        else
-            Project.StartLiveDebugging();
+        ProjectService.ProjectChanged -= OnProjectChanged;
     }
 }

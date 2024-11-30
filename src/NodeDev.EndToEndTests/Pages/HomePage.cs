@@ -18,6 +18,10 @@ public class HomePage
 	private ILocator SearchProjectExplorerTabsHeader => _user.Locator("[data-test-id='ProjectExplorerSection'] .mud-tabs-tabbar");
 	private ILocator SearchClassExplorer => _user.Locator("[data-test-id='classExplorer']");
 	private ILocator SearchSnackBarContainer => _user.Locator("#mud-snackbar-container");
+	private ILocator SearchOptionsButton => SearchAppBar.Locator("[data-test-id='options']");
+	private ILocator SearchSaveButton => SearchAppBar.Locator("[data-test-id='save']");
+	private ILocator SearchSaveAsButton => SearchAppBar.Locator("[data-test-id='saveAs']");
+
 
 	public async Task CreateNewProject()
 	{
@@ -69,11 +73,48 @@ public class HomePage
 
 	public async Task SaveProject()
 	{
-		var saveBtn = SearchAppBar.Locator("[data-test-id='Save']");
+		await SearchSaveButton.WaitForVisible();
+		await SearchSaveButton.ClickAsync();
+	}
 
-		await saveBtn.WaitForVisible();
+	public async Task OpenOptionsDialog()
+	{
+		await SearchOptionsButton.WaitForVisible();
+		await SearchOptionsButton.ClickAsync();
+	}
 
-		await saveBtn.ClickAsync();
+	public async Task SetProjectsDirectory(string directory)
+	{
+		var projectsDirectoryInput = _user.Locator("[data-test-id='optionsProjectDirectory']");
+		await projectsDirectoryInput.WaitForVisible();
+		await projectsDirectoryInput.FillAsync(directory);
+	}
+
+	public async Task AcceptOptions()
+	{
+		var acceptButton = _user.Locator("[data-test-id='optionsAccept']");
+		await acceptButton.WaitForVisible();
+		await acceptButton.ClickAsync();
+	}
+
+	public async Task OpenSaveAsDialog()
+	{
+		await SearchSaveAsButton.WaitForVisible();
+		await SearchSaveAsButton.ClickAsync();
+	}
+
+	public async Task SetProjectNameAs(string projectName)
+	{
+		var projectNameInput = _user.Locator("[data-test-id='saveAsProjectName']");
+		await projectNameInput.WaitForVisible();
+		await projectNameInput.FillAsync(projectName);
+	}
+
+	public async Task AcceptSaveAs()
+	{
+		var saveButton = _user.Locator("[data-test-id='saveAsSave']");
+		await saveButton.WaitForVisible();
+		await saveButton.ClickAsync();
 	}
 
 	public async Task SnackBarHasByText(string text)

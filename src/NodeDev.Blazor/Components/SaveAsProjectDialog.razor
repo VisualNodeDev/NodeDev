@@ -1,0 +1,48 @@
+﻿@using System.Text.Json
+@using NodeDev.Blazor.Services
+@using NodeDev.Core
+@inject AppOptionsContainer AppOptionsContainer
+@inject IDialogService DialogService
+@inject ProjectService ProjectService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+	<DialogContent>
+		<MudTextField @bind-Value="ProjectName" Label="File Name" Variant="Variant.Text" data-test-id="saveAsProjectName"></MudTextField>
+	</DialogContent>
+	<DialogActions>
+		<MudButton Color="Color.Primary" OnClick="SaveProject" Disabled="ProjectName is null" data-test-id="saveAsSave">Save</MudButton>
+		<MudButton Color="Color.Primary" OnClick="Close" data-test-id="saveAsCancel">Cancel</MudButton>
+	</DialogActions>
+</MudDialog>
+
+@code {
+	[CascadingParameter]
+	private MudDialogInstance MudDialog { get; set; } = null!;
+
+	public string? ProjectName { get; set; }
+
+	private void Close() => MudDialog.Close(DialogResult.Ok(true));
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+		ProjectName = ProjectService.Project.Settings.ProjectName;
+	}
+
+	private void SaveProject()
+	{
+		try
+		{
+			ProjectService.Project.Settings.ProjectName = ProjectName!;
+			ProjectService.SaveProjectToFile();
+			Snackbar.Add("Project saved", Severity.Success);
+			MudDialog.Close(DialogResult.Ok(ProjectName));
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add(ex.Message, Severity.Error);
+		}
+	}
+
+}

@@ -1,0 +1,88 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using NodeDev.Blazor.Services
+@using NodeDev.Core
+@inject ProjectService ProjectService
+@inject ISnackbar Snackbar
+@inject AppOptionsContainer AppOptionsContainer
+@inject IDialogService DialogService
+
+
+<MudButton OnClick="Open" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="openProject">Open</MudButton>
+<MudButton OnClick="NewProject" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="newProject">New Project</MudButton>
+<MudButton OnClick="Save" Class="ml-3" data-test-id="save">Save</MudButton>
+<MudButton OnClick="SaveAs" Class="ml-3" data-test-id="saveAs">Save As</MudButton>
+<MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
+<MudButton OnClick="Run" Class="ml-3">Run</MudButton>
+<MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
+<MudSpacer />
+<MudButton OnClick="OpenOptionsDialogAsync" Class="ml-3" data-test-id="options">Options</MudButton>
+<MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+
+
+@code {
+
+    private Project Project => ProjectService.Project;
+
+	private DialogOptions DialogOptions => new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    private Task Open()
+    {
+        return DialogService.ShowAsync<OpenProjectDialog>("Open Project", DialogOptions);
+    }
+
+    private Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(Project.Settings.ProjectName))
+        {
+            return SaveAs();
+        }
+
+        try
+        {
+            ProjectService.SaveProjectToFile();
+            Snackbar.Add("Project saved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        
+		return Task.CompletedTask;
+    }
+
+	private Task SaveAs()
+	{
+        return DialogService.ShowAsync<SaveAsProjectDialog>("Save As Project", DialogOptions);
+	}
+
+    private void NewProject()
+    {
+        ProjectService.ChangeProject(Core.Project.CreateNewDefaultProject());
+    }
+
+    private void Add()
+    {
+        //GraphCanvas?.ShowAddNode();
+    }
+
+    public void Run()
+    {
+        new Thread(() =>
+        {
+            Project.Run(Project.IsLiveDebuggingEnabled ? Core.BuildOptions.Debug : Core.BuildOptions.Release);
+        }).Start();
+    }
+
+    private void SwitchLiveDebugging()
+    {
+        if (Project.IsLiveDebuggingEnabled)
+            Project.StopLiveDebugging();
+        else
+            Project.StartLiveDebugging();
+    }
+
+    private Task OpenOptionsDialogAsync()
+    {
+        return DialogService.ShowAsync<OptionsDialog>("Options", DialogOptions);
+    }
+}
