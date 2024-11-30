@@ -115,36 +115,134 @@ jobs:
       with:
         dotnet-version: 9.0.x
         
-    - name: Publish Web Server framework dependent (Windows)
+      # ------------------------------------------------------------------------- Windows
+    - name: Publish Web Server framework dependent (Windows x64)
       working-directory: ./src/NodeDev.Blazor.Server
       run: dotnet publish -c Release --runtime win-x64 --self-contained false -p:PublishSingleFile=true
+      
+    - name: Zip Web Server framework dependent (Windows x64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/win-x64/publish/* -DestinationPath ./Windows_x64_WebServer.zip
 
-    - name: Publish Web Server framework dependent (Linux)
+
+    - name: Publish Web Server self contained (Windows x64)
+      working-directory: ./src/NodeDev.Blazor.Server
+      run: dotnet publish -c Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true
+
+    - name: Zip Web Server self contained (Windows x64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/win-x64/publish/* -DestinationPath ./Windows_x64_WebServer_SelfContained.zip
+
+
+    - name: Publish Web Server framework dependent (Windows arm64)
+      working-directory: ./src/NodeDev.Blazor.Server
+      run: dotnet publish -c Release --runtime win-arm64 --self-contained false -p:PublishSingleFile=true
+
+    - name: Zip Web Server framework dependent (Windows arm64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/win-arm64/publish/* -DestinationPath ./Windows_arm64_WebServer.zip
+
+
+    - name: Publish Web Server self contained (Windows arm64)
+      working-directory: ./src/NodeDev.Blazor.Server
+      run: dotnet publish -c Release --runtime win-arm64 --self-contained true -p:PublishSingleFile=true
+
+    - name: Zip Web Server self contained (Windows arm64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/win-arm64/publish/* -DestinationPath ./Windows_arm64_WebServer_SelfContained.zip
+      
+
+      # ------------------------------------------------------------------------- Linux
+    - name: Publish Web Server framework dependent (Linux x64)
       working-directory: ./src/NodeDev.Blazor.Server
       run: dotnet publish -c Release --runtime linux-x64 --self-contained false -p:PublishSingleFile=true
 
-    - name: Publish Desktop framework dependent (Windows)
-      working-directory: ./src/NodeDev.Blazor.MAUI
-      shell: pwsh
-      run: ./publishAndCleanup.ps1
-      
-    - name: Zip Web Server framework dependent (Windows)
-      shell: pwsh
-      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/win-x64/publish/* -DestinationPath ./Windows_x64_WebServer.zip
-      
-    - name: Zip Desktop framework dependent (Windows)
-      shell: pwsh
-      run: Compress-Archive -Path ./src/NodeDev.Blazor.MAUI/bin/Release/net9.0-windows10.0.19041.0/win-x64/publish/* -DestinationPath ./Windows_x64_DesktopApp.zip
-      
-    - name: Zip Web Server framework dependent (Linux)
+    - name: Zip Web Server self contained (Linux x64)
       shell: pwsh
       run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/linux-x64/publish/* -DestinationPath ./Linux_x64_WebServer.zip
-    
+      
+
+    - name: Publish Web Server self contained (Linux x64)
+      working-directory: ./src/NodeDev.Blazor.Server
+      run: dotnet publish -c Release --runtime linux-x64 --self-contained true -p:PublishSingleFile=true
+
+    - name: Zip Web Server self contained (Linux x64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/linux-x64/publish/* -DestinationPath ./Linux_x64_WebServer_SelfContained.zip
+      
+
+    - name: Publish Web Server framework dependent (Linux arm64)
+      working-directory: ./src/NodeDev.Blazor.Server
+      run: dotnet publish -c Release --runtime linux-arm64 --self-contained false -p:PublishSingleFile=true
+
+    - name: Zip Web Server self contained (Linux arm64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/linux-arm64/publish/* -DestinationPath ./Linux_arm64_WebServer.zip
+      
+
+    - name: Publish Web Server self contained (Linux arm64)
+      working-directory: ./src/NodeDev.Blazor.Server
+      run: dotnet publish -c Release --runtime linux-arm64 --self-contained true -p:PublishSingleFile=true
+
+    - name: Zip Web Server self contained (Linux arm64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/linux-arm64/publish/* -DestinationPath ./Linux_arm64_WebServer_SelfContained.zip
+
+      # ------------------------------------------------------------------------- Windows MAUI
+    - name: Publish Desktop framework dependent (Windows x64)
+      working-directory: ./src/NodeDev.Blazor.MAUI
+      shell: pwsh
+      run: ./publishAndCleanup.ps1 -architecture "win-x64" -selfContained $False
+
+    - name: Zip Web Server framework dependent (Windows x64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/win-x64/publish/* -DestinationPath ./Windows_x64_DesktopApp.zip
+
+
+    - name: Publish Desktop self contained (Windows x64)
+      working-directory: ./src/NodeDev.Blazor.MAUI
+      shell: pwsh
+      run: ./publishAndCleanup.ps1 -architecture "win-x64" -selfContained $True
+
+    - name: Zip Web Server self contained (Windows x64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/win-x64/publish/* -DestinationPath ./Windows_x64_DesktopApp_SelfContained.zip
+      
+
+    - name: Publish Desktop framework dependent (Windows arm64)
+      working-directory: ./src/NodeDev.Blazor.MAUI
+      shell: pwsh
+      run: ./publishAndCleanup.ps1 -architecture "win-arm64" -selfContained $False
+
+    - name: Zip Web Server framework dependent (Windows arm64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/win-arm64/publish/* -DestinationPath ./Windows_arm64_DesktopApp.zip
+
+
+    - name: Publish Desktop self contained (Windows arm64)
+      working-directory: ./src/NodeDev.Blazor.MAUI
+      shell: pwsh
+      run: ./publishAndCleanup.ps1 -architecture "win-arm64" -selfContained $True
+
+    - name: Zip Web Server self contained (Windows arm64)
+      shell: pwsh
+      run: Compress-Archive -Path ./src/NodeDev.Blazor.Server/bin/Release/net9.0/win-arm64/publish/* -DestinationPath ./Windows_arm64_DesktopApp_SelfContained.zip
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
           ./Windows_x64_WebServer.zip
+          ./Windows_x64_WebServer_SelfContained.zip
           ./Windows_x64_DesktopApp.zip
+          ./Windows_x64_DesktopApp_SelfContained.zip
+          ./Windows_arm64_WebServer.zip
+          ./Windows_arm64_WebServer_SelfContained.zip
+          ./Windows_arm64_DesktopApp.zip
+          ./Windows_arm64_DesktopApp_SelfContained.zip
           ./Linux_x64_WebServer.zip
+          ./Linux_x64_WebServer_SelfContained.zip
+          ./Linux_arm64_WebServer.zip
+          ./Linux_arm64_WebServer_SelfContained.zip
+
 

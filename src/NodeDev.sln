@@ -18,17 +18,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		..\.github\workflows\dotnet.yml = ..\.github\workflows\dotnet.yml
+		..\.github\workflows\release.yml = ..\.github\workflows\release.yml
 	EndProjectSection
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Blazor.Diagrams", "Blazor.Diagrams\src\Blazor.Diagrams\Blazor.Diagrams.csproj", "{2E39F6E8-637A-4EFE-970C-53CA5972BC90}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Diagrams", "Diagrams", "{1F7402C9-C5FD-481F-95D0-F9646E68CD02}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Blazor.Diagrams.Core", "Blazor.Diagrams\src\Blazor.Diagrams.Core\Blazor.Diagrams.Core.csproj", "{13919421-1AE3-4B79-8CC9-7C084F74E718}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{F19EB03F-8DAD-4553-B7BA-863B6B2F155F}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dis2Msil", "Dis2Msil\Dis2Msil\Dis2Msil.csproj", "{9873F12D-9C5B-4756-B31C-B514664638CE}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.EndToEndTests", "NodeDev.EndToEndTests\NodeDev.EndToEndTests.csproj", "{DFA6D765-BFC3-407F-9330-B92B89310DCA}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -59,18 +50,6 @@ Global
 		{4C775E47-79BC-4F2D-93FF-440A151B2757}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C775E47-79BC-4F2D-93FF-440A151B2757}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C775E47-79BC-4F2D-93FF-440A151B2757}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2E39F6E8-637A-4EFE-970C-53CA5972BC90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2E39F6E8-637A-4EFE-970C-53CA5972BC90}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2E39F6E8-637A-4EFE-970C-53CA5972BC90}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2E39F6E8-637A-4EFE-970C-53CA5972BC90}.Release|Any CPU.Build.0 = Release|Any CPU
-		{13919421-1AE3-4B79-8CC9-7C084F74E718}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{13919421-1AE3-4B79-8CC9-7C084F74E718}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{13919421-1AE3-4B79-8CC9-7C084F74E718}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{13919421-1AE3-4B79-8CC9-7C084F74E718}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9873F12D-9C5B-4756-B31C-B514664638CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9873F12D-9C5B-4756-B31C-B514664638CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9873F12D-9C5B-4756-B31C-B514664638CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9873F12D-9C5B-4756-B31C-B514664638CE}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DFA6D765-BFC3-407F-9330-B92B89310DCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -81,12 +60,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{2E39F6E8-637A-4EFE-970C-53CA5972BC90} = {1F7402C9-C5FD-481F-95D0-F9646E68CD02}
-		{1F7402C9-C5FD-481F-95D0-F9646E68CD02} = {F19EB03F-8DAD-4553-B7BA-863B6B2F155F}
-		{13919421-1AE3-4B79-8CC9-7C084F74E718} = {F19EB03F-8DAD-4553-B7BA-863B6B2F155F}
-		{9873F12D-9C5B-4756-B31C-B514664638CE} = {1F7402C9-C5FD-481F-95D0-F9646E68CD02}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F82949DF-ABD0-4772-9022-5913ED3C6FB2}
