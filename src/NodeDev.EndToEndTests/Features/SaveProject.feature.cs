@@ -105,7 +105,7 @@ this.ScenarioInitialize(scenarioInfo);
  await testRunner.ThenAsync("The \'Main\' method in the \'Program\' class should exist", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 7
- await testRunner.GivenAsync("I save the current project", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+ await testRunner.GivenAsync("I save the current project as \'EmptyProject\'", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
 #line 8
  await testRunner.ThenAsync("Snackbar should contain \'Project saved\'", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");

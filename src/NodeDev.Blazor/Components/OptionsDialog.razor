@@ -1,0 +1,38 @@
+﻿@using NodeDev.Blazor.Services
+@inject IDialogService DialogService
+@inject Services.AppOptionsContainer AppOptionsContainer
+
+<MudDialog>
+    <TitleContent>
+        Options
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="AppOptions.ProjectsDirectory" Label="Projects Directory" Variant="Variant.Text" AutoGrow data-test-id="optionsProjectDirectory"></MudTextField>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Close" data-test-id="optionsCancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Accept" data-test-id="optionsAccept">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; } = null!;
+
+    private AppOptions AppOptions { get; set; } = null!;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        AppOptions = AppOptionsContainer.AppOptions with { };
+    }
+
+    private void Accept()
+    {
+        AppOptionsContainer.AppOptions = AppOptions;
+        MudDialog.Close();
+    }
+
+    private void Close() => MudDialog.Close();
+
+}
