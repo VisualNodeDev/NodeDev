@@ -10,7 +10,7 @@ public class NodeDevTestsBase
 	protected Add AddNewAddNodeToGraph<T>(Graph graph)
 	{
 		var addNode = new Add(graph);
-		graph.AddNode(addNode, false);
+		graph.Manager.AddNode(addNode);
 
 		addNode.Inputs[0].UpdateTypeAndTextboxVisibility(graph.Project.TypeFactory.Get<T>(), overrideInitialType: true);
 		addNode.Inputs[1].UpdateTypeAndTextboxVisibility(graph.Project.TypeFactory.Get<T>(), overrideInitialType: true);
@@ -24,7 +24,7 @@ public class NodeDevTestsBase
 		var methods = type.GetMethods(methodName);
 
 		var methodCall = new MethodCall(graph);
-		graph.AddNode(methodCall, false);
+		graph.Manager.AddNode(methodCall);
 
 		var method = methods.First(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(args));
 		methodCall.SetMethodTarget(method);

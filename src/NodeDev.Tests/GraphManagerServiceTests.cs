@@ -25,7 +25,7 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		// create a random method call used to test the connection
 		var methodCall = new MethodCall(main.Graph);
-		main.Graph.AddNode(methodCall, false);
+		main.Graph.Manager.AddNode(methodCall);
 
 
 		// This should also disconnect the entry node's existing exec connection
@@ -102,7 +102,7 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		// create a random method call used to test the connection
 		var methodCall = new MethodCall(main.Graph);
-		main.Graph.AddNode(methodCall, false);
+		main.Graph.Manager.AddNode(methodCall);
 
 		// connect output of addNode1 to input of addNode3
 		graphManager.AddNewConnectionBetween(methodCall.Outputs[0], main.ReturnNodes.Single().Inputs[0]);
@@ -136,7 +136,7 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 		methodCall.Outputs[1].UpdateTypeAndTextboxVisibility(typeFactory.Get<string[]>(), overrideInitialType: true);
 
 		var foreachNode = new ForeachNode(main.Graph);
-		main.Graph.AddNode(foreachNode, false);
+		main.Graph.Manager.AddNode(foreachNode);
 
 		// connect output of Array.Empty<string>() to input of foreachNode
 		graphManager.AddNewConnectionBetween(methodCall.Outputs[1], foreachNode.Inputs[1]);
@@ -169,10 +169,10 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 		newListArray.GenericConnectionTypeDefined(newListArray.Outputs[1]);
 
 		var foreachNode = new ForeachNode(main.Graph);
-		main.Graph.AddNode(foreachNode, false);
+		main.Graph.Manager.AddNode(foreachNode);
 
 		var foreachNode2 = new ForeachNode(main.Graph);
-		main.Graph.AddNode(foreachNode2, false);
+		main.Graph.Manager.AddNode(foreachNode2);
 
 		// connect output of foreachNode into input of foreachNode2
 		graphManager.AddNewConnectionBetween(foreachNode.Outputs[1], foreachNode2.Inputs[1]);
@@ -216,7 +216,7 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 		newArray.GenericConnectionTypeDefined(newArray.Outputs[1]);
 
 		var arrayGet = new ArrayGet(main.Graph);
-		main.Graph.AddNode(arrayGet, false);
+		main.Graph.Manager.AddNode(arrayGet);
 
 		// connect output of foreachNode into input of foreachNode2
 		graphManager.AddNewConnectionBetween(newArray.Outputs[1], arrayGet.Inputs[0]);
