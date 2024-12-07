@@ -3,7 +3,7 @@ using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
 
-namespace NodeDev.Blazor.Services.GraphManager;
+namespace NodeDev.Core.ManagerServices;
 
 /// <summary>
 /// Contains the logic on how to manipulate Graphs and Nodes.
@@ -14,14 +14,97 @@ public class GraphManagerService
 
 	private Graph Graph => GraphCanvas.Graph;
 
-	public GraphManagerService(IGraphCanvas graphCanvas)
+	internal GraphManagerService(IGraphCanvas graphCanvas)
 	{
 		GraphCanvas = graphCanvas;
 	}
 
+	#region Nodes
+
+	/// <summary>
+	/// Add the node from the search result.
+	/// The <paramref name="populateNode"/> is used to add required UI information before adding it to the UI
+	/// </summary>
+	/// <param name="searchResult"></param>
+	/// <param name="populateNode"></param>
+	/// <returns></returns>
+	public Node AddNode(NodeProvider.NodeSearchResult searchResult, Action<Node> populateNode)
+	{
+		var node = (Node)Activator.CreateInstance(searchResult.Type, [Graph, null])!;
+		populateNode(node);
+
+		// add it to the nodes and the UI
+		AddNode(node);
+
+		if (searchResult is NodeProvider.MethodCallNode methodCall && node is MethodCall methodCallNode)
+			methodCallNode.SetMethodTarget(methodCall.MethodInfo);
+		else if (searchResult is NodeProvider.GetPropertyOrFieldNode getPropertyOrField && node is GetPropertyOrField getPropertyOrFieldNode)
+			getPropertyOrFieldNode.SetMemberTarget(getPropertyOrField.MemberInfo);
+		else if (searchResult is NodeProvider.SetPropertyOrFieldNode setPropertyOrField && node is SetPropertyOrField setPropertyOrFieldNode)
+			setPropertyOrFieldNode.SetMemberTarget(setPropertyOrField.MemberInfo);
+
+		return node;
+	}
+
+	public void AddNode(Node node)
+	{
+		((IDictionary<string, Node>)Graph.Nodes)[node.Id] = node;
+
+		GraphCanvas.AddNode(node);
+	}
+
+
+	public void RemoveNode(Node node)
+	{
+		Graph._Nodes.Remove(node.Id);
+
+		GraphCanvas.RemoveNode(node);
+
+		Graph.RaiseGraphChanged(false);
+	}
+
+	#endregion
+
+	#region Connections
+
+	public void MergeRemovedConnectionsWithNewConnections(IEnumerable<Connection> newConnections, IEnumerable<Connection> removedConnections)
+	{
+		foreach (var removedConnection in removedConnections)
+		{
+			var newConnection = newConnections.FirstOrDefault(x => x.Parent == removedConnection.Parent && x.Name == removedConnection.Name && x.Type == removedConnection.Type);
+
+			// if we found a new connection, connect them together and remove the old connection
+			foreach (var oldLink in removedConnection.Connections)
+			{
+				DisconnectConnectionBetween(oldLink, removedConnection); // cleanup the old connection
+
+				if (newConnection != null)
+				{
+					// Before we re-connect them let's make sure both are inputs or both outputs
+					if (oldLink.IsInput != newConnection.IsInput)
+					{
+						// we can safely reconnect the new connection to the old link
+						// Either newConnection is an input and removedConnection is an output or vice versa
+						AddNewConnectionBetween(oldLink, newConnection);
+					}
+				}
+			}
+		}
+	}
+
 	public void AddNewConnectionBetween(Connection source, Connection destination)
 	{
-		Graph.Connect(source, destination, false);
+		if (source.IsInput)
+		{
+			var temp = source;
+			source = destination;
+			destination = temp;
+		}
+
+		if (!source._Connections.Contains(destination))
+			source._Connections.Add(destination);
+		if (!destination._Connections.Contains(source))
+			destination._Connections.Add(source);
 
 		// we're plugging something something with a generic into something without a generic
 		if (source.IsAssignableTo(destination, true, true, out var newTypesLeft, out var newTypesRight, out var usedInitialTypes))
@@ -32,6 +115,8 @@ public class GraphManagerService
 				PropagateNewGeneric(destination.Parent, newTypesRight, usedInitialTypes, source, false);
 		}
 
+		GraphCanvas.AddLinkToGraphCanvas(source, destination);
+
 		GraphCanvas.UpdatePortColor(source);
 		GraphCanvas.UpdatePortColor(destination);
 
@@ -41,16 +126,27 @@ public class GraphManagerService
 		else if (!destination.Type.IsExec && destination.Connections.Count > 1) // non-exec inputs can only have one connection
 			DisconnectConnectionBetween(destination.Connections.First(x => x != source), destination);
 
-		Graph.RaiseGraphChanged(true);
+		Graph.RaiseGraphChanged(false); // any change in the graph should trigger a UI refresh already, lets just trigger at least one non-ui refresh to be sure
 	}
 
 	public void DisconnectConnectionBetween(Connection source, Connection destination)
 	{
-		Graph.Disconnect(source, destination, false);
+		if(source.IsInput)
+		{
+			var temp = source;
+			source = destination;
+			destination = temp;
+		}
+
+		source._Connections.Remove(destination);
+		destination._Connections.Remove(source);
+
 		GraphCanvas.RemoveLinkFromGraphCanvas(source, destination);
 
 		GraphCanvas.UpdatePortColor(source);
 		GraphCanvas.UpdatePortColor(destination);
+
+		Graph.RaiseGraphChanged(false); // no ui refresh needed as we already took care of it through the GraphCanvas directly
 	}
 
 	/// <summary>
@@ -76,7 +172,7 @@ public class GraphManagerService
 
 			var isPortInput = port.IsInput; // cache for performance, IsInput is slow
 											// check if other connections had their own generics and if we just solved them
-			foreach (var other in port.Connections.ToList())
+			foreach (var other in port.Connections.ToList()) // ToList is required since we're modifying the list in the loop
 			{
 				if (other == initiatingConnection)
 					continue;
@@ -103,6 +199,8 @@ public class GraphManagerService
 	{
 		popupNode.SelectOverload(overload, out var newConnections, out var removedConnections);
 
-		Graph.MergeRemovedConnectionsWithNewConnections(newConnections, removedConnections);
+		MergeRemovedConnectionsWithNewConnections(newConnections, removedConnections);
 	}
+
+	#endregion
 }

@@ -1,5 +1,6 @@
 ﻿using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
+using NodeDev.Core.ManagerServices;
 using NodeDev.Core.Migrations;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
@@ -26,11 +27,12 @@ public class Project
 
 	internal readonly string NodeDevVersion;
 
-	public static string CurrentNodeDevVersion => System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? throw new Exception("Unable to get current NodeDev version");
+	public static string CurrentNodeDevVersion => Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? throw new Exception("Unable to get current NodeDev version");
 
-	public List<NodeClass> Classes { get; } = new();
+	private List<NodeClass> _Classes = [];
+	public IReadOnlyList<NodeClass> Classes => _Classes;
 
-	private Dictionary<NodeClass, NodeClassType> NodeClassTypes = new();
+	private Dictionary<NodeClass, NodeClassType> NodeClassTypes = [];
 
 	public readonly TypeFactory TypeFactory;
 
@@ -59,8 +61,8 @@ public class Project
 	public Project(Guid id, string? nodeDevVersion = null)
 	{
 		Id = id;
-		TypeFactory = new TypeFactory(this);
 		NodeDevVersion = nodeDevVersion ?? CurrentNodeDevVersion;
+		TypeFactory = new TypeFactory(this);
 	}
 
 	public IEnumerable<T> GetNodes<T>() where T : Node
@@ -80,21 +82,25 @@ public class Project
 		var project = new Project(Guid.NewGuid());
 
 		var programClass = new NodeClass("Program", "NewProject", project);
+		project.AddClass(programClass);
 
+		// Create the main method and add it to the project
 		main = new NodeClassMethod(programClass, "Main", project.TypeFactory.Get<int>(), new Graph(), true);
+		programClass.AddMethod(main, createEntryAndReturn: true);
 
-		var entry = new EntryNode(main.Graph);
-		var returnNode = new ReturnNode(main.Graph);
-		returnNode.Inputs[1].UpdateTextboxText("0");
-		main.Graph.AddNode(entry, false);
-		main.Graph.AddNode(returnNode, false);
-		programClass.Methods.Add(main);
-		project.Classes.Add(programClass);
-
-		// Connect entry's exec to return node's exec
-		main.Graph.Connect(entry.Outputs[0], returnNode.Inputs[0], false);
+		// Now that the method is created with its entry and return nodes, we can set the default return value of 0
+		main.ReturnNodes.First().Inputs[1].UpdateTextboxText("0");
 
 		return project;
+	}
+
+	#endregion
+
+	#region AddClass
+
+	public void AddClass(NodeClass nodeClass)
+	{
+		_Classes.Add(nodeClass);
 	}
 
 	#endregion
@@ -271,7 +277,7 @@ public class Project
 		foreach (var nodeClassSerializedObj in serializedProject.Classes)
 		{
 			var nodeClass = NodeClass.Deserialize(nodeClassSerializedObj, project);
-			project.Classes.Add(nodeClass);
+			project._Classes.Add(nodeClass);
 
 			nodeClasses[nodeClass] = nodeClassSerializedObj;
 		}

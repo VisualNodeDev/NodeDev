@@ -15,7 +15,7 @@ public class NodeClassTypeCreatorTests
 		var project = new Project(Guid.NewGuid());
 
 		var myClass = new NodeClass("TestClass", "MyProject", project);
-		project.Classes.Add(myClass);
+		project.AddClass(myClass);
 
 		myClass.Properties.Add(new(myClass, "MyProp", project.TypeFactory.Get<float>()));
 
@@ -66,7 +66,7 @@ public class NodeClassTypeCreatorTests
 		var project = new Project(Guid.NewGuid());
 
 		var myClass = new NodeClass("Program", "MyProject", project);
-		project.Classes.Add(myClass);
+		project.AddClass(myClass);
 
 		var prop = new NodeClassProperty(myClass, "MyProp", project.TypeFactory.Get<int>());
 		myClass.Properties.Add(prop);
@@ -74,7 +74,7 @@ public class NodeClassTypeCreatorTests
 		var graph = new Graph();
 		var method = new NodeClassMethod(myClass, "MainInternal", myClass.TypeFactory.Get<int>(), graph);
 		method.IsStatic = true;
-		myClass.Methods.Add(method);
+		myClass.AddMethod(method, createEntryAndReturn: false);
 		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method)); // TODO REMOVE
 
 		var entryNode = new EntryNode(graph);
@@ -90,22 +90,22 @@ public class NodeClassTypeCreatorTests
 		var getProp = new GetPropertyOrField(graph);
 		getProp.SetMemberTarget(prop);
 
-		graph.AddNode(entryNode, false);
-		graph.AddNode(returnNode, false);
-		graph.AddNode(newNode, false);
-		graph.AddNode(getProp, false);
-		graph.AddNode(setProp, false);
+		graph.Manager.AddNode(entryNode);
+		graph.Manager.AddNode(returnNode);
+		graph.Manager.AddNode(newNode);
+		graph.Manager.AddNode(getProp);
+		graph.Manager.AddNode(setProp);
 
 		// link the execution path
-		graph.Connect(entryNode.Outputs[0], newNode.Inputs[0], false);
-		graph.Connect(newNode.Outputs[0], setProp.Inputs[1], false); // set input 0 is the target, so use input 1 as the exec
-		graph.Connect(setProp.Outputs[0], returnNode.Inputs[0], false);
+		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], newNode.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(newNode.Outputs[0], setProp.Inputs[1]); // set input 0 is the target, so use input 1 as the exec
+		graph.Manager.AddNewConnectionBetween(setProp.Outputs[0], returnNode.Inputs[0]);
 
 		// link the rest
-		graph.Connect(entryNode.Outputs[1], setProp.Inputs[2], false);
-		graph.Connect(newNode.Outputs[1], setProp.Inputs[0], false);
-		graph.Connect(newNode.Outputs[1], getProp.Inputs[0], false);
-		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1], false);
+		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[1], setProp.Inputs[2]);
+		graph.Manager.AddNewConnectionBetween(newNode.Outputs[1], setProp.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(newNode.Outputs[1], getProp.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(getProp.Outputs[0], returnNode.Inputs[1]);
 
 		GraphExecutorTests.CreateStaticMainWithConversion(myClass, method);
 

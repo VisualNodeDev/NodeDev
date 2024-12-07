@@ -1,5 +1,6 @@
 ﻿using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
+using NodeDev.Core.ManagerServices;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using System.Linq.Expressions;
@@ -8,12 +9,34 @@ namespace NodeDev.Core;
 
 public class Graph
 {
-	public IReadOnlyDictionary<string, Node> Nodes { get; } = new Dictionary<string, Node>();
+	internal Dictionary<string, Node> _Nodes = [];
+	public IReadOnlyDictionary<string, Node> Nodes => _Nodes;
 
 	public NodeClass SelfClass => SelfMethod.Class;
 	public NodeClassMethod SelfMethod { get; set; }
 
 	public Project Project => SelfMethod.Class.Project;
+
+	private IGraphCanvas? _graphCanvas;
+	/// <summary>
+	/// The canvas that this graph is displayed on. Null if the graph is not displayed on a canvas.
+	/// </summary>
+	public IGraphCanvas? GraphCanvas
+	{
+		get => _graphCanvas;
+		set
+		{
+			_graphCanvas = value;
+			_graphManagerService = null;
+		}
+	}
+
+	private GraphManagerService? _graphManagerService;
+	/// <summary>
+	/// Get the GraphManagerService for this graph and its associated graph canvas.
+	/// This property should be used all the time as it will keep itself up to date with the graph canvas.
+	/// </summary>
+	public GraphManagerService Manager => _graphManagerService ??= new(GraphCanvas ?? new GraphCanvasNoUI(this));
 
 	static Graph()
 	{
@@ -408,93 +431,6 @@ public class Graph
 
 	#endregion
 
-	#region Connect / Disconnect / MergedRemovedConnectionsWithNewConnections
-
-	public void MergeRemovedConnectionsWithNewConnections(List<Connection> newConnections, List<Connection> removedConnections)
-	{
-		foreach (var removedConnection in removedConnections)
-		{
-			var newConnection = newConnections.FirstOrDefault(x => x.Parent == removedConnection.Parent && x.Name == removedConnection.Name && x.Type == removedConnection.Type);
-
-			// if we found a new connection, connect them together and remove the old connection
-			foreach (var oldLink in removedConnection.Connections)
-			{
-				oldLink._Connections.Remove(removedConnection); // cleanup the old connection
-
-				if (newConnection != null)
-				{
-					// Before we re-connect them let's make sure both are inputs or both outputs
-					if (oldLink.Parent.Outputs.Contains(oldLink) == newConnection.Parent.Inputs.Contains(newConnection))
-					{
-						// we can safely reconnect the new connection to the old link
-						// Either newConnection is an input and removedConnection is an output or vice versa
-						newConnection._Connections.Add(oldLink);
-						oldLink._Connections.Add(newConnection);
-					}
-				}
-			}
-		}
-
-		RaiseGraphChanged(true); // this always require refreshing the UI as this is custom behavior that needs to be replicated by the UI
-	}
-
-	public void Connect(Connection connection1, Connection connection2, bool requireUIRefresh)
-	{
-		if (!connection1._Connections.Contains(connection2))
-			connection1._Connections.Add(connection2);
-		if (!connection2._Connections.Contains(connection1))
-			connection2._Connections.Add(connection1);
-
-		RaiseGraphChanged(requireUIRefresh);
-	}
-
-	public void Disconnect(Connection connection1, Connection connection2, bool requireUIRefresh)
-	{
-		connection1._Connections.Remove(connection2);
-		connection2._Connections.Remove(connection1);
-
-		RaiseGraphChanged(requireUIRefresh);
-	}
-
-	#endregion
-
-	#region AddNode
-
-	public void AddNode(Node node, bool requireUIRefresh)
-	{
-		((IDictionary<string, Node>)Nodes)[node.Id] = node;
-
-		RaiseGraphChanged(requireUIRefresh);
-	}
-
-	public Node AddNode(NodeProvider.NodeSearchResult searchResult, bool requireUIRefresh)
-	{
-		var node = (Node)Activator.CreateInstance(searchResult.Type, this, null)!;
-		AddNode(node, requireUIRefresh);
-
-		if (searchResult is NodeProvider.MethodCallNode methodCall && node is MethodCall methodCallNode)
-			methodCallNode.SetMethodTarget(methodCall.MethodInfo);
-		else if (searchResult is NodeProvider.GetPropertyOrFieldNode getPropertyOrField && node is GetPropertyOrField getPropertyOrFieldNode)
-			getPropertyOrFieldNode.SetMemberTarget(getPropertyOrField.MemberInfo);
-		else if (searchResult is NodeProvider.SetPropertyOrFieldNode setPropertyOrField && node is SetPropertyOrField setPropertyOrFieldNode)
-			setPropertyOrFieldNode.SetMemberTarget(setPropertyOrField.MemberInfo);
-
-		return node;
-	}
-
-	#endregion
-
-	#region RemoveNode
-
-	public void RemoveNode(Node node, bool requireUIRefresh)
-	{
-		((IDictionary<string, Node>)Nodes).Remove(node.Id);
-
-		RaiseGraphChanged(requireUIRefresh);
-	}
-
-	#endregion
-
 	#region Serialization
 
 	internal record class SerializedGraph(List<Node.SerializedNode> Nodes);
@@ -515,7 +451,10 @@ public class Graph
 		foreach (var serializedNode in serializedGraphObj.Nodes)
 		{
 			var node = Node.Deserialize(graph, serializedNode);
-			graph.AddNode(node, false);
+			
+			var noUi = new GraphCanvasNoUI(graph);
+			var manager = new GraphManagerService(noUi);
+			manager.AddNode(node);
 		}
 	}
 

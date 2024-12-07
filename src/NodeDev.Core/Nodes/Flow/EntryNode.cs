@@ -56,7 +56,7 @@ public class EntryNode : FlowNode
 		Outputs.RemoveRange(1, Outputs.Count - 1);
 		Outputs.AddRange(newConnections);
 
-		Graph.MergeRemovedConnectionsWithNewConnections(newConnections, removedConnections);
+		Graph.Manager.MergeRemovedConnectionsWithNewConnections(newConnections, removedConnections);
 	}
 
 	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)

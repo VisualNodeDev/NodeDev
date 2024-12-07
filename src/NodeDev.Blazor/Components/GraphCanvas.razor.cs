@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Components;
 using NodeDev.Blazor.DiagramsModels;
 using NodeDev.Blazor.NodeAttributes;
 using NodeDev.Blazor.Services;
-using NodeDev.Blazor.Services.GraphManager;
+using NodeDev.Core.ManagerServices;
 using NodeDev.Core;
 using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
@@ -30,8 +30,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	[Inject]
 	internal DebuggedPathService DebuggedPathService { get; set; } = null!;
 
-	private GraphManagerService? _GraphManagerService;
-	private GraphManagerService GraphManagerService => _GraphManagerService ??= new GraphManagerService(this);
+	private GraphManagerService GraphManagerService => Graph.Manager;
 
 	private int PopupX = 0;
 	private int PopupY = 0;
@@ -48,6 +47,8 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	protected override void OnInitialized()
 	{
 		base.OnInitialized();
+
+		Graph.GraphCanvas = this;
 
 		var options = new BlazorDiagramOptions
 		{
@@ -126,7 +127,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	#endregion
 
-	#region OnGraphChangedFromCore
+	#region OnGraphChangedFromCore / RefreshAll
 
 	private void OnGraphChangedFromCore((Graph, bool) _)
 	{
@@ -198,16 +199,16 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 			foreach (var input in node.Inputs)
 			{
 				foreach (var connection in input.Connections)
-					Graph.Disconnect(input, connection, false);
+					GraphManagerService.DisconnectConnectionBetween(input, connection);
 			}
 
 			foreach (var output in node.Outputs)
 			{
 				foreach (var connection in output.Connections)
-					Graph.Disconnect(output, connection, false);
+					GraphManagerService.DisconnectConnectionBetween(output, connection);
 			}
 
-			Graph.RemoveNode(node, false); // no need to refresh UI, it already came from UI
+			GraphManagerService.RemoveNode(node);
 		});
 	}
 
@@ -335,11 +336,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 			if (source != null && destination != null)
 			{
-				Graph.Disconnect(source, destination, false);
-
-				// We have to add back the textbox editor
-				if (destination.Connections.Count == 0 && destination.Type.AllowTextboxEdit)
-					UpdatePortColor(destination);
+				GraphManagerService.DisconnectConnectionBetween(source, destination);
 
 				UpdateVerticesInConnection(source, destination, baseLinkModel);
 			}
@@ -387,13 +384,13 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	private void OnNewNodeTypeSelected(NodeProvider.NodeSearchResult searchResult)
 	{
-		var node = Graph.AddNode(searchResult, false);
-		node.AddDecoration(new NodeDecorationPosition(new(PopupNodePosition.X, PopupNodePosition.Y)));
+		var node = GraphManagerService.AddNode(searchResult, node =>
+		{
+			node.AddDecoration(new NodeDecorationPosition(new(PopupNodePosition.X, PopupNodePosition.Y)));
+		});
 
 		Diagram.Batch(() =>
 		{
-			CreateGraphNodeModel(node);
-
 			if (PopupNodeConnection != null && PopupNode != null)
 			{
 				// check if the source was an input or output and choose the proper destination based on that
@@ -433,7 +430,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	#endregion
 
-	#region OnOverloadSelectionRequested
+	#region OnOverloadSelectionRequested / OnNewOverloadSelected
 
 	private bool IsShowingOverloadSelection = false;
 
@@ -482,7 +479,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		GraphManagerService.PropagateNewGeneric(PopupNode, new Dictionary<string, TypeBase>() { [GenericTypeSelectionMenuGeneric] = type }, false, null, overrideInitialTypes: true);
 
 		// Prefer updating the nodes directly instead of calling Graph.RaiseGraphChanged(true) to be sure it is called as soon as possible
-		UpdateNodes(Graph.Nodes.Values.ToList());
+		//UpdateNodes(Graph.Nodes.Values.ToList());
 
 		CancelPopup();
 	}
@@ -597,7 +594,19 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	#endregion
 
-	#region RemoveLink
+	#region RemoveNode
+
+	public void RemoveNode(Node node)
+	{
+		var nodeModel = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == node);
+		
+		if (nodeModel != null)
+			Diagram.Nodes.Remove(nodeModel);
+	}
+
+	#endregion
+
+	#region AddLink / RemoveLink
 
 	public void RemoveLinkFromGraphCanvas(Connection source, Connection destination)
 	{
@@ -615,11 +624,38 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		});
 	}
 
+	public void AddLinkToGraphCanvas(Connection source, Connection destination)
+	{
+		DisableConnectionUpdate = true;
+		try
+		{
+			if(source.IsInput)
+				(destination, source) = (source, destination);
+
+			var sourceNode = Diagram.Nodes.OfType<GraphNodeModel>().First(x => x.Node == source.Parent);
+			var destinationNode = Diagram.Nodes.OfType<GraphNodeModel>().First(x => x.Node == destination.Parent);
+			var sourcePort = sourceNode.GetPort(source);
+			var destinationPort = destinationNode.GetPort(destination);
+
+			// Make sure there isn't already an existing identical link
+			if(Diagram.Links.OfType<LinkModel>().Any( x => (x.Source as SinglePortAnchor)?.Port == sourcePort && (x.Target as SinglePortAnchor)?.Port == destinationPort))
+				return;
+
+			var link = Diagram.Links.Add(new LinkModel(sourcePort, destinationPort));
+
+			OnConnectionAdded(link, true);
+		}
+		finally
+		{
+			DisableConnectionUpdate = false;
+		}
+	}
+
 	#endregion
 
-	#region CreateGraphNodeModel
+	#region AddNode
 
-	private void CreateGraphNodeModel(Node node)
+	public void AddNode(Node node)
 	{
 		var nodeModel = Diagram.Nodes.Add(new GraphNodeModel(node));
 		foreach (var connection in node.InputsAndOutputs)
@@ -686,13 +722,24 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	#endregion
 
+	#region Refresh
+
+	public void Refresh(Node node)
+	{
+		var nodeModel = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == node);
+		
+		nodeModel?.Refresh();
+	}
+
+	#endregion
+
 	#region Initialize
 
 	private void InitializeCanvasWithGraphNodes()
 	{
 		// add the nodes themselves
 		foreach (var node in Graph.Nodes.Values)
-			CreateGraphNodeModel(node);
+			AddNode(node);
 
 		// add links
 		foreach (var node in Graph.Nodes.Values)
@@ -724,6 +771,9 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	private IDisposable? NodeExecutedSubscription;
 	public void Dispose()
 	{
+		if(Graph.GraphCanvas == this)
+			Graph.GraphCanvas = null;
+
 		GraphChangedSubscription?.Dispose();
 		NodeExecutingSubscription?.Dispose();
 		NodeExecutedSubscription?.Dispose();

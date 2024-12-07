@@ -1,6 +1,7 @@
 using NodeDev.Core;
 using NodeDev.Core.Class;
 using NodeDev.Core.Nodes;
+using NodeDev.Core.Nodes.Flow;
 using System.Reactive.Linq;
 
 namespace NodeDev.Tests;
@@ -13,21 +14,19 @@ public class EventsTests
 		var project = new Project(Guid.NewGuid());
 
 		var myClass = new NodeClass("Program", "MyProject", project);
-		project.Classes.Add(myClass);
+		project.AddClass(myClass);
 
 		var prop = new NodeClassProperty(myClass, "MyProp", project.TypeFactory.Get<int>());
 		myClass.Properties.Add(prop);
 
 		var graph = new Graph();
 		var method = new NodeClassMethod(myClass, "Main", myClass.TypeFactory.Get<int>(), graph);
-		myClass.Methods.Add(method);
 		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method));
+		myClass.AddMethod(method, true);
 
-		var entryNode = new Core.Nodes.Flow.EntryNode(graph);
-		entryNode.Outputs.Add(new("A", entryNode, myClass.TypeFactory.Get<int>()));
+		var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
 
-		var returnNode = new Core.Nodes.Flow.ReturnNode(graph);
-		returnNode.Inputs.Add(new("Result", entryNode, myClass.TypeFactory.Get<int>()));
+		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
 
 		var newNode = new New(graph);
 		newNode.Outputs[1].UpdateTypeAndTextboxVisibility(myClass.ClassTypeBase, overrideInitialType: true);
@@ -38,22 +37,20 @@ public class EventsTests
 		var getProp = new GetPropertyOrField(graph);
 		getProp.SetMemberTarget(prop);
 
-		graph.AddNode(entryNode, false);
-		graph.AddNode(returnNode, false);
-		graph.AddNode(newNode, false);
-		graph.AddNode(getProp, false);
-		graph.AddNode(setProp, false);
+		graph.Manager.AddNode(newNode);
+		graph.Manager.AddNode(getProp);
+		graph.Manager.AddNode(setProp);
 
 		// link the execution path
-		graph.Connect(entryNode.Outputs[0], newNode.Inputs[0], false);
-		graph.Connect(newNode.Outputs[0], setProp.Inputs[1], false); // set input 0 is the target, so use input 1 as the exec
-		graph.Connect(setProp.Outputs[0], returnNode.Inputs[0], false);
+		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], newNode.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(newNode.Outputs[0], setProp.Inputs[1]); // set input 0 is the target, so use input 1 as the exec
+		graph.Manager.AddNewConnectionBetween(setProp.Outputs[0], returnNode.Inputs[0]);
 
 		// link the rest
-		graph.Connect(entryNode.Outputs[1], setProp.Inputs[2], false);
-		graph.Connect(newNode.Outputs[1], setProp.Inputs[0], false);
-		graph.Connect(newNode.Outputs[1], getProp.Inputs[0], false);
-		graph.Connect(getProp.Outputs[0], returnNode.Inputs[1], false);
+		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[1], setProp.Inputs[2]);
+		graph.Manager.AddNewConnectionBetween(newNode.Outputs[1], setProp.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(newNode.Outputs[1], getProp.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(getProp.Outputs[0], returnNode.Inputs[1]);
 
 		bool raised = false;
 		project.GraphChanged.Subscribe(x =>
