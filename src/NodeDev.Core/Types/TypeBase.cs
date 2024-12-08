@@ -347,9 +347,7 @@ public abstract class TypeBase
 
 						if (swapped)
 						{
-							var temp = changedGenericsLeftLocally;
-							changedGenericsLeftLocally = changedGenericsRightLocally;
-							changedGenericsRightLocally = temp;
+							(changedGenericsRightLocally, changedGenericsLeftLocally) = (changedGenericsLeftLocally, changedGenericsRightLocally);
 						}
 
 						foreach (var changed in changedGenericsLeftLocally)
@@ -367,9 +365,7 @@ public abstract class TypeBase
 
 						if (swapped)
 						{
-							var temp = changedGenericsLeftLocally;
-							changedGenericsLeftLocally = changedGenericsRightLocally;
-							changedGenericsRightLocally = temp;
+							(changedGenericsRightLocally, changedGenericsLeftLocally) = (changedGenericsLeftLocally, changedGenericsRightLocally);
 						}
 
 						foreach (var changed in changedGenericsLeftLocally)
@@ -456,7 +452,7 @@ public abstract class TypeBase
 
 		var deserializeMethod = type.GetMethod("Deserialize", BindingFlags.Public | BindingFlags.Static) ?? throw new Exception($"Deserialize method not found in type: {serializedType.TypeFullName}");
 
-		var deserializedType = deserializeMethod.Invoke(null, new object[] { typeFactory, serializedType.SerializedTypeCustom });
+		var deserializedType = deserializeMethod.Invoke(null, [typeFactory, serializedType.SerializedTypeCustom]);
 
 		if (deserializedType is TypeBase typeBase)
 			return typeBase;

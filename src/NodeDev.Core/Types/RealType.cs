@@ -245,15 +245,15 @@ public class RealType : TypeBase
 		return new RealType(TypeFactory, typeUsingOurGenerics, generics);
 	}
 
-	private record class SerializedType(string TypeFullName, string[] SerializedGenerics);
+	private record class SerializedRealType(string TypeFullName, string[] SerializedGenerics);
 	internal protected override string Serialize()
 	{
-		return System.Text.Json.JsonSerializer.Serialize(new SerializedType(BackendType.FullName!, Generics.Select(x => x.SerializeWithFullTypeNameString()).ToArray()));
+		return System.Text.Json.JsonSerializer.Serialize(new SerializedRealType(BackendType.FullName!, Generics.Select(x => x.SerializeWithFullTypeNameString()).ToArray()));
 	}
 
-	public new static RealType Deserialize(TypeFactory typeFactory, string serializedString)
+	public static RealType Deserialize(TypeFactory typeFactory, string serializedString)
 	{
-		var serializedType = System.Text.Json.JsonSerializer.Deserialize<SerializedType>(serializedString) ?? throw new Exception("Unable to deserialize type");
+		var serializedType = System.Text.Json.JsonSerializer.Deserialize<SerializedRealType>(serializedString) ?? throw new Exception("Unable to deserialize type");
 
 		var type = typeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
 

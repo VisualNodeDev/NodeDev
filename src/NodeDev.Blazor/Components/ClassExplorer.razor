@@ -202,9 +202,9 @@
             }).Result;
 
         NodeDev.Core.Types.TypeBase typeBase;
-        if (result.Data is Type type)
+        if (result?.Data is Type type)
             typeBase = Class.TypeFactory.Get(type, null);
-        else if (result.Data is NodeDev.Core.Types.TypeBase t)
+        else if (result?.Data is NodeDev.Core.Types.TypeBase t)
             typeBase = t;
         else
             return;
@@ -234,7 +234,7 @@
         {
             if (CurrentlyEditingItem!.Type == TreeItemType.Method)
             {
-                var method = new Core.Class.NodeClassMethod(Class, Text, Class.TypeFactory.Get(typeof(void), null), new Core.Graph());
+                var method = new Core.Class.NodeClassMethod(Class, Text, Class.TypeFactory.Get(typeof(void), null));
                 Class.AddMethod(method, createEntryAndReturn: true);
 
                 Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.RemoveAll(x => x.Value == CurrentlyEditingItem);

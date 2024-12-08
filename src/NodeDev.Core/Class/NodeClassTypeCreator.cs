@@ -32,7 +32,7 @@ public class NodeClassTypeCreator
 		Options = buildOptions;
 	}
 
-	private static Assembly TemporaryReflectionAssembly;
+	private static Assembly? TemporaryReflectionAssembly;
 	public void CreateProjectClassesAndAssembly()
 	{
 		// TODO Remove this when the new System.Reflection.Emit is available in .NET 10
@@ -57,11 +57,8 @@ public class NodeClassTypeCreator
 		// Creating all the types early so they are all accessible during expression tree generation
 		foreach (var nodeClass in Project.Classes)
 		{
-			GeneratedType generatedType;
-			if (GeneratedTypes.ContainsKey(Project.GetNodeClassType(nodeClass)))
-				generatedType = GeneratedTypes[Project.GetNodeClassType(nodeClass)];
-			else
-				GeneratedTypes[Project.GetNodeClassType(nodeClass)] = generatedType = CreateGeneratedType(mb, nodeClass.Name);
+			if (!GeneratedTypes.ContainsKey(Project.GetNodeClassType(nodeClass)))
+				GeneratedTypes[Project.GetNodeClassType(nodeClass)] = CreateGeneratedType(mb, nodeClass.Name);
 		}
 
 		// Create the properties and methods in the real type

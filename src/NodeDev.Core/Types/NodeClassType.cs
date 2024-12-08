@@ -56,7 +56,7 @@ namespace NodeDev.Core.Types
 			return new NodeClassType(NodeClass, newGenerics);
 		}
 
-		public new static NodeClassType Deserialize(TypeFactory typeFactory, string typeName)
+		public static NodeClassType Deserialize(TypeFactory typeFactory, string typeName)
 		{
 			return typeFactory.Project.GetNodeClassType(typeFactory.Project.Classes.First(x => x.Namespace + "." + x.Name == typeName));
 		}

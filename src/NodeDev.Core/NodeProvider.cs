@@ -10,10 +10,15 @@ namespace NodeDev.Core
 	// you're welcome
 	public static class NodeProvider
 	{
-		private static List<Type> NodeTypes = new();
+		private readonly static List<Type> NodeTypes = [];
 		public static void Initialize()
 		{
 			AddNodesFromAssembly(typeof(NodeProvider).Assembly);
+		}
+
+		static NodeProvider()
+		{
+			Initialize();
 		}
 
 
