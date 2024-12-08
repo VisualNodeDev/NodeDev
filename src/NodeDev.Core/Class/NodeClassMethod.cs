@@ -9,15 +9,13 @@ namespace NodeDev.Core.Class
 	public class NodeClassMethod : IMethodInfo
 	{
 		internal record class SerializedNodeClassMethod(string Name, TypeBase.SerializedType ReturnType, List<NodeClassMethodParameter.SerializedNodeClassMethodParameter> Parameters, Graph.SerializedGraph Graph, bool IsStatic);
-		public NodeClassMethod(NodeClass ownerClass, string name, TypeBase returnType, Graph graph, bool isStatic = false)
+		public NodeClassMethod(NodeClass ownerClass, string name, TypeBase returnType, bool isStatic = false)
 		{
 			Class = ownerClass;
 			Name = name;
 			ReturnType = returnType;
-			Graph = graph;
 			IsStatic = isStatic;
-
-			Graph.SelfMethod = this;
+			Graph = new(this);
 		}
 
 		public NodeClass Class { get; }
@@ -26,7 +24,7 @@ namespace NodeDev.Core.Class
 
 		public TypeBase ReturnType { get; }
 
-		public List<NodeClassMethodParameter> Parameters { get; } = new();
+		public List<NodeClassMethodParameter> Parameters { get; } = [];
 
 		public Graph Graph { get; }
 
@@ -84,8 +82,7 @@ namespace NodeDev.Core.Class
 			}
 
 			var entry = Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
-			if (entry != null)
-				entry.AddNewParameter(newParameter);
+			entry?.AddNewParameter(newParameter);
 		}
 
 		public IEnumerable<IMethodParameterInfo> GetParameters()
@@ -111,9 +108,7 @@ namespace NodeDev.Core.Class
 		internal static NodeClassMethod Deserialize(NodeClass owner, SerializedNodeClassMethod serializedNodeClassMethod)
 		{
 			var returnType = TypeBase.Deserialize(owner.Project.TypeFactory, serializedNodeClassMethod.ReturnType);
-			var graph = new Graph();
-			var nodeClassMethod = new NodeClassMethod(owner, serializedNodeClassMethod.Name, returnType, graph, serializedNodeClassMethod.IsStatic);
-			graph.SelfMethod = nodeClassMethod; // a bit / really ugly
+			var nodeClassMethod = new NodeClassMethod(owner, serializedNodeClassMethod.Name, returnType, serializedNodeClassMethod.IsStatic);
 
 			foreach (var parameter in serializedNodeClassMethod.Parameters)
 				nodeClassMethod.Parameters.Add(NodeClassMethodParameter.Deserialize(owner.Project.TypeFactory, parameter, nodeClassMethod));

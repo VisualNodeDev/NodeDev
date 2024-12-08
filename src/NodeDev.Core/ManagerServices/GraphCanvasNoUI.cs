@@ -7,14 +7,9 @@ namespace NodeDev.Core.ManagerServices;
 /// Represents a GraphCanvas that doesn't have a UI associated.
 /// This is used when we need to update stuff in a graph but we don't have a UI to update.
 /// </summary>
-internal class GraphCanvasNoUI : IGraphCanvas
+internal class GraphCanvasNoUI(Graph graph) : IGraphCanvas
 {
-	public GraphCanvasNoUI(Graph graph)
-	{
-		Graph = graph;
-	}
-
-	public Graph Graph { get; }
+	public Graph Graph { get; } = graph;
 
 	public void AddLinkToGraphCanvas(Connection source, Connection destination)
 	{

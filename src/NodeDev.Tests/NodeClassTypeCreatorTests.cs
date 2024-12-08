@@ -71,12 +71,12 @@ public class NodeClassTypeCreatorTests
 		var prop = new NodeClassProperty(myClass, "MyProp", project.TypeFactory.Get<int>());
 		myClass.Properties.Add(prop);
 
-		var graph = new Graph();
-		var method = new NodeClassMethod(myClass, "MainInternal", myClass.TypeFactory.Get<int>(), graph);
+		var method = new NodeClassMethod(myClass, "MainInternal", myClass.TypeFactory.Get<int>());
 		method.IsStatic = true;
 		myClass.AddMethod(method, createEntryAndReturn: false);
 		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method)); // TODO REMOVE
 
+		var graph = method.Graph;
 		var entryNode = new EntryNode(graph);
 
 		var returnNode = new ReturnNode(graph);

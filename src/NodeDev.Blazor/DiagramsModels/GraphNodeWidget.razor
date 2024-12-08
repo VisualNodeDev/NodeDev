@@ -67,7 +67,18 @@
 
     private void OnAfterNodeRenamed()
     {
-        GraphCanvas.OnNodeRenamed(Node);
+        Node.IsEditingName = false;
+
+        Node.Refresh();
+
+        // When the name of a node changes, refresh the connected nodes in case they also need to refresh
+        foreach (var link in Node.PortLinks.OfType<LinkModel>())
+        {
+            if (link.Source.Model is GraphPortModel source)
+                source.Parent.Refresh();
+            if (link.Target.Model is GraphPortModel target)
+                target.Parent.Refresh();
+        }
     }
 
     private void OnKeyDown(KeyboardEventArgs args)

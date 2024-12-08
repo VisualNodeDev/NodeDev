@@ -85,7 +85,7 @@ public class Project
 		project.AddClass(programClass);
 
 		// Create the main method and add it to the project
-		main = new NodeClassMethod(programClass, "Main", project.TypeFactory.Get<int>(), new Graph(), true);
+		main = new NodeClassMethod(programClass, "Main", project.TypeFactory.Get<int>(), true);
 		programClass.AddMethod(main, createEntryAndReturn: true);
 
 		// Now that the method is created with its entry and return nodes, we can set the default return value of 0
@@ -125,6 +125,9 @@ public class Project
 			{
 				var metadataBuilder = assemblyBuilder.GenerateMetadata(out BlobBuilder? ilStream, out BlobBuilder? fieldData);
 				var peHeaderBuilder = new PEHeaderBuilder(imageCharacteristics: Characteristics.ExecutableImage);
+
+				if(ilStream == null || fieldData == null)
+					throw new InvalidOperationException("Unable to generate assembly metadata. ilStream or fieldData was null. This shouldn't happen");
 
 				var peBuilder = new ManagedPEBuilder(
 								header: peHeaderBuilder,
@@ -209,7 +212,7 @@ public class Project
 
 			return process.ExitCode;
 		}
-		catch (Exception ex)
+		catch (Exception)
 		{
 			return null;
 		}

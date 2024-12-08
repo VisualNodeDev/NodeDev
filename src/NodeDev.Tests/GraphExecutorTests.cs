@@ -16,13 +16,13 @@ public class GraphExecutorTests
 		var nodeClass = new NodeClass("Program", "Test", project);
 		project.AddClass(nodeClass);
 
-		var graph = new Graph();
-		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<TOut>(), graph, true);
+		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<TOut>(), true);
 		nodeClass.AddMethod(method, createEntryAndReturn: false);
-		graph.SelfMethod = method;
 
 		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<TIn>(), method));
 		method.Parameters.Add(new("B", nodeClass.TypeFactory.Get<TIn>(), method));
+
+		var graph = method.Graph;
 
 		entryNode = new EntryNode(graph);
 
@@ -52,13 +52,12 @@ public class GraphExecutorTests
 	public static Graph CreateStaticMainWithConversion(NodeClass nodeClass, NodeClassMethod internalMethod)
 	{
 		// Now that the fake method is created we need to create the real Main method, taking string[] as input and converting the first two elements to TIn
-		var graph = new Graph();
-		var mainMethod = new NodeClassMethod(nodeClass, "Main", nodeClass.TypeFactory.Void, graph, true);
+		var mainMethod = new NodeClassMethod(nodeClass, "Main", nodeClass.TypeFactory.Void, true);
 		nodeClass.AddMethod(mainMethod, createEntryAndReturn: false);
-		graph.SelfMethod = mainMethod;
 
 		mainMethod.Parameters.Add(new("args", nodeClass.TypeFactory.Get<string[]>(), mainMethod));
 
+		var graph = mainMethod.Graph;
 		var entryNode = new EntryNode(graph);
 
 		var returnNode = new ReturnNode(graph);
@@ -300,12 +299,11 @@ public class GraphExecutorTests
 		var nodeClass = new NodeClass("Program", "Test", project);
 		project.AddClass(nodeClass);
 
-		var graph = new Graph();
-		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph);
+		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>());
 		method.IsStatic = true;
 		nodeClass.AddMethod(method, createEntryAndReturn: false);
-		graph.SelfMethod = nodeClass.Methods.First();
 
+		var graph = method.Graph;
 		var entryNode = new EntryNode(graph);
 		var tryCatchNode = new TryCatchNode(graph);
 		tryCatchNode.Outputs[3].UpdateTypeAndTextboxVisibility(nodeClass.TypeFactory.Get<Exception>(), overrideInitialType: true);
@@ -368,13 +366,12 @@ public class GraphExecutorTests
 		var nodeClass = new NodeClass("Program", "Test", project);
 		project.AddClass(nodeClass);
 
-		var graph = new Graph();
-		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph, true);
+		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), true);
 		nodeClass.AddMethod(method, createEntryAndReturn: false);
-		graph.SelfMethod = method;
 
 		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<int>(), method));
 
+		var graph = method.Graph;
 		var entryNode = new EntryNode(graph);
 		graph.Manager.AddNode(entryNode);
 
@@ -413,13 +410,12 @@ public class GraphExecutorTests
 		var nodeClass = new NodeClass("Program", "Test", project);
 		project.AddClass(nodeClass);
 
-		var graph = new Graph();
-		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), graph, true);
+		var method = new NodeClassMethod(nodeClass, "MainInternal", nodeClass.TypeFactory.Get<int>(), true);
 		nodeClass.AddMethod(method, createEntryAndReturn: false);
-		graph.SelfMethod = method;
 
 		method.Parameters.Add(new("A", nodeClass.TypeFactory.Get<int>(), method));
 
+		var graph = method.Graph;
 		var entryNode = new EntryNode(graph);
 		graph.Manager.AddNode(entryNode);
 

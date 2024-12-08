@@ -19,10 +19,11 @@ public class EventsTests
 		var prop = new NodeClassProperty(myClass, "MyProp", project.TypeFactory.Get<int>());
 		myClass.Properties.Add(prop);
 
-		var graph = new Graph();
-		var method = new NodeClassMethod(myClass, "Main", myClass.TypeFactory.Get<int>(), graph);
+		var method = new NodeClassMethod(myClass, "Main", myClass.TypeFactory.Get<int>());
 		method.Parameters.Add(new("A", myClass.TypeFactory.Get<int>(), method));
 		myClass.AddMethod(method, true);
+
+		var graph = method.Graph;
 
 		var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
 
