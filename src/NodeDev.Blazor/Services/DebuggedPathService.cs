@@ -13,7 +13,7 @@ internal class DebuggedPathService
 	/// The stack of nodes throught which we are debugging. 
 	/// Ie, if we are debugging Main -> MethodCall1 -> MethodCall2, this will contain MethodCall1, MethodCall2. Or more the actual nodes of each of them
 	/// </summary>
-	private readonly List<Node> GraphIndexesAndNodes_ = new();
+	private readonly List<Node> GraphIndexesAndNodes_ = [];
 
 	/// <summary>
 	/// The queue of nodes throught which we are debugging. 

@@ -19,7 +19,7 @@
                         </CellTemplate>
                     </TemplateColumn>
 
-                    <CallbackSetColumn Property="x => x.Name" SetCallback="(x, name) => x.Rename(name)" IsEditable="true" />
+                    <CallbackSetColumn Property="x => x.Name" SetCallback="(x, name) => x.Rename(name)" Editable="true" />
 
                     <TemplateColumn Title="IsOut">
                         <EditTemplate>
@@ -27,7 +27,7 @@
                         </EditTemplate>
                     </TemplateColumn>
 
-                    <TemplateColumn IsEditable="false">
+                    <TemplateColumn Editable="false">
 
                         <CellTemplate>
 
@@ -73,9 +73,9 @@
             }).Result;
 
         NodeDev.Core.Types.TypeBase typeBase;
-        if (result.Data is Type type)
+        if (result?.Data is Type type)
             typeBase = Method.Class.TypeFactory.Get(type, null);
-        else if (result.Data is NodeDev.Core.Types.TypeBase t)
+        else if (result?.Data is NodeDev.Core.Types.TypeBase t)
             typeBase = t;
         else
             return;

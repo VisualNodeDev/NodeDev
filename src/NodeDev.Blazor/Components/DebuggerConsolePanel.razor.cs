@@ -78,6 +78,8 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 
 	public void Dispose()
 	{
+		GC.SuppressFinalize(this);
+
 		GraphExecutionChangedDisposable?.Dispose();
 		RefreshRequiredDisposable?.Dispose();
 

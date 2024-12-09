@@ -77,7 +77,7 @@
 			return System.Text.Json.JsonSerializer.Serialize(new SerializedNodeClassArrayType(InnerNodeClassType.Serialize(), NbArrayLevels));
 		}
 
-		public new static NodeClassArrayType Deserialize(TypeFactory typeFactory, string serializedString)
+		public static NodeClassArrayType Deserialize(TypeFactory typeFactory, string serializedString)
 		{
 			var deserialized = System.Text.Json.JsonSerializer.Deserialize<SerializedNodeClassArrayType>(serializedString);
 			if (deserialized == null)

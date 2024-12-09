@@ -10,7 +10,7 @@
 
 		public override bool IsExec => true;
 
-		public override TypeBase[] Generics => Array.Empty<TypeBase>();
+		public override TypeBase[] Generics => [];
 
 		public override string FriendlyName => "Exec";
 
@@ -43,7 +43,7 @@
 			return "";
 		}
 
-		public new static ExecType Deserialize(TypeFactory typeFactory, string serialized)
+		public static ExecType Deserialize(TypeFactory typeFactory, string serialized)
 		{
 			return typeFactory.ExecType;
 		}

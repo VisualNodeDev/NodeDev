@@ -83,6 +83,9 @@ public class GetPropertyOrField : NoFlowNode
 
 	internal override void BuildInlineExpression(BuildExpressionInfo info)
 	{
+		if (TargetMember == null)
+			throw new InvalidOperationException("Target member is not set");
+
 		var type = TargetMember.DeclaringType.MakeRealType();
 
 		var binding = BindingFlags.Public | BindingFlags.NonPublic | (TargetMember.IsStatic ? BindingFlags.Static : BindingFlags.Instance);

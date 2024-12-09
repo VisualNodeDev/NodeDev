@@ -7,13 +7,13 @@ using System.Linq.Expressions;
 
 namespace NodeDev.Core;
 
-public class Graph
+public class Graph(NodeClassMethod selfMethod)
 {
 	internal Dictionary<string, Node> _Nodes = [];
 	public IReadOnlyDictionary<string, Node> Nodes => _Nodes;
 
 	public NodeClass SelfClass => SelfMethod.Class;
-	public NodeClassMethod SelfMethod { get; set; }
+	public NodeClassMethod SelfMethod { get; } = selfMethod;
 
 	public Project Project => SelfMethod.Class.Project;
 
@@ -36,7 +36,7 @@ public class Graph
 	/// Get the GraphManagerService for this graph and its associated graph canvas.
 	/// This property should be used all the time as it will keep itself up to date with the graph canvas.
 	/// </summary>
-	public GraphManagerService Manager => _graphManagerService ??= new(GraphCanvas ?? new GraphCanvasNoUI(this));
+	public GraphManagerService Manager => _graphManagerService ??= new(_graphCanvas ?? new GraphCanvasNoUI(this));
 
 	static Graph()
 	{
@@ -44,6 +44,7 @@ public class Graph
 	}
 
 	public void RaiseGraphChanged(bool requireUIRefresh) => Project.GraphChangedSubject.OnNext((this, requireUIRefresh));
+
 
 	#region GetChunks
 
@@ -409,24 +410,6 @@ public class Graph
 			// Get the local variable or expression associated with that input and use it as that input's expression
 			info.LocalVariables[input] = info.LocalVariables[input.Connections[0]];
 		}
-	}
-
-	#endregion
-
-	#region Invoke
-
-	public Task Invoke(Action action)
-	{
-		return Invoke(() =>
-		{
-			action();
-			return Task.CompletedTask;
-		});
-	}
-
-	public async Task Invoke(Func<Task> action)
-	{
-		await action(); // temporary
 	}
 
 	#endregion

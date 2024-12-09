@@ -24,9 +24,9 @@ namespace NodeDev.Core.Nodes
 
 		public abstract string TitleColor { get; }
 
-		public List<Connection> Inputs { get; } = new();
+		public List<Connection> Inputs { get; } = [];
 
-		public List<Connection> Outputs { get; } = new();
+		public List<Connection> Outputs { get; } = [];
 
 		public IEnumerable<Connection> InputsAndOutputs => Inputs.Concat(Outputs);
 
@@ -220,7 +220,7 @@ namespace NodeDev.Core.Nodes
 
 		#region Decorations
 
-		public Dictionary<Type, INodeDecoration> Decorations { get; init; } = new();
+		public Dictionary<Type, INodeDecoration> Decorations { get; init; } = [];
 
 		public void AddDecoration<T>(T attribute) where T : INodeDecoration => Decorations[typeof(T)] = attribute;
 
@@ -249,21 +249,20 @@ namespace NodeDev.Core.Nodes
 
 		internal static Node Deserialize(Graph graph, SerializedNode serializedNodeObj)
 		{
-			var type = graph.SelfClass.TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
+			var type = TypeFactory.GetTypeByFullName(serializedNodeObj.Type) ?? throw new Exception($"Unable to find type: {serializedNodeObj.Type}");
 			var node = (Node?)Activator.CreateInstance(type, graph, serializedNodeObj.Id) ?? throw new Exception($"Unable to create instance of type: {serializedNodeObj.Type}");
 
 			foreach (var decoration in serializedNodeObj.Decorations)
 			{
-				var decorationType = graph.SelfClass.TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
+				var decorationType = TypeFactory.GetTypeByFullName(decoration.Key) ?? throw new Exception($"Unable to find type: {decoration.Key}");
 
 				var method = decorationType.GetMethod(nameof(INodeDecoration.Deserialize), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
 				if (method == null)
 					throw new Exception($"Unable to find Deserialize method on type: {decoration.Key}");
 
-				var decorationObj = method.Invoke(null, new object[] { graph.SelfClass.TypeFactory, decoration.Value }) as INodeDecoration;
 
-				if (decorationObj == null)
+				if (method.Invoke(null, [graph.SelfClass.TypeFactory, decoration.Value]) is not INodeDecoration decorationObj)
 					throw new Exception($"Unable to deserialize decoration: {decoration.Key}");
 
 				node.Decorations[decorationType] = decorationObj;

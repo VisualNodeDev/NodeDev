@@ -6,7 +6,7 @@ public class AppOptionsContainer
 {
 	private readonly string OptionsFileName;
 
-	private AppOptions appOptions = new AppOptions();
+	private AppOptions appOptions = new();
 	public AppOptions AppOptions
 	{
 		get => appOptions;

@@ -96,9 +96,7 @@ public class GraphManagerService
 	{
 		if (source.IsInput)
 		{
-			var temp = source;
-			source = destination;
-			destination = temp;
+			(destination, source) = (source, destination);
 		}
 
 		if (!source._Connections.Contains(destination))
@@ -133,9 +131,7 @@ public class GraphManagerService
 	{
 		if(source.IsInput)
 		{
-			var temp = source;
-			source = destination;
-			destination = temp;
+			(destination, source) = (source, destination);
 		}
 
 		source._Connections.Remove(destination);

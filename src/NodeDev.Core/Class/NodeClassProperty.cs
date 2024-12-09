@@ -2,23 +2,17 @@
 
 namespace NodeDev.Core.Class;
 
-public class NodeClassProperty : IMemberInfo
+public class NodeClassProperty(NodeClass ownerClass, string name, TypeBase propertyType) : IMemberInfo
 {
 	internal record class SerializedNodeClassProperty(string Name, TypeBase.SerializedType Type);
-	public NodeClassProperty(NodeClass ownerClass, string name, TypeBase propertyType)
-	{
-		Class = ownerClass;
-		Name = name;
-		PropertyType = propertyType;
-	}
 
-	public NodeClass Class { get; }
+	public NodeClass Class { get; } = ownerClass;
 
-	public string Name { get; private set; }
+	public string Name { get; private set; } = name;
 
-	public TypeBase PropertyType { get; private set; }
+	public TypeBase PropertyType { get; private set; } = propertyType;
 
-	public List<NodeClassMethodParameter> Parameters { get; } = new();
+	public List<NodeClassMethodParameter> Parameters { get; } = [];
 
 	public TypeBase DeclaringType => Class.ClassTypeBase;
 

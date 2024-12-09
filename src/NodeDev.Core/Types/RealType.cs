@@ -36,8 +36,8 @@ public class RealType : TypeBase
 	/// <summary>
 	/// Types that the UI will show a textbox for editing
 	/// </summary>
-	private static readonly List<Type> AllowedEditTypes = new()
-	{
+	private static readonly List<Type> AllowedEditTypes =
+	[
 		typeof(int),
 		typeof(string),
 		typeof(bool),
@@ -65,7 +65,7 @@ public class RealType : TypeBase
 		typeof(ushort?),
 		typeof(sbyte?),
 		typeof(char?),
-	};
+	];
 	public override bool AllowTextboxEdit => AllowedEditTypes.Contains(BackendType);
 	public override string? DefaultTextboxValue
 	{
@@ -245,17 +245,17 @@ public class RealType : TypeBase
 		return new RealType(TypeFactory, typeUsingOurGenerics, generics);
 	}
 
-	private record class SerializedType(string TypeFullName, string[] SerializedGenerics);
+	private record class SerializedRealType(string TypeFullName, string[] SerializedGenerics);
 	internal protected override string Serialize()
 	{
-		return System.Text.Json.JsonSerializer.Serialize(new SerializedType(BackendType.FullName!, Generics.Select(x => x.SerializeWithFullTypeNameString()).ToArray()));
+		return System.Text.Json.JsonSerializer.Serialize(new SerializedRealType(BackendType.FullName!, Generics.Select(x => x.SerializeWithFullTypeNameString()).ToArray()));
 	}
 
-	public new static RealType Deserialize(TypeFactory typeFactory, string serializedString)
+	public static RealType Deserialize(TypeFactory typeFactory, string serializedString)
 	{
-		var serializedType = System.Text.Json.JsonSerializer.Deserialize<SerializedType>(serializedString) ?? throw new Exception("Unable to deserialize type");
+		var serializedType = System.Text.Json.JsonSerializer.Deserialize<SerializedRealType>(serializedString) ?? throw new Exception("Unable to deserialize type");
 
-		var type = typeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
+		var type = TypeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
 
 		var generics = serializedType.SerializedGenerics.Select(x => DeserializeFullTypeNameString(typeFactory, x)).ToArray();
 
