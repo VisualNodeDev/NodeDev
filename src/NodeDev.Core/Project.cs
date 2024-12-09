@@ -29,10 +29,10 @@ public class Project
 
 	public static string CurrentNodeDevVersion => Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? throw new Exception("Unable to get current NodeDev version");
 
-	private List<NodeClass> _Classes = [];
+	private readonly List<NodeClass> _Classes = [];
 	public IReadOnlyList<NodeClass> Classes => _Classes;
 
-	private Dictionary<NodeClass, NodeClassType> NodeClassTypes = [];
+	private readonly Dictionary<NodeClass, NodeClassType> NodeClassTypes = [];
 
 	public readonly TypeFactory TypeFactory;
 

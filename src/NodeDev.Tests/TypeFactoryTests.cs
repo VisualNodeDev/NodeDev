@@ -9,14 +9,14 @@ public class TypeFactoryTests
 	{
 		var typeFactory = new TypeFactory(new(Guid.NewGuid()));
 
-		var type = typeFactory.GetTypeByFullName(typeof(string).FullName!);
+		var type = TypeFactory.GetTypeByFullName(typeof(string).FullName!);
 		Assert.Same(typeof(string), type);
 
 
-		type = typeFactory.GetTypeByFullName(typeof(List<int>).FullName!);
+		type = TypeFactory.GetTypeByFullName(typeof(List<int>).FullName!);
 		Assert.Same(typeof(List<int>), type);
 
-		type = typeFactory.GetTypeByFullName(typeof(List<>).FullName!);
+		type = TypeFactory.GetTypeByFullName(typeof(List<>).FullName!);
 		Assert.Same(typeof(List<>), type);
 	}
 

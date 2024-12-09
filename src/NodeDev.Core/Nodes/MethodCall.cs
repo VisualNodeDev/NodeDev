@@ -58,7 +58,7 @@ public class MethodCall : NormalFlowNode
 		{
 			var parentType = TargetMethod?.DeclaringType;
 			if (TargetMethod == null || parentType == null)
-				return Enumerable.Empty<AlternateOverload>();
+				return [];
 
 			var methods = parentType.GetMethods(TargetMethod.Name);
 
@@ -84,8 +84,8 @@ public class MethodCall : NormalFlowNode
 		var parentType = TargetMethod?.DeclaringType;
 		if (TargetMethod == null || parentType == null)
 		{
-			newConnections = new List<Connection>();
-			removedConnections = new List<Connection>();
+			newConnections = [];
+			removedConnections = [];
 			return;
 		}
 

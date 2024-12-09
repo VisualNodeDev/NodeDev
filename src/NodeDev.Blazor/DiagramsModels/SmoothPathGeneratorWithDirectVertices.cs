@@ -43,7 +43,7 @@ public class SmoothPathGeneratorWithDirectVertices : PathGenerator
 			.AddMoveTo(route[0].X, route[0].Y)
 			.AddCubicBezierCurve(route[1].X, route[1].Y, route[2].X, route[2].Y, route[3].X, route[3].Y);
 
-		return new PathGeneratorResult(path, Array.Empty<SvgPath>(), sourceAngle, route[0], targetAngle, route[^1]);
+		return new PathGeneratorResult(path, [], sourceAngle, route[0], targetAngle, route[^1]);
 	}
 
 	private PathGeneratorResult CurveThroughPoints(Point[] route, BaseLinkModel link)

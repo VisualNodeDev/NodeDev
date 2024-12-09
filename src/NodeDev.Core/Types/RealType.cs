@@ -36,8 +36,8 @@ public class RealType : TypeBase
 	/// <summary>
 	/// Types that the UI will show a textbox for editing
 	/// </summary>
-	private static readonly List<Type> AllowedEditTypes = new()
-	{
+	private static readonly List<Type> AllowedEditTypes =
+	[
 		typeof(int),
 		typeof(string),
 		typeof(bool),
@@ -65,7 +65,7 @@ public class RealType : TypeBase
 		typeof(ushort?),
 		typeof(sbyte?),
 		typeof(char?),
-	};
+	];
 	public override bool AllowTextboxEdit => AllowedEditTypes.Contains(BackendType);
 	public override string? DefaultTextboxValue
 	{
@@ -255,7 +255,7 @@ public class RealType : TypeBase
 	{
 		var serializedType = System.Text.Json.JsonSerializer.Deserialize<SerializedRealType>(serializedString) ?? throw new Exception("Unable to deserialize type");
 
-		var type = typeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
+		var type = TypeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
 
 		var generics = serializedType.SerializedGenerics.Select(x => DeserializeFullTypeNameString(typeFactory, x)).ToArray();
 

@@ -4,29 +4,22 @@ using NodeDev.Core.Types;
 
 namespace NodeDev.Core.Class
 {
-	public class NodeClass
+	public class NodeClass(string name, string @namespace, Project project)
 	{
-		public readonly Project Project;
+		public readonly Project Project = project;
 
 		public TypeFactory TypeFactory => Project.TypeFactory;
 
 		public TypeBase ClassTypeBase => Project.GetNodeClassType(this);
 
-		public string Name { get; set; }
+		public string Name { get; set; } = name;
 
-		public string Namespace { get; set; }
+		public string Namespace { get; set; } = @namespace;
 
 		internal List<NodeClassMethod> _Methods = [];
 		public IReadOnlyList<NodeClassMethod> Methods => _Methods;
 
-		public List<NodeClassProperty> Properties { get; } = new();
-
-		public NodeClass(string name, string @namespace, Project project)
-		{
-			Name = name;
-			Namespace = @namespace;
-			Project = project;
-		}
+		public List<NodeClassProperty> Properties { get; } = [];
 
 		#region AddMethod
 

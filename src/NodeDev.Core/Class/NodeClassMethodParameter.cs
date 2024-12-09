@@ -4,24 +4,17 @@ using NodeDev.Core.Types;
 
 namespace NodeDev.Core.Class
 {
-	public class NodeClassMethodParameter : IMethodParameterInfo
+	public class NodeClassMethodParameter(string name, TypeBase parameterType, NodeClassMethod method) : IMethodParameterInfo
 	{
 		internal record class SerializedNodeClassMethodParameter(string Name, TypeBase.SerializedType ParameterType, bool? IsOut);
 
-		public string Name { get; private set; }
+		public string Name { get; private set; } = name;
 
-		public TypeBase ParameterType { get; private set; }
+		public TypeBase ParameterType { get; private set; } = parameterType;
 
-		public NodeClassMethod Method { get; }
+		public NodeClassMethod Method { get; } = method;
 
 		public bool IsOut { get; set; }
-
-		public NodeClassMethodParameter(string name, TypeBase parameterType, NodeClassMethod method)
-		{
-			Name = name;
-			ParameterType = parameterType;
-			Method = method;
-		}
 
 		internal SerializedNodeClassMethodParameter Serialize()
 		{
@@ -124,8 +117,7 @@ namespace NodeDev.Core.Class
 			}
 
 			var entry = Method.Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
-			if (entry != null)
-				entry.RenameParameter(this, Method.Parameters.IndexOf(this));
+			entry?.RenameParameter(this, Method.Parameters.IndexOf(this));
 		}
 
 		public void ChangeType(TypeBase type)

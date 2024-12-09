@@ -5,8 +5,8 @@ namespace NodeDev.Core.Types;
 
 public class TypeFactory
 {
-	public List<string> IncludedNamespaces = new()
-	{
+	public List<string> IncludedNamespaces =
+	[
 		"System",
 		"System.Collections.Generic",
 		"System.Linq",
@@ -14,19 +14,19 @@ public class TypeFactory
 		"System.Threading",
 		"System.Threading.Tasks",
 		"System.Diagnostics",
-	};
-	private Dictionary<string, List<string>> TypeCorrespondances = new()
+	];
+	private readonly Dictionary<string, List<string>> TypeCorrespondances = new()
 	{
-		["System.Int32"] = new() { "int" },
-		["System.Int64"] = new() { "long" },
-		["System.Single"] = new() { "float" },
-		["System.Double"] = new() { "double" },
-		["System.Boolean"] = new() { "bool" },
-		["System.String"] = new() { "string" },
-		["System.Void"] = new() { "void" },
+		["System.Int32"] = ["int"],
+		["System.Int64"] = ["long"],
+		["System.Single"] = ["float"],
+		["System.Double"] = ["double"],
+		["System.Boolean"] = ["bool"],
+		["System.String"] = ["string"],
+		["System.Void"] = ["void"],
 	};
 
-	private ExecType ExecType_;
+	private readonly ExecType ExecType_;
 
 	private readonly Dictionary<string, RealType> RealTypesCache = new(5_000);
 
@@ -78,12 +78,12 @@ public class TypeFactory
 		return realTypeWithGenerics;
 	}
 
-	public Type? GetTypeByFullName(string name)
+	public static Type? GetTypeByFullName(string name)
 	{
 		return AppDomain.CurrentDomain.GetAssemblies().Select(x => x.GetType(name)).FirstOrDefault(x => x != null);
 	}
 
-	private Type? GetTypeFromAllAssemblies(string name)
+	private static Type? GetTypeFromAllAssemblies(string name)
 	{
 		if (string.IsNullOrWhiteSpace(name))
 			return null;

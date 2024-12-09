@@ -448,7 +448,7 @@ public abstract class TypeBase
 
 	public static TypeBase Deserialize(TypeFactory typeFactory, SerializedType serializedType)
 	{
-		var type = typeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
+		var type = TypeFactory.GetTypeByFullName(serializedType.TypeFullName) ?? throw new Exception($"Type not found: {serializedType.TypeFullName}");
 
 		var deserializeMethod = type.GetMethod("Deserialize", BindingFlags.Public | BindingFlags.Static) ?? throw new Exception($"Deserialize method not found in type: {serializedType.TypeFullName}");
 
