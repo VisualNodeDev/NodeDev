@@ -15,8 +15,7 @@ https://github.com/VisualNodeDev/NodeDev/assets/39806655/f4a8e7fd-08a1-4f37-8cae
 
 Here's a newer demo with the generated IL code shown:
 
-https://github.com/user-attachments/assets/b8c915b9-2ade-43ff-920e-1efabf299ecf
-
+https://github.com/user-attachments/assets/fe0bbd8b-15aa-4457-bb37-772909bcbb23
 
 # Tell me more !
 NodeDev runs in .NET and allows you to manipulate any .NET objects, call any method, create an .NET type you want.
