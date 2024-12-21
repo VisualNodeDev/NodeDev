@@ -13,6 +13,11 @@ It is still in very early alpha and full of bugs but it's improving fast! Check 
 
 https://github.com/VisualNodeDev/NodeDev/assets/39806655/f4a8e7fd-08a1-4f37-8cae-0b7a7c2d4759
 
+Here's a newer demo with the generated IL code shown:
+
+https://github.com/user-attachments/assets/b8c915b9-2ade-43ff-920e-1efabf299ecf
+
+
 # Tell me more !
 NodeDev runs in .NET and allows you to manipulate any .NET objects, call any method, create an .NET type you want.
 You can create classes, methods and properties as you would in C# and mix them with real pre-existing types seemlessly.
