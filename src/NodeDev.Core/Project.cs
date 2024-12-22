@@ -1,5 +1,6 @@
 ﻿using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
+using NodeDev.Core.Debug;
 using NodeDev.Core.ManagerServices;
 using NodeDev.Core.Migrations;
 using NodeDev.Core.Nodes;
@@ -199,6 +200,9 @@ public class Project
 		try
 		{
 			var assemblyPath = Build(options);
+
+			var debugger = new NodeDebugger(this);
+			debugger.StartAndAttach(assemblyPath, inputs);
 
 			var arguments = Path.GetFileName(assemblyPath) + " " + string.Join(" ", inputs.Select(x => '"' + (x?.ToString() ?? "") + '"'));
 			var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo()

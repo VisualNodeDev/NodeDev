@@ -8,7 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ClrDebug" Version="0.3.3" />
     <PackageReference Include="FastExpressionCompiler" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Diagnostics.DbgShim" Version="9.0.553101" />
     <PackageReference Include="NuGet.Versioning" Version="6.12.1" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
     <PackageReference Include="snakex64.Dis2Msil" Version="1.0.0" />

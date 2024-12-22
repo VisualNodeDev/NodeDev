@@ -1,6 +1,8 @@
 ﻿using Dis2Msil;
 using FastExpressionCompiler;
 using NodeDev.Core.Types;
+using System.Diagnostics.SymbolStore;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.Loader;
@@ -99,13 +101,15 @@ public class NodeClassTypeCreator
 		if (!Options.PreBuildOnly)
 		{
 			// Create the body of each methods in the hidden type
-			foreach (var generatedType in GeneratedTypes.Values)
+			foreach (var generatedType in GeneratedTypes)
 			{
-				foreach ((var method, var methodBuilder) in generatedType.Methods)
-					GenerateHiddenMethodBody(method, methodBuilder);
+				var documentWriter = mb.DefineDocument($"{generatedType.Key.Name}.cs", SymLanguageType.CSharp);
+
+				foreach ((var method, var methodBuilder) in generatedType.Value.Methods)
+					GenerateHiddenMethodBody(method, methodBuilder, documentWriter);
 
 				// We are finally ready to create the final hidden type
-				generatedType.HiddenType.CreateType();
+				generatedType.Value.HiddenType.CreateType();
 			}
 		}
 	}
@@ -171,12 +175,15 @@ public class NodeClassTypeCreator
 		}
 	}
 
-	private void GenerateHiddenMethodBody(NodeClassMethod method, MethodBuilder methodBuilder)
+	private void GenerateHiddenMethodBody(NodeClassMethod method, MethodBuilder methodBuilder, ISymbolDocumentWriter documentWriter)
 	{
 		// Generate the expression tree for the method
 		var expression = method.Graph.BuildExpression(Options.BuildExpressionOptions);
 
 		var ilGenerator = methodBuilder.GetILGenerator();
+
+		ilGenerator.MarkSequencePoint(documentWriter, 1, 1, 1, 2);
+
 		var result = expression.CompileFastToIL(ilGenerator, CompilerFlags.ThrowOnNotSupportedExpression);
 
 		if (!result)
