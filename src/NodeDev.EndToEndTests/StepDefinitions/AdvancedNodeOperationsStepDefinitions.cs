@@ -156,7 +156,6 @@ public sealed class AdvancedNodeOperationsStepDefinitions
 		}
 		Console.WriteLine($"✓ Found {count} '{nodeName}' nodes");
 	}
-	}
 
 	[When("I click on a {string} node")]
 	public async Task WhenIClickOnANode(string nodeName)
