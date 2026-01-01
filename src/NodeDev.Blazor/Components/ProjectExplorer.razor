@@ -4,7 +4,14 @@
 <MudStack Row="false" Class="wh100">
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <MudText>Project</MudText>
-        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="ShowCreateClassDialog" data-test-id="create-class" Title="Create new class" />
+        <div>
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="ShowCreateClassDialog" data-test-id="create-class" Title="Create new class" />
+            @if (Selected?.Type == TreeItemType.Class)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="() => ShowRenameClassDialog(Selected!)" data-test-id="rename-class" Title="Rename class" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="() => DeleteClass(Selected!)" data-test-id="delete-class" Title="Delete class" />
+            }
+        </div>
     </div>
 
     <MudTreeView T="TreeItem" Items="Items" @bind-SelectedValue="Selected" @bind-SelectedValue:after="OnSelectedItemChanged" Class="flex-1" data-test-id="projectExplorer">
@@ -17,17 +24,7 @@
             }
             else if (context.Value.Type == TreeItemType.Class)
             {
-                <MudTreeViewItem @bind-Expanded="@context.Expanded" Value="@context.Value" EndTextTypo="@Typo.caption" data-test-id="projectExplorerClass">
-                    <BodyContent Context="Item">
-                        <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => HoveredClass = Item.Value" @onmouseout="() => HoveredClass = null">
-                            <MudText>@Item.Text</MudText>
-                            <div style="@($"justify-self: end; visibility: {(HoveredClass == Item.Value ? "visible" : "hidden")}")">
-                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Inherit" OnClick="() => ShowRenameClassDialog(Item.Value!)" data-test-id="rename-class" Title="Rename class" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Inherit" OnClick="() => DeleteClass(Item.Value!)" data-test-id="delete-class" Title="Delete class" />
-                            </div>
-                        </div>
-                    </BodyContent>
-                </MudTreeViewItem>
+                <MudTreeViewItem @bind-Expanded="@context.Expanded" Value="@context.Value" Text="@context.Value.Name" EndTextTypo="@Typo.caption" data-test-id="projectExplorerClass" />
             }
         </ItemTemplate>
     </MudTreeView>
