@@ -1,5 +1,9 @@
 ﻿using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
 
@@ -15,5 +19,11 @@ public class Null : NoFlowNode
 	internal override void BuildInlineExpression(BuildExpressionInfo info)
 	{
 		info.LocalVariables[Outputs[0]] = Expression.Constant(null, Outputs[0].Type.MakeRealType()); ;
+	}
+
+	internal override ExpressionSyntax GenerateRoslynExpression(GenerationContext context)
+	{
+		// Generate null literal
+		return SF.LiteralExpression(SyntaxKind.NullLiteralExpression);
 	}
 }

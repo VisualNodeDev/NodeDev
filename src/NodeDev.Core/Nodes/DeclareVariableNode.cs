@@ -1,6 +1,10 @@
 using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
 
@@ -34,6 +38,22 @@ public class DeclareVariableNode : NormalFlowNode
 	internal override Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info)
 	{
 		return Expression.Assign(info.LocalVariables[Outputs[1]], info.LocalVariables[Inputs[1]]);
+	}
+
+	internal override StatementSyntax GenerateRoslynStatement(Dictionary<Connection, Graph.NodePathChunks>? subChunks, GenerationContext context)
+	{
+		var outputVarName = context.GetVariableName(Outputs[1]);
+		var inputVarName = context.GetVariableName(Inputs[1]);
+
+		if (outputVarName == null || inputVarName == null)
+			throw new Exception("Variable names not found for DeclareVariableNode");
+
+		// Create assignment: outputVar = inputVar;
+		return SF.ExpressionStatement(
+			SF.AssignmentExpression(
+				SyntaxKind.SimpleAssignmentExpression,
+				SF.IdentifierName(outputVarName),
+				SF.IdentifierName(inputVarName)));
 	}
 
 	internal override void BuildInlineExpression(BuildExpressionInfo info)

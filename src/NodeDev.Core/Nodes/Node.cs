@@ -1,7 +1,9 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace NodeDev.Core.Nodes
 {
@@ -84,6 +86,19 @@ namespace NodeDev.Core.Nodes
 		internal virtual Expression BuildExpression(Dictionary<Connection, Graph.NodePathChunks>? subChunks, BuildExpressionInfo info) => throw new NotImplementedException();
 
 		internal virtual void BuildInlineExpression(BuildExpressionInfo info) => throw new NotImplementedException();
+
+		/// <summary>
+		/// Generate Roslyn syntax for this node. Called for flow nodes that have exec connections.
+		/// Should return a StatementSyntax (or multiple via auxiliary statements in context).
+		/// </summary>
+		internal virtual StatementSyntax GenerateRoslynStatement(Dictionary<Connection, Graph.NodePathChunks>? subChunks, GenerationContext context) => throw new NotImplementedException();
+
+		/// <summary>
+		/// Generate Roslyn syntax for this node as an inline expression. Called for data nodes without exec connections.
+		/// Should return an ExpressionSyntax that computes the output value.
+		/// Can add auxiliary statements to context if setup code is needed.
+		/// </summary>
+		internal virtual ExpressionSyntax GenerateRoslynExpression(GenerationContext context) => throw new NotImplementedException();
 
 		/// <summary>
 		/// Create an Expression node that can be used in the graph.

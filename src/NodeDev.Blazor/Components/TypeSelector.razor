@@ -35,7 +35,7 @@
 	public EventCallback<TypeBase> OnTypeSelected { get; set; }
 
 	[CascadingParameter]
-	public MudDialogInstance? MudDialog { get; set; } = null!;
+	public IMudDialogInstance? MudDialog { get; set; } = null!;
 
 	private string? Error;
 	private TypeBase? Type;

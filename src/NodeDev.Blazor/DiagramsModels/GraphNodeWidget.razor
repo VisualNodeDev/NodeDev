@@ -1,6 +1,6 @@
 ﻿@using global::Blazor.Diagrams.Core.Models
 
-<div class="drop-shadow-lg bg-white border my-node" @ondblclick="OnDoubleClick">
+<div class="drop-shadow-lg bg-white border my-node" @ondblclick="OnDoubleClick" data-test-id="graph-node" data-test-node-name="@Node.Node.Name">
 
     <div class="bg-main pa-2 mb-1 font-semibold text-white title relative">
         @if (Node.Node.AlternatesOverloads.Take(2).Count() == 2)
