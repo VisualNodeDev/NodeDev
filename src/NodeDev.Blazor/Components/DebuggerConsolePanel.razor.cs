@@ -11,6 +11,7 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 	public Project Project { get; set; } = null!;
 
 	private IDisposable? GraphExecutionChangedDisposable;
+	private IDisposable? ConsoleOutputDisposable;
 
 	private TextWriter? PreviousTextWriter;
 
@@ -29,6 +30,7 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 		RefreshRequiredDisposable = RefreshRequiredSubject.AcceptThenSample(TimeSpan.FromMilliseconds(100)).Subscribe(_ => InvokeAsync(StateHasChanged));
 
 		GraphExecutionChangedDisposable = Project.GraphExecutionChanged.Subscribe(OnGraphExecutionChanged);
+		ConsoleOutputDisposable = Project.ConsoleOutput.Subscribe(OnConsoleOutput);
 	}
 
 	public void Clear()
@@ -42,6 +44,7 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 		if (status)
 		{
 			Clear();
+			IsShowing = true;
 			PreviousTextWriter = Console.Out;
 			Console.SetOut(new ControlWriter(AddText));
 		}
@@ -50,6 +53,11 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 			Console.SetOut(PreviousTextWriter);
 			PreviousTextWriter = null;
 		}
+	}
+
+	private void OnConsoleOutput(string text)
+	{
+		AddText(text);
 	}
 
 	private void AddText(string text)
@@ -81,6 +89,7 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 		GC.SuppressFinalize(this);
 
 		GraphExecutionChangedDisposable?.Dispose();
+		ConsoleOutputDisposable?.Dispose();
 		RefreshRequiredDisposable?.Dispose();
 
 		if (PreviousTextWriter != null)
