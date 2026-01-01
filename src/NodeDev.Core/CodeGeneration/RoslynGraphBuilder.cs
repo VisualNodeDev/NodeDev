@@ -6,7 +6,7 @@ using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using System.Text;
-using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.CodeGeneration;
 
@@ -73,9 +73,15 @@ public class RoslynGraphBuilder
 				var varName = _context.GetUniqueName($"{node.Name}_{output.Name}");
 				_context.RegisterVariableName(output, varName);
 				
-				// Declare: var <varName>;
+				// Declare: var <varName> = default;
+				var declarator = SF.VariableDeclarator(SF.Identifier(varName))
+					.WithInitializer(SF.EqualsValueClause(
+						SF.LiteralExpression(SyntaxKind.DefaultLiteralExpression)));
+				
 				variableDeclarations.Add(
-					SyntaxHelper.CreateVarDeclaration(varName, SyntaxHelper.Default()));
+					SF.LocalDeclarationStatement(
+						SF.VariableDeclaration(SF.IdentifierName("var"))
+							.WithVariables(SF.SingletonSeparatedList(declarator))));
 			}
 		}
 
@@ -91,28 +97,28 @@ public class RoslynGraphBuilder
 		// Add return statement if needed
 		if (!method.HasReturnValue)
 		{
-			allStatements.Add(ReturnStatement());
+			allStatements.Add(SF.ReturnStatement());
 		}
 
 		// Create the method declaration
 		var modifiers = new List<SyntaxToken>();
-		modifiers.Add(Token(SyntaxKind.PublicKeyword));
+		modifiers.Add(SF.Token(SyntaxKind.PublicKeyword));
 		if (method.IsStatic)
-			modifiers.Add(Token(SyntaxKind.StaticKeyword));
+			modifiers.Add(SF.Token(SyntaxKind.StaticKeyword));
 
 		var returnType = method.HasReturnValue 
-			? SyntaxHelper.GetTypeSyntax(method.ReturnType)
-			: PredefinedType(Token(SyntaxKind.VoidKeyword));
+			? RoslynHelpers.GetTypeSyntax(method.ReturnType)
+			: SF.PredefinedType(SF.Token(SyntaxKind.VoidKeyword));
 
 		var parameters = method.Parameters
 			.Where(p => !p.ParameterType.IsExec)
-			.Select(p => Parameter(Identifier(p.Name))
-				.WithType(SyntaxHelper.GetTypeSyntax(p.ParameterType)));
+			.Select(p => SF.Parameter(SF.Identifier(p.Name))
+				.WithType(RoslynHelpers.GetTypeSyntax(p.ParameterType)));
 
-		var methodDeclaration = MethodDeclaration(returnType, Identifier(method.Name))
-			.WithModifiers(TokenList(modifiers))
-			.WithParameterList(ParameterList(SeparatedList(parameters)))
-			.WithBody(Block(allStatements));
+		var methodDeclaration = SF.MethodDeclaration(returnType, SF.Identifier(method.Name))
+			.WithModifiers(SF.TokenList(modifiers))
+			.WithParameterList(SF.ParameterList(SF.SeparatedList(parameters)))
+			.WithBody(SF.Block(allStatements));
 
 		return methodDeclaration;
 	}
@@ -120,7 +126,7 @@ public class RoslynGraphBuilder
 	/// <summary>
 	/// Builds statements from node path chunks
 	/// </summary>
-	public List<StatementSyntax> BuildStatements(Graph.NodePathChunks chunks)
+	internal List<StatementSyntax> BuildStatements(Graph.NodePathChunks chunks)
 	{
 		var statements = new List<StatementSyntax>();
 
@@ -173,10 +179,15 @@ public class RoslynGraphBuilder
 				var defaultVarName = _context.GetUniqueName($"{input.Parent.Name}_{input.Name}_default");
 				_context.RegisterVariableName(input, defaultVarName);
 				
-				// Add declaration
-				var defaultValue = SyntaxHelper.Default(SyntaxHelper.GetTypeSyntax(input.Type));
+				// Add declaration: var <varName> = default;
+				var declarator = SF.VariableDeclarator(SF.Identifier(defaultVarName))
+					.WithInitializer(SF.EqualsValueClause(
+						SF.LiteralExpression(SyntaxKind.DefaultLiteralExpression)));
+				
 				_context.AddAuxiliaryStatement(
-					SyntaxHelper.CreateVarDeclaration(defaultVarName, defaultValue));
+					SF.LocalDeclarationStatement(
+						SF.VariableDeclaration(SF.IdentifierName("var"))
+							.WithVariables(SF.SingletonSeparatedList(declarator))));
 			}
 			else
 			{
@@ -184,10 +195,28 @@ public class RoslynGraphBuilder
 				var constVarName = _context.GetUniqueName($"{input.Parent.Name}_{input.Name}_const");
 				_context.RegisterVariableName(input, constVarName);
 				
+				// Create literal expression
+				ExpressionSyntax constValue = input.ParsedTextboxValue switch
+				{
+					null => SF.LiteralExpression(SyntaxKind.NullLiteralExpression),
+					bool b => SF.LiteralExpression(b ? SyntaxKind.TrueLiteralExpression : SyntaxKind.FalseLiteralExpression),
+					int i => SF.LiteralExpression(SyntaxKind.NumericLiteralExpression, SF.Literal(i)),
+					long l => SF.LiteralExpression(SyntaxKind.NumericLiteralExpression, SF.Literal(l)),
+					float f => SF.LiteralExpression(SyntaxKind.NumericLiteralExpression, SF.Literal(f)),
+					double d => SF.LiteralExpression(SyntaxKind.NumericLiteralExpression, SF.Literal(d)),
+					string s => SF.LiteralExpression(SyntaxKind.StringLiteralExpression, SF.Literal(s)),
+					char c => SF.LiteralExpression(SyntaxKind.CharacterLiteralExpression, SF.Literal(c)),
+					_ => SF.DefaultExpression(RoslynHelpers.GetTypeSyntax(input.Type))
+				};
+				
 				// Add declaration with constant
-				var constValue = SyntaxHelper.GetLiteralExpression(input.ParsedTextboxValue, input.Type);
+				var declarator = SF.VariableDeclarator(SF.Identifier(constVarName))
+					.WithInitializer(SF.EqualsValueClause(constValue));
+				
 				_context.AddAuxiliaryStatement(
-					SyntaxHelper.CreateVarDeclaration(constVarName, constValue));
+					SF.LocalDeclarationStatement(
+						SF.VariableDeclaration(SF.IdentifierName("var"))
+							.WithVariables(SF.SingletonSeparatedList(declarator))));
 			}
 		}
 		else
@@ -204,10 +233,14 @@ public class RoslynGraphBuilder
 				var inlineVarName = _context.GetUniqueName($"{otherNode.Name}_{outputConnection.Name}");
 				_context.RegisterVariableName(input, inlineVarName);
 				
-				// Add auxiliary statements from inline generation
-				// Add declaration
+				// Add declaration: var <varName> = <inlineExpr>;
+				var declarator = SF.VariableDeclarator(SF.Identifier(inlineVarName))
+					.WithInitializer(SF.EqualsValueClause(inlineExpr));
+				
 				_context.AddAuxiliaryStatement(
-					SyntaxHelper.CreateVarDeclaration(inlineVarName, inlineExpr));
+					SF.LocalDeclarationStatement(
+						SF.VariableDeclaration(SF.IdentifierName("var"))
+							.WithVariables(SF.SingletonSeparatedList(declarator))));
 			}
 			else
 			{
@@ -260,11 +293,11 @@ public class RoslynGraphBuilder
 		{
 			var param = _graph.SelfMethod.Parameters.FirstOrDefault(p => p.Name == input.Name);
 			if (param != null)
-				return SyntaxHelper.Identifier(param.Name);
+				return SF.IdentifierName(param.Name);
 			
 			throw new Exception($"Variable name not found for connection {input.Name} of node {input.Parent.Name}");
 		}
 
-		return SyntaxHelper.Identifier(varName);
+		return SF.IdentifierName(varName);
 	}
 }

@@ -2,7 +2,9 @@ using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
 using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
 
@@ -46,9 +48,12 @@ public class DeclareVariableNode : NormalFlowNode
 		if (outputVarName == null || inputVarName == null)
 			throw new Exception("Variable names not found for DeclareVariableNode");
 
-		return SyntaxHelper.Assignment(
-			SyntaxHelper.Identifier(outputVarName),
-			SyntaxHelper.Identifier(inputVarName));
+		// Create assignment: outputVar = inputVar;
+		return SF.ExpressionStatement(
+			SF.AssignmentExpression(
+				SyntaxKind.SimpleAssignmentExpression,
+				SF.IdentifierName(outputVarName),
+				SF.IdentifierName(inputVarName)));
 	}
 
 	internal override void BuildInlineExpression(BuildExpressionInfo info)

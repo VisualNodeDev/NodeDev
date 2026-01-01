@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.CodeGeneration;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes.Math;
 
@@ -20,8 +21,8 @@ public class Modulo : TwoOperationMath
 
 	internal override ExpressionSyntax GenerateRoslynExpression(GenerationContext context)
 	{
-		var left = SyntaxHelper.Identifier(context.GetVariableName(Inputs[0])!);
-		var right = SyntaxHelper.Identifier(context.GetVariableName(Inputs[1])!);
-		return SyntaxHelper.BinaryExpression(SyntaxKind.ModuloExpression, left, right);
+		var left = SF.IdentifierName(context.GetVariableName(Inputs[0])!);
+		var right = SF.IdentifierName(context.GetVariableName(Inputs[1])!);
+		return SF.BinaryExpression(SyntaxKind.ModuloExpression, left, right);
 	}
 }

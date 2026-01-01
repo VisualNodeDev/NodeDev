@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes.Flow;
 
@@ -67,9 +67,12 @@ public class ReturnNode : FlowNode
 			if (varName == null)
 				throw new Exception($"Variable not found for out parameter {input.Name}");
 
-			var assignment = SyntaxHelper.Assignment(
-				SyntaxHelper.Identifier(input.Name),
-				SyntaxHelper.Identifier(varName));
+			// Create assignment: parameterName = varName;
+			var assignment = SF.ExpressionStatement(
+				SF.AssignmentExpression(
+					SyntaxKind.SimpleAssignmentExpression,
+					SF.IdentifierName(input.Name),
+					SF.IdentifierName(varName)));
 			statements.Add(assignment);
 		}
 
@@ -80,15 +83,15 @@ public class ReturnNode : FlowNode
 			if (returnVarName == null)
 				throw new Exception("Return value variable not found");
 
-			statements.Add(ReturnStatement(SyntaxHelper.Identifier(returnVarName)));
+			statements.Add(SF.ReturnStatement(SF.IdentifierName(returnVarName)));
 		}
 		else
 		{
-			statements.Add(ReturnStatement());
+			statements.Add(SF.ReturnStatement());
 		}
 
 		// If there are multiple statements, wrap in a block, otherwise return the single statement
-		return statements.Count == 1 ? statements[0] : Block(statements);
+		return statements.Count == 1 ? statements[0] : SF.Block(statements);
 	}
 
 	internal void Refresh()
