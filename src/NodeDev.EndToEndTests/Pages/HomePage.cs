@@ -148,8 +148,9 @@ public class HomePage
 			await node.WaitForVisible();
 			return true;
 		}
-		catch
+		catch (TimeoutException)
 		{
+			// Node is not visible within timeout
 			return false;
 		}
 	}

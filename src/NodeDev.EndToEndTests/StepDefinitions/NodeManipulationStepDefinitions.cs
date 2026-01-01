@@ -35,14 +35,14 @@ public sealed class NodeManipulationStepDefinitions
 		// Get current position (before this drag operation)
 		var currentPos = await HomePage.GetNodePosition(nodeName);
 		
-		// Store as original if not already stored (for first drag in scenario)
+		// Store the very first position as original (for validation at the end)
 		if (!_originalNodePositions.ContainsKey(nodeName))
 		{
 			_originalNodePositions[nodeName] = currentPos;
 		}
 		
 		Console.WriteLine($"Current position of {nodeName}: ({currentPos.X}, {currentPos.Y})");
-		Console.WriteLine($"Original position of {nodeName}: ({_originalNodePositions[nodeName].X}, {_originalNodePositions[nodeName].Y})");
+		Console.WriteLine($"First/Original position of {nodeName}: ({_originalNodePositions[nodeName].X}, {_originalNodePositions[nodeName].Y})");
 		
 		// Calculate new absolute position (current position + delta)
 		// We need to drag to the center of where the node should end up
@@ -66,9 +66,6 @@ public sealed class NodeManipulationStepDefinitions
 		var posAfterDrag = await HomePage.GetNodePosition(nodeName);
 		Console.WriteLine($"Position after drag: ({posAfterDrag.X}, {posAfterDrag.Y})");
 		Console.WriteLine($"Movement delta: ({posAfterDrag.X - currentPos.X}, {posAfterDrag.Y - currentPos.Y})");
-		
-		// Update the stored position for the next validation
-		_originalNodePositions[nodeName] = currentPos; // Store the position BEFORE this drag as "original" for validation
 	}
 
 	[Then("The {string} node should have moved from its original position")]
