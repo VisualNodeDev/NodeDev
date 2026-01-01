@@ -47,15 +47,13 @@ public class RoslynGraphBuilder
 		var entryOutput = entryNode.Outputs.FirstOrDefault()
 			?? throw new Exception("Entry node has no output");
 
-		// Register method parameters in context
-		foreach (var parameter in method.Parameters)
+		// Register method parameters in context (from Entry node)
+		// Skip the first output (Exec), the rest are parameters
+		for (int i = 1; i < entryNode.Outputs.Count; i++)
 		{
-			if (!parameter.ParameterType.IsExec)
-			{
-				var paramName = _context.GetUniqueName(parameter.Name);
-				// Method parameters don't have a connection to register
-				// They'll be referenced directly by name
-			}
+			var output = entryNode.Outputs[i];
+			// Register with the parameter name directly
+			_context.RegisterVariableName(output, output.Name);
 		}
 
 		// Pre-declare variables for node outputs (similar to old CreateOutputsLocalVariableExpressions)
@@ -64,6 +62,10 @@ public class RoslynGraphBuilder
 		{
 			if (node.CanBeInlined)
 				continue; // inline nodes don't need pre-declared variables
+			
+			// Entry node parameters are not pre-declared, they are method parameters
+			if (node is EntryNode)
+				continue;
 
 			foreach (var output in node.Outputs)
 			{
@@ -73,10 +75,11 @@ public class RoslynGraphBuilder
 				var varName = _context.GetUniqueName($"{node.Name}_{output.Name}");
 				_context.RegisterVariableName(output, varName);
 				
-				// Declare: var <varName> = default;
+				// Declare: var <varName> = default(Type);
+				var typeSyntax = RoslynHelpers.GetTypeSyntax(output.Type);
 				var declarator = SF.VariableDeclarator(SF.Identifier(varName))
 					.WithInitializer(SF.EqualsValueClause(
-						SF.LiteralExpression(SyntaxKind.DefaultLiteralExpression)));
+						SF.DefaultExpression(typeSyntax)));
 				
 				variableDeclarations.Add(
 					SF.LocalDeclarationStatement(
@@ -179,10 +182,11 @@ public class RoslynGraphBuilder
 				var defaultVarName = _context.GetUniqueName($"{input.Parent.Name}_{input.Name}_default");
 				_context.RegisterVariableName(input, defaultVarName);
 				
-				// Add declaration: var <varName> = default;
+				// Add declaration: var <varName> = default(Type);
+				var typeSyntax = RoslynHelpers.GetTypeSyntax(input.Type);
 				var declarator = SF.VariableDeclarator(SF.Identifier(defaultVarName))
 					.WithInitializer(SF.EqualsValueClause(
-						SF.LiteralExpression(SyntaxKind.DefaultLiteralExpression)));
+						SF.DefaultExpression(typeSyntax)));
 				
 				_context.AddAuxiliaryStatement(
 					SF.LocalDeclarationStatement(
@@ -226,12 +230,25 @@ public class RoslynGraphBuilder
 
 			if (otherNode.CanBeInlined)
 			{
+				// Check if this output was already generated
+				var existingVarName = _context.GetVariableName(outputConnection);
+				if (existingVarName != null)
+				{
+					// Reuse the existing variable
+					_context.RegisterVariableName(input, existingVarName);
+					return;
+				}
+				
 				// Generate inline expression
 				var inlineExpr = GenerateInlineExpression(otherNode);
 				
 				// Create a variable to hold the result
 				var inlineVarName = _context.GetUniqueName($"{otherNode.Name}_{outputConnection.Name}");
+				
+				// Register the variable for BOTH the input and the output
+				// This ensures other inputs that use the same output can find it
 				_context.RegisterVariableName(input, inlineVarName);
+				_context.RegisterVariableName(outputConnection, inlineVarName);
 				
 				// Add declaration: var <varName> = <inlineExpr>;
 				var declarator = SF.VariableDeclarator(SF.Identifier(inlineVarName))
