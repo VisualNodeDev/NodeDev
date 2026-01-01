@@ -316,8 +316,10 @@ public sealed class UIResponsivenessStepDefinitions
 		var canvas = HomePage.GetGraphCanvas();
 		var canvasVisible = await canvas.IsVisibleAsync();
 		
+		// When canvas is visible, either project explorer or class explorer should be visible
 		var projectExplorer = User.Locator("[data-test-id='projectExplorer']");
-		var explorerVisible = await projectExplorer.IsVisibleAsync();
+		var classExplorer = User.Locator("[data-test-id='classExplorer']");
+		var explorerVisible = await projectExplorer.IsVisibleAsync() || await classExplorer.IsVisibleAsync();
 		
 		if (!canvasVisible || !explorerVisible)
 		{

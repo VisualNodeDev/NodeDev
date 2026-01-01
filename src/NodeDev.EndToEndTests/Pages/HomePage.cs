@@ -737,6 +737,7 @@ public class HomePage
 	{
 		for (int i = 0; i < count; i++)
 		{
+			await SearchForNodes(nodeType);
 			await AddNodeFromSearch(nodeType);
 			await Task.Delay(50);
 		}
@@ -759,7 +760,16 @@ public class HomePage
 	public async Task DeleteNode(string nodeName)
 	{
 		var node = GetGraphNode(nodeName);
-		await node.ClickAsync();
+		try
+		{
+			// Try normal click first
+			await node.ClickAsync(new() { Timeout = 2000 });
+		}
+		catch
+		{
+			// If normal click fails, force click through overlays
+			await node.ClickAsync(new() { Force = true });
+		}
 		await _user.Keyboard.PressAsync("Delete");
 		await Task.Delay(200);
 		Console.WriteLine($"Deleted node '{nodeName}'");
