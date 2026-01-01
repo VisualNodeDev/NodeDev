@@ -38,6 +38,9 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	[Then("The class should be named {string} in the project explorer")]
 	public async Task ThenTheClassShouldBeNamedInTheProjectExplorer(string expectedName)
 	{
+		// Wait a bit for the UI to update after rename
+		await Task.Delay(1000);
+		
 		var exists = await HomePage.ClassExists(expectedName);
 		if (!exists)
 		{
@@ -88,6 +91,9 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	[Then("The method should be named {string}")]
 	public async Task ThenTheMethodShouldBeNamed(string expectedName)
 	{
+		// Wait a bit for the UI to update after rename
+		await Task.Delay(1000);
+		
 		var exists = await HomePage.MethodExists(expectedName);
 		if (!exists)
 		{
