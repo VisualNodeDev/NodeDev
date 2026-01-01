@@ -21,6 +21,7 @@ public class HomePage
 	private ILocator SearchOptionsButton => SearchAppBar.Locator("[data-test-id='options']");
 	private ILocator SearchSaveButton => SearchAppBar.Locator("[data-test-id='save']");
 	private ILocator SearchSaveAsButton => SearchAppBar.Locator("[data-test-id='saveAs']");
+	private ILocator SearchGraphCanvas => _user.Locator("[data-test-id='graph-canvas']");
 
 
 	public async Task CreateNewProject()
@@ -120,5 +121,106 @@ public class HomePage
 	public async Task SnackBarHasByText(string text)
 	{
 		await SearchSnackBarContainer.GetByText(text).WaitForVisible();
+	}
+
+	// Graph Node and Connection Methods
+
+	public ILocator GetGraphNode(string nodeName)
+	{
+		return _user.Locator($"[data-test-id='graph-node'][data-test-node-name='{nodeName}']");
+	}
+
+	public async Task<bool> HasGraphNode(string nodeName)
+	{
+		var node = GetGraphNode(nodeName);
+		try
+		{
+			await node.WaitForVisible();
+			return true;
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	public async Task DragNodeTo(string nodeName, int x, int y)
+	{
+		var node = GetGraphNode(nodeName);
+		await node.WaitForVisible();
+
+		// Get the current position of the node
+		var box = await node.BoundingBoxAsync();
+		if (box == null)
+			throw new Exception($"Could not get bounding box for node '{nodeName}'");
+
+		// Calculate center of node
+		var startX = box.X + box.Width / 2;
+		var startY = box.Y + box.Height / 2;
+
+		// Perform drag operation
+		await _user.Mouse.MoveAsync((float)startX, (float)startY);
+		await _user.Mouse.DownAsync();
+		await Task.Delay(50); // Small delay to ensure drag starts
+		await _user.Mouse.MoveAsync(x, y, new() { Steps = 10 });
+		await Task.Delay(50);
+		await _user.Mouse.UpAsync();
+		await Task.Delay(100); // Wait for position to update
+	}
+
+	public async Task<(float X, float Y)> GetNodePosition(string nodeName)
+	{
+		var node = GetGraphNode(nodeName);
+		await node.WaitForVisible();
+
+		var box = await node.BoundingBoxAsync();
+		if (box == null)
+			throw new Exception($"Could not get bounding box for node '{nodeName}'");
+
+		return ((float)box.X, (float)box.Y);
+	}
+
+	public ILocator GetGraphPort(string nodeName, string portName, bool isInput)
+	{
+		var node = GetGraphNode(nodeName);
+		return node.Locator($"[data-test-id='graph-port'][data-test-port-name='{portName}'][data-test-port-is-input='{isInput}']");
+	}
+
+	public async Task ConnectPorts(string sourceNodeName, string sourcePortName, string targetNodeName, string targetPortName)
+	{
+		// Get source port (output)
+		var sourcePort = GetGraphPort(sourceNodeName, sourcePortName, isInput: false);
+		await sourcePort.WaitForVisible();
+
+		// Get target port (input)
+		var targetPort = GetGraphPort(targetNodeName, targetPortName, isInput: true);
+		await targetPort.WaitForVisible();
+
+		// Get positions
+		var sourceBox = await sourcePort.BoundingBoxAsync();
+		var targetBox = await targetPort.BoundingBoxAsync();
+
+		if (sourceBox == null || targetBox == null)
+			throw new Exception("Could not get bounding boxes for ports");
+
+		// Calculate centers
+		var sourceX = sourceBox.X + sourceBox.Width / 2;
+		var sourceY = sourceBox.Y + sourceBox.Height / 2;
+		var targetX = targetBox.X + targetBox.Width / 2;
+		var targetY = targetBox.Y + targetBox.Height / 2;
+
+		// Perform drag from source to target
+		await _user.Mouse.MoveAsync((float)sourceX, (float)sourceY);
+		await _user.Mouse.DownAsync();
+		await Task.Delay(50);
+		await _user.Mouse.MoveAsync((float)targetX, (float)targetY, new() { Steps = 10 });
+		await Task.Delay(50);
+		await _user.Mouse.UpAsync();
+		await Task.Delay(100); // Wait for connection to be established
+	}
+
+	public async Task TakeScreenshot(string fileName)
+	{
+		await _user.ScreenshotAsync(new() { Path = fileName });
 	}
 }

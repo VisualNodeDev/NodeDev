@@ -1,0 +1,87 @@
+{
+  "Id": "66c999f5-5cb1-43c7-98e0-7be08fcfdfb5",
+  "NodeDevVersion": "1.0.1.0",
+  "Classes": [
+    {
+      "Name": "Program",
+      "Namespace": "NewProject",
+      "Methods": [
+        {
+          "Name": "Main",
+          "ReturnType": {
+            "TypeFullName": "NodeDev.Core.Types.RealType",
+            "SerializedTypeCustom": "{\u0022TypeFullName\u0022:\u0022System.Int32\u0022,\u0022SerializedGenerics\u0022:[]}"
+          },
+          "Parameters": [],
+          "Graph": {
+            "Nodes": [
+              {
+                "Type": "NodeDev.Core.Nodes.Flow.EntryNode",
+                "Id": "be5d7134-a504-4cc0-ae53-229531b33175",
+                "Name": "Entry",
+                "Inputs": [],
+                "Outputs": [
+                  {
+                    "Id": "11ef60ca-54ca-481f-b865-7467a1eb7994",
+                    "Name": "Exec",
+                    "SerializedType": {
+                      "TypeFullName": "NodeDev.Core.Types.ExecType",
+                      "SerializedTypeCustom": ""
+                    },
+                    "Connections": [
+                      "41274ce9-36a7-4f57-848d-a4d4aee69155"
+                    ],
+                    "TextboxValue": null,
+                    "Vertices": [],
+                    "LinkedExec": null
+                  }
+                ],
+                "Decorations": {}
+              },
+              {
+                "Type": "NodeDev.Core.Nodes.Flow.ReturnNode",
+                "Id": "5c62102c-a1bd-4f5e-8f02-817b32f0a4f5",
+                "Name": "Return",
+                "Inputs": [
+                  {
+                    "Id": "41274ce9-36a7-4f57-848d-a4d4aee69155",
+                    "Name": "Exec",
+                    "SerializedType": {
+                      "TypeFullName": "NodeDev.Core.Types.ExecType",
+                      "SerializedTypeCustom": ""
+                    },
+                    "Connections": [
+                      "11ef60ca-54ca-481f-b865-7467a1eb7994"
+                    ],
+                    "TextboxValue": null,
+                    "Vertices": [],
+                    "LinkedExec": null
+                  },
+                  {
+                    "Id": "43337142-4d22-4440-8671-75aea4dee577",
+                    "Name": "Return",
+                    "SerializedType": {
+                      "TypeFullName": "NodeDev.Core.Types.RealType",
+                      "SerializedTypeCustom": "{\u0022TypeFullName\u0022:\u0022System.Int32\u0022,\u0022SerializedGenerics\u0022:[]}"
+                    },
+                    "Connections": [],
+                    "TextboxValue": "0",
+                    "Vertices": [],
+                    "LinkedExec": null
+                  }
+                ],
+                "Outputs": [],
+                "Decorations": {}
+              }
+            ]
+          },
+          "IsStatic": true
+        }
+      ],
+      "Properties": []
+    }
+  ],
+  "Settings": {
+    "ProjectName": "EmptyProject"
+  }
+}
