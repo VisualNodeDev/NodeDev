@@ -1,0 +1,38 @@
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="MethodName" Label="Method Name" data-test-id="method-name-input" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" data-test-id="confirm-create-method">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public NodeDev.Core.Class.NodeClass Class { get; set; } = null!;
+
+    private string MethodName { get; set; } = "NewMethod";
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(MethodName))
+        {
+            Snackbar.Add("Method name cannot be empty", Severity.Error);
+            return;
+        }
+
+        // Create the new method
+        var method = new NodeDev.Core.Class.NodeClassMethod(Class, MethodName, Class.TypeFactory.Get(typeof(void), null));
+        Class.AddMethod(method, createEntryAndReturn: true);
+        
+        MudDialog.Close(DialogResult.Ok(method));
+    }
+}

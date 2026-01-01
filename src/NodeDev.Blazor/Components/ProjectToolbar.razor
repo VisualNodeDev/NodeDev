@@ -7,12 +7,15 @@
 @inject IDialogService DialogService
 
 
-<MudButton OnClick="Open" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="openProject">Open</MudButton>
+<MudButton OnClick="Open" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="open-project">Open</MudButton>
 <MudButton OnClick="NewProject" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="newProject">New Project</MudButton>
 <MudButton OnClick="Save" Class="ml-3" data-test-id="save">Save</MudButton>
 <MudButton OnClick="SaveAs" Class="ml-3" data-test-id="saveAs">Save As</MudButton>
+<MudButton OnClick="Build" Class="ml-3" data-test-id="build-project">Build</MudButton>
+<MudButton OnClick="Run" Class="ml-3" data-test-id="run-project">Run</MudButton>
+<MudButton OnClick="Export" Class="ml-3" data-test-id="export-project">Export</MudButton>
 <MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
-<MudButton OnClick="Run" Class="ml-3" data-test-id="runProject">Run</MudButton>
+<MudButton OnClick="Run" Class="ml-3">Run</MudButton>
 <MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
 <MudSpacer />
 <MudButton OnClick="OpenOptionsDialogAsync" Class="ml-3" data-test-id="options">Options</MudButton>
@@ -71,6 +74,32 @@
         {
             Project.Run(Project.IsLiveDebuggingEnabled ? Core.BuildOptions.Debug : Core.BuildOptions.Release);
         }).Start();
+    }
+
+    public void Build()
+    {
+        try
+        {
+            Project.Build(Core.BuildOptions.Debug);
+            Snackbar.Add("Project built successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Build failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    public void Export()
+    {
+        try
+        {
+            // Export functionality - for now, just show a message
+            Snackbar.Add("Export functionality not yet implemented", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
+        }
     }
 
     private void SwitchLiveDebugging()

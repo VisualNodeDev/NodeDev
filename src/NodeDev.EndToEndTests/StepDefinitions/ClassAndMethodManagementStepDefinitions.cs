@@ -30,12 +30,9 @@ public sealed class ClassAndMethodManagementStepDefinitions
 		var exists = await HomePage.ClassExists(className);
 		if (!exists)
 		{
-			Console.WriteLine($"✓ Class '{className}' verification - simulated (UI automation in progress)");
+			throw new Exception($"Class '{className}' not found in project explorer");
 		}
-		else
-		{
-			Console.WriteLine($"✓ Class '{className}' appears in project explorer");
-		}
+		Console.WriteLine($"✓ Class '{className}' appears in project explorer");
 	}
 
 	[Then("The class should be named {string} in the project explorer")]
@@ -62,12 +59,9 @@ public sealed class ClassAndMethodManagementStepDefinitions
 		var exists = await HomePage.ClassExists(className);
 		if (exists)
 		{
-			Console.WriteLine($"✓ Class '{className}' verification - simulated deletion check");
+			throw new Exception($"Class '{className}' still exists in project explorer");
 		}
-		else
-		{
-			Console.WriteLine($"✓ Class '{className}' not in project explorer");
-		}
+		Console.WriteLine($"✓ Class '{className}' not in project explorer");
 	}
 
 	[When("I create a new method named {string}")]
@@ -115,12 +109,9 @@ public sealed class ClassAndMethodManagementStepDefinitions
 		var exists = await HomePage.MethodExists(methodName);
 		if (exists)
 		{
-			Console.WriteLine($"✓ Method '{methodName}' verification - simulated deletion check");
+			throw new Exception($"Method '{methodName}' still exists in method list");
 		}
-		else
-		{
-			Console.WriteLine($"✓ Method '{methodName}' not in list");
-		}
+		Console.WriteLine($"✓ Method '{methodName}' not in list");
 	}
 
 	[When("I add a parameter named {string} of type {string}")]

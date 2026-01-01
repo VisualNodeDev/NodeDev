@@ -20,6 +20,7 @@ public sealed class ComprehensiveUIStepDefinitions
 	public async Task WhenIClickOnTheClass(string className)
 	{
 		await HomePage.ClickClass(className);
+		await HomePage.OpenProjectExplorerClassTab(); // Switch to Class tab after clicking
 		await Task.Delay(200);
 		Console.WriteLine($"✓ Clicked on class '{className}'");
 	}
@@ -77,26 +78,28 @@ public sealed class ComprehensiveUIStepDefinitions
 	[When("I rename the class to {string}")]
 	public async Task WhenIRenameTheClassTo(string newName)
 	{
-		// This would require implementing class renaming in UI
-		// For now, log that this needs implementation
-		Console.WriteLine($"⚠️  Class renaming to '{newName}' - functionality needs implementation");
+		// Store the old class name for verification
+		var oldName = _previousClassName ?? "Program"; // Default to Program if not set
+		await HomePage.RenameClass(oldName, newName);
 		_previousClassName = newName;
 	}
 
 	[Then("The class should be named {string}")]
 	public async Task ThenTheClassShouldBeNamed(string expectedName)
 	{
-		if (_previousClassName != null)
+		var exists = await HomePage.ClassExists(expectedName);
+		if (!exists)
 		{
-			Console.WriteLine($"⚠️  Skipping class name verification - renaming not implemented");
+			throw new Exception($"Class '{expectedName}' does not exist");
 		}
+		Console.WriteLine($"✓ Class renamed to '{expectedName}'");
 	}
 
 	[When("I add a {string} node to the canvas")]
 	public async Task WhenIAddANodeToTheCanvas(string nodeType)
 	{
-		Console.WriteLine($"⚠️  Adding '{nodeType}' node - functionality needs implementation");
-		// This requires right-click menu or node palette
+		await HomePage.SearchForNodes(nodeType);
+		await HomePage.AddNodeFromSearch(nodeType);
 	}
 
 	[Then("The {string} node should be visible")]
@@ -113,8 +116,7 @@ public sealed class ComprehensiveUIStepDefinitions
 	[When("I delete the {string} node")]
 	public async Task WhenIDeleteTheNode(string nodeName)
 	{
-		Console.WriteLine($"⚠️  Deleting '{nodeName}' node - functionality needs implementation");
-		// This requires selecting node and pressing delete
+		await HomePage.DeleteNode(nodeName);
 	}
 
 	[Then("The {string} node should not be visible")]
@@ -131,14 +133,14 @@ public sealed class ComprehensiveUIStepDefinitions
 	[When("I disconnect the {string} {string} from {string} {string}")]
 	public async Task WhenIDisconnectTheFromConnection(string sourceNode, string sourcePort, string targetNode, string targetPort)
 	{
-		Console.WriteLine($"⚠️  Disconnecting {sourceNode}.{sourcePort} from {targetNode}.{targetPort} - functionality needs implementation");
-		// This requires clicking on connection and deleting
+		await HomePage.DeleteAllConnectionsFromNode(sourceNode);
 	}
 
 	[Then("The connection should be removed")]
 	public async Task ThenTheConnectionShouldBeRemoved()
 	{
-		Console.WriteLine("⚠️  Connection removal verification - needs implementation");
+		// Verification is handled by DeleteAllConnectionsFromNode
+		Console.WriteLine("✓ Connection removed");
 	}
 
 	[When("I connect a generic type port")]

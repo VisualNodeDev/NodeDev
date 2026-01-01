@@ -1,10 +1,15 @@
 ﻿@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <MudDialog>
     <DialogContent>
         <div style="height: 50vh; width: 100%; display: flex; flex-direction: column">
             <MudText Typo="Typo.h2">@Method.Name</MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Method.AddDefaultParameter" Class="px-8">Add parameter</MudButton>
+            
+            <div style="display: flex; gap: 8px; margin: 8px 0;">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddParameter" Class="px-8" data-test-id="add-parameter">Add parameter</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="ShowReturnTypeEdit" Class="px-8" data-test-id="change-return-type">Change return type</MudButton>
+            </div>
 
             <MudDataGrid Items="Method.Parameters" EditMode="DataGridEditMode.Cell" ReadOnly="false" Class="w100 flex-1">
                 <Columns>
@@ -19,7 +24,7 @@
                         </CellTemplate>
                     </TemplateColumn>
 
-                    <CallbackSetColumn Property="x => x.Name" SetCallback="(x, name) => x.Rename(name)" Editable="true" />
+                    <CallbackSetColumn Property="x => x.Name" SetCallback="(x, name) => x.Rename(name)" Editable="true" data-test-id="param-name-input" />
 
                     <TemplateColumn Title="IsOut">
                         <EditTemplate>
@@ -60,6 +65,27 @@
 
     void Submit() => MudDialog.Close(DialogResult.Ok(true));
 
+    void AddParameter()
+    {
+        Method.AddDefaultParameter();
+        StateHasChanged();
+    }
+
+    private async Task ShowReturnTypeEdit()
+    {
+        var result = await DialogService.Show<TypeSelectorDialog>("Select Return Type", new()
+            {
+                [nameof(TypeSelectorDialog.TypeFactory)] = Method.Class.TypeFactory
+            }, new DialogOptions()
+            {
+                FullScreen = false,
+                FullWidth = true
+            }).Result;
+
+        // Note: ReturnType is readonly in NodeClassMethod, so we can't actually change it
+        // This is a limitation of the current API
+        Snackbar.Add("Return type changing not yet supported in the API", Severity.Warning);
+    }
 
     private async Task ShowParameterTypeEdit(NodeDev.Core.Class.NodeClassMethodParameter parameter)
     {

@@ -548,6 +548,12 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
         PopupY = 300;
     }
 
+    public void ShowAddNodeDialog()
+    {
+        // Same as ShowAddNode but can be called from button click
+        ShowAddNode();
+    }
+
     #endregion
 
     #region CancelPopup

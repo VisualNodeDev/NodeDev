@@ -152,12 +152,9 @@ public sealed class AdvancedNodeOperationsStepDefinitions
 		var count = await HomePage.CountNodesOfType(nodeName);
 		if (count < 2)
 		{
-			Console.WriteLine($"✓ Node count verification - simulated (expected 2, using existing nodes)");
+			throw new Exception($"Expected at least 2 '{nodeName}' nodes, but found {count}");
 		}
-		else
-		{
-			Console.WriteLine($"✓ Found {count} '{nodeName}' nodes");
-		}
+		Console.WriteLine($"✓ Found {count} '{nodeName}' nodes");
 	}
 
 	[When("I click on a {string} node")]
