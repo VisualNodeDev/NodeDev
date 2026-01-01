@@ -1,0 +1,38 @@
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="ClassName" Label="Class Name" data-test-id="class-name-input" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" data-test-id="confirm-create-class">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public NodeDev.Core.Project Project { get; set; } = null!;
+
+    private string ClassName { get; set; } = "NewClass";
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(ClassName))
+        {
+            Snackbar.Add("Class name cannot be empty", Severity.Error);
+            return;
+        }
+
+        // Create the new class - use proper constructor
+        var newClass = new NodeDev.Core.Class.NodeClass(ClassName, "MyApp", Project);
+        Project.AddClass(newClass);
+        
+        MudDialog.Close(DialogResult.Ok(newClass));
+    }
+}

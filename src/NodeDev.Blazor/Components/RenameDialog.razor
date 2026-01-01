@@ -1,0 +1,45 @@
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="NewName" Label="@Label" data-test-id="@(IsMethod ? "method-name-input" : "class-name-input")" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" data-test-id="confirm-rename">Rename</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string CurrentName { get; set; } = "";
+
+    [Parameter]
+    public string Label { get; set; } = "New Name";
+
+    [Parameter]
+    public bool IsMethod { get; set; } = false;
+
+    private string NewName { get; set; } = "";
+
+    protected override void OnInitialized()
+    {
+        NewName = CurrentName;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(NewName))
+        {
+            Snackbar.Add($"{Label} cannot be empty", Severity.Error);
+            return;
+        }
+        
+        MudDialog.Close(DialogResult.Ok(NewName));
+    }
+}

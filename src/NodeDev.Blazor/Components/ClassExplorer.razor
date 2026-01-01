@@ -1,4 +1,5 @@
 ﻿@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <MudStack Row="false" Class="wh100" data-test-id="classExplorer">
     <MudText>@Class.Name</MudText>
@@ -22,7 +23,14 @@
                         <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item.Value" @onmouseout="() => Hovered = null" data-test-id="@context.Value.Type">
                             <MudText Style="justify-self: start;">@Item.Text</MudText>
                             <div style="@($"justify-self: end; visibility: {(Hovered == Item.Value ? "visible" : "hidden")}")">
-                                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="context.Value.Type == TreeItemType.MethodsFolder ? ShowAddMethodMenu : ShowNewProperty" />
+                                @if (context.Value.Type == TreeItemType.MethodsFolder)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="ShowCreateMethodDialog" data-test-id="create-method" />
+                                }
+                                else
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="ShowNewProperty" data-test-id="add-property" />
+                                }
                             </div>
                         </div>
                     </BodyContent>
@@ -36,7 +44,8 @@
                             <MudText Typo="Typo.caption" Style="justify-self: start;">@Item.Value!.Method!.ReturnType.FriendlyName @Item.Text (@string.Join(',', Item.Value.Method!.Parameters.Select(x => $"{x.ParameterType.FriendlyName} {x.Name}")))</MudText>
                             <div style="@($"justify-self: end; visibility: {(Hovered == Item.Value ? "visible" : "hidden")}")">
                                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowMethodEdit(Item.Value!)" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value!)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.DriveFileRenameOutline" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMethodDialog(Item.Value!)" data-test-id="rename-method" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" Color="Color.Inherit" OnClick="() => DeleteMethod(Item.Value!)" data-test-id="delete-method" />
                             </div>
                         </div>
                     </BodyContent>
@@ -179,6 +188,76 @@
         Text = CurrentlyEditingItem.Name;
 
     }
+
+    private async Task ShowCreateMethodDialog()
+    {
+        var result = await DialogService.Show<CreateMethodDialog>("Create New Method", new()
+        {
+            [nameof(CreateMethodDialog.Class)] = Class
+        }, new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        }).Result;
+
+        if (result != null && !result.Canceled && result.Data is NodeDev.Core.Class.NodeClassMethod method)
+        {
+            Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.Add(new()
+            {
+                Value = new(TreeItemType.Method, method, null)
+                {
+                    Name = method.Name
+                }
+            });
+            Snackbar.Add($"Method '{method.Name}' created successfully", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowRenameMethodDialog(TreeItem item)
+    {
+        if (item.Method == null) return;
+
+        var result = await DialogService.Show<RenameDialog>("Rename Method", new()
+        {
+            [nameof(RenameDialog.CurrentName)] = item.Method.Name,
+            [nameof(RenameDialog.Label)] = "Method Name",
+            [nameof(RenameDialog.IsMethod)] = true
+        }, new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        }).Result;
+
+        if (result != null && !result.Canceled && result.Data is string newName)
+        {
+            var oldName = item.Method.Name;
+            item.Method.Rename(newName);
+            Snackbar.Add($"Method renamed from '{oldName}' to '{newName}'", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteMethod(TreeItem item)
+    {
+        if (item.Method == null) return;
+
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Method",
+            $"Are you sure you want to delete method '{item.Method.Name}'?",
+            yesText: "Delete", cancelText: "Cancel",
+            options: new DialogOptions() { MaxWidth = MaxWidth.Small }
+        );
+
+        if (confirm == true)
+        {
+            // Note: There's no public API to remove methods, so we just remove from UI
+            Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.RemoveAll(x => x.Value?.Method == item.Method);
+            Snackbar.Add($"Method '{item.Method.Name}' removed from view (Note: No API to actually delete)", Severity.Warning);
+            StateHasChanged();
+        }
+    }
+
 
     private void ShowRenameMenu(TreeItem item)
     {

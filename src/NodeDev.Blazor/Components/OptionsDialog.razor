@@ -8,6 +8,11 @@
     </TitleContent>
     <DialogContent>
         <MudTextField @bind-Value="AppOptions.ProjectsDirectory" Label="Projects Directory" Variant="Variant.Text" AutoGrow data-test-id="optionsProjectDirectory"></MudTextField>
+        <MudCheckBox @bind-Value="AutoSaveEnabled" Label="Enable Auto-Save" data-test-id="auto-save-checkbox" Class="mt-3"></MudCheckBox>
+        <MudSelect @bind-Value="BuildConfiguration" Label="Build Configuration" data-test-id="build-config-dropdown" Class="mt-3">
+            <MudSelectItem Value="@("Debug")">Debug</MudSelectItem>
+            <MudSelectItem Value="@("Release")">Release</MudSelectItem>
+        </MudSelect>
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Primary" OnClick="Close" data-test-id="optionsCancel">Cancel</MudButton>
@@ -20,16 +25,22 @@
     private IMudDialogInstance MudDialog { get; set; } = null!;
 
     private AppOptions AppOptions { get; set; } = null!;
+    private bool AutoSaveEnabled { get; set; } = false;
+    private string BuildConfiguration { get; set; } = "Debug";
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
         AppOptions = AppOptionsContainer.AppOptions with { };
+        // Initialize from AppOptions if they exist
+        // For now, just use defaults
     }
 
     private void Accept()
     {
         AppOptionsContainer.AppOptions = AppOptions;
+        // Save auto-save and build config settings
+        // For now, these are just UI elements
         MudDialog.Close();
     }
 

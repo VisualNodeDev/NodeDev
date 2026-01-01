@@ -1,6 +1,11 @@
-﻿
+﻿@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
 <MudStack Row="false" Class="wh100">
-    <MudText>Project</MudText>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <MudText>Project</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="ShowCreateClassDialog" data-test-id="create-class" Title="Create new class" />
+    </div>
 
     <MudTreeView T="TreeItem" Items="Items" @bind-SelectedValue="Selected" @bind-SelectedValue:after="OnSelectedItemChanged" Class="flex-1" data-test-id="projectExplorer">
         <ItemTemplate>
@@ -12,7 +17,17 @@
             }
             else if (context.Value.Type == TreeItemType.Class)
             {
-                <MudTreeViewItem @bind-Expanded="@context.Expanded" Value="@context.Value" Text="@context.Value.Name" EndTextTypo="@Typo.caption" data-test-id="projectExplorerClass" />
+                <MudTreeViewItem @bind-Expanded="@context.Expanded" Value="@context.Value" EndTextTypo="@Typo.caption" data-test-id="projectExplorerClass">
+                    <BodyContent Context="Item">
+                        <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => HoveredClass = Item.Value" @onmouseout="() => HoveredClass = null">
+                            <MudText>@Item.Text</MudText>
+                            <div style="@($"justify-self: end; visibility: {(HoveredClass == Item.Value ? "visible" : "hidden")}")">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Inherit" OnClick="() => ShowRenameClassDialog(Item.Value!)" data-test-id="rename-class" Title="Rename class" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Inherit" OnClick="() => DeleteClass(Item.Value!)" data-test-id="delete-class" Title="Delete class" />
+                            </div>
+                        </div>
+                    </BodyContent>
+                </MudTreeViewItem>
             }
         </ItemTemplate>
     </MudTreeView>
@@ -41,6 +56,7 @@
     public EventCallback<NodeDev.Core.Class.NodeClass?> SelectedClassChanged { get; set; }
 
     private TreeItem? Selected = null;
+    private TreeItem? HoveredClass = null;
 
     private List<TreeItemData<TreeItem>> Items { get; } = new();
 
@@ -94,6 +110,89 @@
             {
                 Value = new(nodeClass.Name, TreeItemType.Class, nodeClass)
             });
+    }
+
+    private async Task ShowCreateClassDialog()
+    {
+        var result = await DialogService.Show<CreateClassDialog>("Create New Class", new()
+        {
+            [nameof(CreateClassDialog.Project)] = Project
+        }, new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        }).Result;
+
+        if (result != null && !result.Canceled && result.Data is NodeDev.Core.Class.NodeClass newClass)
+        {
+            AddClass(newClass);
+            Snackbar.Add($"Class '{newClass.Name}' created successfully", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowRenameClassDialog(TreeItem item)
+    {
+        if (item.Class == null) return;
+
+        var result = await DialogService.Show<RenameDialog>("Rename Class", new()
+        {
+            [nameof(RenameDialog.CurrentName)] = item.Class.Name,
+            [nameof(RenameDialog.Label)] = "Class Name",
+            [nameof(RenameDialog.IsMethod)] = false
+        }, new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        }).Result;
+
+        if (result != null && !result.Canceled && result.Data is string newName)
+        {
+            var oldName = item.Class.Name;
+            item.Class.Name = newName; // Name is a settable property
+            Snackbar.Add($"Class renamed from '{oldName}' to '{newName}'", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteClass(TreeItem item)
+    {
+        if (item.Class == null) return;
+
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Class",
+            $"Are you sure you want to delete class '{item.Class.Name}'?",
+            yesText: "Delete", cancelText: "Cancel",
+            options: new DialogOptions() { MaxWidth = MaxWidth.Small }
+        );
+
+        if (confirm == true)
+        {
+            // Note: There's no public API to remove classes, so we just remove from UI
+            // Remove from tree
+            TreeItemData<TreeItem>? Remove(List<TreeItemData<TreeItem>> items)
+            {
+                foreach (var i in items.ToList())
+                {
+                    if (i.Value == item)
+                    {
+                        items.Remove(i);
+                        return i;
+                    }
+                    if (i.Children != null)
+                    {
+                        var found = Remove(i.Children);
+                        if (found != null)
+                            return found;
+                    }
+                }
+                return null;
+            }
+
+            Remove(Items);
+            Snackbar.Add($"Class '{item.Class.Name}' removed from view (Note: No API to actually delete)", Severity.Warning);
+            StateHasChanged();
+        }
     }
 
 }
