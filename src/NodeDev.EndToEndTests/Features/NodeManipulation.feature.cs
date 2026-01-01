@@ -82,12 +82,12 @@ namespace NodeDev.EndToEndTests.Features
         }
         
         [NUnit.Framework.TestAttribute()]
-        [NUnit.Framework.DescriptionAttribute("Move a node on the canvas")]
-        public async System.Threading.Tasks.Task MoveANodeOnTheCanvas()
+        [NUnit.Framework.DescriptionAttribute("Move a Return node on the canvas")]
+        public async System.Threading.Tasks.Task MoveAReturnNodeOnTheCanvas()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Move a node on the canvas", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Move a Return node on the canvas", null, tagsOfScenario, argumentsOfScenario, featureTags);
 #line 4
 this.ScenarioInitialize(scenarioInfo);
 #line hidden

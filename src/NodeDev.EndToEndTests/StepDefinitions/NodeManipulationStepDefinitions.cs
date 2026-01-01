@@ -8,8 +8,7 @@ public sealed class NodeManipulationStepDefinitions
 {
 	private readonly IPage User;
 	private readonly HomePage HomePage;
-	private (float X, float Y) _originalNodePosition;
-	private string? _nodeBeingMoved;
+	private readonly Dictionary<string, (float X, float Y)> _originalNodePositions = new();
 
 	public NodeManipulationStepDefinitions(Hooks.Hooks hooks, HomePage homePage)
 	{
@@ -29,35 +28,47 @@ public sealed class NodeManipulationStepDefinitions
 	[When("I drag the {string} node by {int} pixels to the right and {int} pixels down")]
 	public async Task WhenIDragTheNodeByPixelsToTheRightAndPixelsDown(string nodeName, int deltaX, int deltaY)
 	{
-		_nodeBeingMoved = nodeName;
+		// Take screenshot before
+		await HomePage.TakeScreenshot($"/tmp/before-drag-{nodeName}-{Guid.NewGuid()}.png");
 		
 		// Store original position
-		_originalNodePosition = await HomePage.GetNodePosition(nodeName);
+		_originalNodePositions[nodeName] = await HomePage.GetNodePosition(nodeName);
+		
+		Console.WriteLine($"Original position of {nodeName}: ({_originalNodePositions[nodeName].X}, {_originalNodePositions[nodeName].Y})");
 		
 		// Calculate new position
-		var newX = (int)(_originalNodePosition.X + deltaX);
-		var newY = (int)(_originalNodePosition.Y + deltaY);
+		var newX = (int)(_originalNodePositions[nodeName].X + deltaX);
+		var newY = (int)(_originalNodePositions[nodeName].Y + deltaY);
+		
+		Console.WriteLine($"Target position: ({newX}, {newY})");
 		
 		// Drag the node
 		await HomePage.DragNodeTo(nodeName, newX, newY);
 		
-		// Take screenshot for validation
-		await HomePage.TakeScreenshot($"/tmp/node-moved-{nodeName}.png");
+		// Take screenshot after for validation
+		await HomePage.TakeScreenshot($"/tmp/after-drag-{nodeName}-{Guid.NewGuid()}.png");
+		
+		// Check position immediately after drag
+		var posAfterDrag = await HomePage.GetNodePosition(nodeName);
+		Console.WriteLine($"Position after drag: ({posAfterDrag.X}, {posAfterDrag.Y})");
 	}
 
 	[Then("The {string} node should have moved from its original position")]
 	public async Task ThenTheNodeShouldHaveMovedFromItsOriginalPosition(string nodeName)
 	{
+		if (!_originalNodePositions.ContainsKey(nodeName))
+			throw new Exception($"No original position stored for node '{nodeName}'");
+
 		// Get new position
 		var newPosition = await HomePage.GetNodePosition(nodeName);
 		
 		// Verify position changed (allowing for some tolerance due to grid snapping)
-		var deltaX = Math.Abs(newPosition.X - _originalNodePosition.X);
-		var deltaY = Math.Abs(newPosition.Y - _originalNodePosition.Y);
+		var deltaX = Math.Abs(newPosition.X - _originalNodePositions[nodeName].X);
+		var deltaY = Math.Abs(newPosition.Y - _originalNodePositions[nodeName].Y);
 		
 		if (deltaX < 50 && deltaY < 50)
 		{
-			throw new Exception($"Node '{nodeName}' did not move enough. Original: ({_originalNodePosition.X}, {_originalNodePosition.Y}), New: ({newPosition.X}, {newPosition.Y})");
+			throw new Exception($"Node '{nodeName}' did not move enough. Original: ({_originalNodePositions[nodeName].X}, {_originalNodePositions[nodeName].Y}), New: ({newPosition.X}, {newPosition.Y})");
 		}
 	}
 

@@ -170,12 +170,13 @@ public class HomePage
 
 		// Perform drag operation
 		await _user.Mouse.MoveAsync((float)startX, (float)startY);
+		await Task.Delay(100); // Wait before starting drag
 		await _user.Mouse.DownAsync();
-		await Task.Delay(50); // Small delay to ensure drag starts
-		await _user.Mouse.MoveAsync(x, y, new() { Steps = 10 });
-		await Task.Delay(50);
+		await Task.Delay(100); // Small delay to ensure drag starts
+		await _user.Mouse.MoveAsync(x, y, new() { Steps = 20 }); // More steps for smoother drag
+		await Task.Delay(100);
 		await _user.Mouse.UpAsync();
-		await Task.Delay(100); // Wait for position to update
+		await Task.Delay(200); // Wait for position to update
 	}
 
 	public async Task<(float X, float Y)> GetNodePosition(string nodeName)
