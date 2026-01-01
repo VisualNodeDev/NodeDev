@@ -155,7 +155,7 @@ public class RoslynGraphBuilder
 			}
 			catch (Exception ex) when (ex is not BuildError)
 			{
-				throw new BuildError(ex.Message, chunk.Input.Parent, ex);
+				throw new BuildError($"Failed to generate statement for node type {chunk.Input.Parent.GetType().Name}: {ex.Message}", chunk.Input.Parent, ex);
 			}
 		}
 

@@ -2,9 +2,13 @@
 using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Buffers;
 using System.Linq.Expressions;
 using System.Text.Json;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
 
@@ -187,5 +191,70 @@ public class MethodCall : NormalFlowNode
 		// Assign the call to the output value.
 		// This will create an expression that will do both the assignation and the call.
 		return Expression.Assign(info.LocalVariables[Outputs[^1]], call);
+	}
+
+	internal override StatementSyntax GenerateRoslynStatement(Dictionary<Connection, Graph.NodePathChunks>? subChunks, GenerationContext context)
+	{
+		if (subChunks != null)
+			throw new Exception("MethodCall.GenerateRoslynStatement: subChunks should be null as MethodCall never has multiple output paths");
+		if (TargetMethod == null)
+			throw new Exception("Target method is not set");
+
+		// Build the method call expression
+		ExpressionSyntax methodCallExpr;
+		
+		if (TargetMethod.IsStatic)
+		{
+			// Static method: ClassName.MethodName(args)
+			var typeSyntax = RoslynHelpers.GetTypeSyntax(TargetMethod.DeclaringType);
+			var memberAccess = SF.MemberAccessExpression(
+				SyntaxKind.SimpleMemberAccessExpression,
+				typeSyntax,
+				SF.IdentifierName(TargetMethod.Name));
+			
+			var args = TargetMethod.GetParameters()
+				.Where(p => !p.IsOut)
+				.Select(p => SF.Argument(SF.IdentifierName(context.GetVariableName(Inputs.First(i => i.Name == p.Name))!)))
+				.ToList();
+			
+			methodCallExpr = SF.InvocationExpression(memberAccess)
+				.WithArgumentList(SF.ArgumentList(SF.SeparatedList(args)));
+		}
+		else
+		{
+			// Instance method: target.MethodName(args)
+			var targetVar = SF.IdentifierName(context.GetVariableName(Inputs[0])!);
+			var memberAccess = SF.MemberAccessExpression(
+				SyntaxKind.SimpleMemberAccessExpression,
+				targetVar,
+				SF.IdentifierName(TargetMethod.Name));
+			
+			var args = TargetMethod.GetParameters()
+				.Where(p => !p.IsOut)
+				.Select(p => SF.Argument(SF.IdentifierName(context.GetVariableName(Inputs.First(i => i.Name == p.Name))!)))
+				.ToList();
+			
+			methodCallExpr = SF.InvocationExpression(memberAccess)
+				.WithArgumentList(SF.ArgumentList(SF.SeparatedList(args)));
+		}
+
+		// If the method has a return value, assign it
+		if (TargetMethod.ReturnType != TypeFactory.Void)
+		{
+			var outputVarName = context.GetVariableName(Outputs[^1]);
+			if (outputVarName == null)
+				throw new Exception("Return value variable not found");
+
+			return SF.ExpressionStatement(
+				SF.AssignmentExpression(
+					SyntaxKind.SimpleAssignmentExpression,
+					SF.IdentifierName(outputVarName),
+					methodCallExpr));
+		}
+		else
+		{
+			// No return value, just call the method
+			return SF.ExpressionStatement(methodCallExpr);
+		}
 	}
 }
