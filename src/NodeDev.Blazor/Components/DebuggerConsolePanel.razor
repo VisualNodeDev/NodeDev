@@ -1,11 +1,11 @@
 @if (IsShowing)
 {
-	<MudPaper Class="w100 pa-1 overflow-y-scroll d-flex flex-column relative" Style="height: 200px">
+	<MudPaper Class="w100 pa-1 overflow-y-scroll d-flex flex-column relative" Style="height: 200px" data-test-id="consolePanel">
 		<MudIconButton Icon="@MudBlazor.Icons.Material.Filled.ArrowDropDown" Class="absolute" Style="right: 0px; top: 0px" Size="Size.Small" OnClick="@(() => IsShowing = false)"></MudIconButton>
 
 		@foreach (var line in Lines.Reverse())
 		{
-			<span class="w100">@line</span>
+			<span class="w100" data-test-id="consoleLine">@line</span>
 		}
 	</MudPaper>
 
@@ -13,6 +13,6 @@
 else
 {
 	<div class="absolute d-flex w100" style="bottom: 0px">
-		<MudIconButton Icon="@MudBlazor.Icons.Material.Filled.ArrowDropUp" Style="margin-left: auto; margin-right: auto" Size="Size.Medium" OnClick="@(() => IsShowing = true)"></MudIconButton>
+		<MudIconButton Icon="@MudBlazor.Icons.Material.Filled.ArrowDropUp" Style="margin-left: auto; margin-right: auto" Size="Size.Medium" OnClick="@(() => IsShowing = true)" data-test-id="showConsoleButton"></MudIconButton>
 	</div>
 }

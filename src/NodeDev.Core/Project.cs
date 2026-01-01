@@ -47,6 +47,7 @@ public class Project
 	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutingSubject { get; } = new();
 	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutedSubject { get; } = new();
 	internal Subject<bool> GraphExecutionChangedSubject { get; } = new();
+	internal Subject<string> ConsoleOutputSubject { get; } = new();
 
 	public IObservable<(Graph Graph, bool RequireUIRefresh)> GraphChanged => GraphChangedSubject.AsObservable();
 
@@ -55,6 +56,8 @@ public class Project
 	public IObservable<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecuted => GraphNodeExecutedSubject.AsObservable();
 
 	public IObservable<bool> GraphExecutionChanged => GraphExecutionChangedSubject.AsObservable();
+
+	public IObservable<string> ConsoleOutput => ConsoleOutputSubject.AsObservable();
 
 	public bool IsLiveDebuggingEnabled { get; private set; }
 
@@ -203,19 +206,54 @@ public class Project
 			var assemblyPath = Build(options);
 
 			var arguments = Path.GetFileName(assemblyPath) + " " + string.Join(" ", inputs.Select(x => '"' + (x?.ToString() ?? "") + '"'));
-			var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo()
+			
+			var processStartInfo = new System.Diagnostics.ProcessStartInfo()
 			{
 				FileName = "dotnet",
 				Arguments = arguments,
 				WorkingDirectory = Path.GetDirectoryName(assemblyPath),
-			}) ?? throw new Exception("Unable to start process");
+				RedirectStandardOutput = true,
+				RedirectStandardError = true,
+				UseShellExecute = false,
+				CreateNoWindow = true,
+			};
+			
+			var process = System.Diagnostics.Process.Start(processStartInfo) ?? throw new Exception("Unable to start process");
+
+			// Notify that execution has started
+			GraphExecutionChangedSubject.OnNext(true);
+
+			// Capture output and error streams
+			process.OutputDataReceived += (sender, e) =>
+			{
+				if (e.Data != null)
+				{
+					ConsoleOutputSubject.OnNext(e.Data + Environment.NewLine);
+				}
+			};
+
+			process.ErrorDataReceived += (sender, e) =>
+			{
+				if (e.Data != null)
+				{
+					ConsoleOutputSubject.OnNext(e.Data + Environment.NewLine);
+				}
+			};
+
+			process.BeginOutputReadLine();
+			process.BeginErrorReadLine();
 
 			process.WaitForExit();
+
+			// Notify that execution has completed
+			GraphExecutionChangedSubject.OnNext(false);
 
 			return process.ExitCode;
 		}
 		catch (Exception)
 		{
+			// Notify that execution has completed even on error
+			GraphExecutionChangedSubject.OnNext(false);
 			return null;
 		}
 		finally
