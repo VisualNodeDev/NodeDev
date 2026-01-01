@@ -6,26 +6,26 @@
 
         <MudStack Style="height: 100%; width: 100%" Class="pa-3">
 
-            <MudTextField T="string" AutoFocus="true" @bind-Value="SearchText" Immediate="true" DebounceInterval="100" Label="Search" Class="flex-none" OnKeyDown="OnKeyDown"></MudTextField>
+            <MudTextField T="string" AutoFocus="true" @bind-Value="SearchText" Immediate="true" DebounceInterval="100" Label="Search" Class="flex-none" OnKeyDown="OnKeyDown" data-test-id="node-search-input"></MudTextField>
 
             <MudList T="NodeDev.Core.NodeProvider.NodeSearchResult" SelectedValueChanged="@( x => OnNodeTypeSelected.InvokeAsync(x))" Class="flex-1 overflow-y-scroll">
                 @foreach (var type in NodeDev.Core.NodeProvider.Search(GraphCanvas.Graph.SelfClass.Project, SearchText, Connection).Take(1000))
                 {
                     @if (type is NodeDev.Core.NodeProvider.MethodCallNode methodCallNode)
                     {
-                        <MudListItem Text="@($"{methodCallNode.MethodInfo.DeclaringType.FriendlyName}.{methodCallNode.MethodInfo.Name}({string.Join(',', methodCallNode.MethodInfo.GetParameters().Select( x=> x.FriendlyFormat()))})")" Value="type" />
+                        <MudListItem Text="@($"{methodCallNode.MethodInfo.DeclaringType.FriendlyName}.{methodCallNode.MethodInfo.Name}({string.Join(',', methodCallNode.MethodInfo.GetParameters().Select( x=> x.FriendlyFormat()))})")" Value="type" data-test-id="node-search-result" data-node-type="@type.Type.Name" />
                     }
                     else if (type is NodeDev.Core.NodeProvider.GetPropertyOrFieldNode getPropertyOrFieldNode)
                     {
-                        <MudListItem Text="@($"{getPropertyOrFieldNode.MemberInfo.DeclaringType.FriendlyName}.{getPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
+                        <MudListItem Text="@($"{getPropertyOrFieldNode.MemberInfo.DeclaringType.FriendlyName}.{getPropertyOrFieldNode.MemberInfo.Name}")" Value="type" data-test-id="node-search-result" data-node-type="@type.Type.Name" />
                     }
                     else if (type is NodeDev.Core.NodeProvider.SetPropertyOrFieldNode setPropertyOrFieldNode)
                     {
-                        <MudListItem Text="@($"{setPropertyOrFieldNode.MemberInfo.DeclaringType.FriendlyName}.{setPropertyOrFieldNode.MemberInfo.Name}")" Value="type" />
+                        <MudListItem Text="@($"{setPropertyOrFieldNode.MemberInfo.DeclaringType.FriendlyName}.{setPropertyOrFieldNode.MemberInfo.Name}")" Value="type" data-test-id="node-search-result" data-node-type="@type.Type.Name" />
                     }
                     else
                     {
-                        <MudListItem Text="@type.Type.Name" Value="type" />
+                        <MudListItem Text="@type.Type.Name" Value="type" data-test-id="node-search-result" data-node-type="@type.Type.Name" />
                     }
                 }
             </MudList>
