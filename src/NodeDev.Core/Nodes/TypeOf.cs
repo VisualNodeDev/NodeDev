@@ -1,6 +1,9 @@
 ﻿using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
 
@@ -71,6 +74,13 @@ public class TypeOf : NoFlowNode
 	internal override void BuildInlineExpression(BuildExpressionInfo info)
 	{
 		info.LocalVariables[Outputs[0]] = Expression.Constant(Type.MakeRealType());
+	}
+
+	internal override ExpressionSyntax GenerateRoslynExpression(GenerationContext context)
+	{
+		// Generate typeof(Type) expression
+		var typeSyntax = RoslynHelpers.GetTypeSyntax(Type);
+		return SF.TypeOfExpression(typeSyntax);
 	}
 
 }

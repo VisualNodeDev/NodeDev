@@ -1,7 +1,11 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes.Flow;
 
@@ -49,6 +53,45 @@ public class ReturnNode : FlowNode
 			return Expression.Return(info.ReturnLabel, info.LocalVariables[Inputs[^1]]);
 		else
 			return Expression.Return(info.ReturnLabel);
+	}
+
+	internal override StatementSyntax GenerateRoslynStatement(Dictionary<Connection, Graph.NodePathChunks>? subChunks, GenerationContext context)
+	{
+		// Assign any out parameters before returning
+		var inputs = CollectionsMarshal.AsSpan(Inputs)[1..^(HasReturnValue ? 1 : 0)];
+		var statements = new List<StatementSyntax>();
+
+		foreach (var input in inputs)
+		{
+			var varName = context.GetVariableName(input);
+			if (varName == null)
+				throw new Exception($"Variable not found for out parameter {input.Name}");
+
+			// Create assignment: parameterName = varName;
+			var assignment = SF.ExpressionStatement(
+				SF.AssignmentExpression(
+					SyntaxKind.SimpleAssignmentExpression,
+					SF.IdentifierName(input.Name),
+					SF.IdentifierName(varName)));
+			statements.Add(assignment);
+		}
+
+		// Add the return statement
+		if (HasReturnValue)
+		{
+			var returnVarName = context.GetVariableName(Inputs[^1]);
+			if (returnVarName == null)
+				throw new Exception("Return value variable not found");
+
+			statements.Add(SF.ReturnStatement(SF.IdentifierName(returnVarName)));
+		}
+		else
+		{
+			statements.Add(SF.ReturnStatement());
+		}
+
+		// If there are multiple statements, wrap in a block, otherwise return the single statement
+		return statements.Count == 1 ? statements[0] : SF.Block(statements);
 	}
 
 	internal void Refresh()

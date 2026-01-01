@@ -1,6 +1,10 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes.Flow;
 
@@ -43,5 +47,46 @@ public class Branch : FlowNode
 			return Expression.IfThen(info.LocalVariables[Inputs[1]], Expression.Block(ifTrue));
 		else
 			return Expression.IfThenElse(info.LocalVariables[Inputs[1]], Expression.Block(ifTrue), Expression.Block(ifFalse));
+	}
+
+	internal override StatementSyntax GenerateRoslynStatement(Dictionary<Connection, Graph.NodePathChunks>? subChunks, GenerationContext context)
+	{
+		ArgumentNullException.ThrowIfNull(subChunks);
+
+		// Build the true and false branches
+		var builder = new RoslynGraphBuilder(Graph, context);
+		var ifTrueStatements = builder.BuildStatements(subChunks[Outputs[0]]);
+		var ifFalseStatements = builder.BuildStatements(subChunks[Outputs[1]]);
+
+		if (ifTrueStatements.Count == 0 && ifFalseStatements.Count == 0)
+			throw new InvalidOperationException("Branch node must have at least a 'IfTrue' or 'IfFalse' statement.");
+
+		var conditionVarName = context.GetVariableName(Inputs[1]);
+		if (conditionVarName == null)
+			throw new Exception("Condition variable not found");
+
+		var condition = SF.IdentifierName(conditionVarName);
+
+		// Optimize for empty branches
+		if (ifTrueStatements.Count == 0)
+		{
+			// if (!condition) { ifFalse }
+			return SF.IfStatement(
+				SF.PrefixUnaryExpression(SyntaxKind.LogicalNotExpression, condition),
+				SF.Block(ifFalseStatements));
+		}
+		else if (ifFalseStatements.Count == 0)
+		{
+			// if (condition) { ifTrue }
+			return SF.IfStatement(condition, SF.Block(ifTrueStatements));
+		}
+		else
+		{
+			// if (condition) { ifTrue } else { ifFalse }
+			return SF.IfStatement(
+				condition,
+				SF.Block(ifTrueStatements),
+				SF.ElseClause(SF.Block(ifFalseStatements)));
+		}
 	}
 }
