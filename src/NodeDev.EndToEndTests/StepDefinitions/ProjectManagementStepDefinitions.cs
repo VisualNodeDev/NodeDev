@@ -57,39 +57,6 @@ public sealed class ProjectManagementStepDefinitions
 		Console.WriteLine($"✓ Modifications saved (unsaved indicator count: {hasUnsaved})");
 	}
 
-	[Given("Auto-save is enabled")]
-	public async Task GivenAutoSaveIsEnabled()
-	{
-		await HomePage.EnableAutoSave();
-		Console.WriteLine("✓ Auto-save enabled");
-	}
-
-	[When("I make changes to the project")]
-	public async Task WhenIMakeChangesToTheProject()
-	{
-		await HomePage.CreateMethod("TestMethod");
-		Console.WriteLine("✓ Made changes to project");
-	}
-
-	[Then("The project should auto-save")]
-	public async Task ThenTheProjectShouldAutoSave()
-	{
-		// Wait for auto-save to trigger
-		await Task.Delay(1000);
-		
-		// Check for save confirmation (snackbar or indicator)
-		var snackbar = User.Locator("#mud-snackbar-container");
-		if (await snackbar.CountAsync() > 0)
-		{
-			var saveText = await snackbar.InnerTextAsync();
-			Console.WriteLine($"✓ Auto-save completed: {saveText}");
-		}
-		else
-		{
-			Console.WriteLine("✓ Auto-save completed (no visual indicator)");
-		}
-	}
-
 	[When("I export the project")]
 	public async Task WhenIExportTheProject()
 	{

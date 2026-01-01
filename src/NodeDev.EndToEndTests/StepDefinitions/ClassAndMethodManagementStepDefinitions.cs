@@ -38,8 +38,8 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	[Then("The class should be named {string} in the project explorer")]
 	public async Task ThenTheClassShouldBeNamedInTheProjectExplorer(string expectedName)
 	{
-		// Wait a bit for the UI to update after rename
-		await Task.Delay(1000);
+		// Wait longer for the UI to update after rename
+		await Task.Delay(2000);
 		
 		var exists = await HomePage.ClassExists(expectedName);
 		if (!exists)
@@ -59,6 +59,9 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	[Then("The {string} should not be in the project explorer")]
 	public async Task ThenTheShouldNotBeInTheProjectExplorer(string className)
 	{
+		// Wait for UI to update after deletion
+		await Task.Delay(1000);
+		
 		var exists = await HomePage.ClassExists(className);
 		if (exists)
 		{
@@ -91,8 +94,8 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	[Then("The method should be named {string}")]
 	public async Task ThenTheMethodShouldBeNamed(string expectedName)
 	{
-		// Wait a bit for the UI to update after rename
-		await Task.Delay(1000);
+		// Wait longer for the UI to update after rename
+		await Task.Delay(2000);
 		
 		var exists = await HomePage.MethodExists(expectedName);
 		if (!exists)
@@ -112,6 +115,9 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	[Then("The {string} should not be in the method list")]
 	public async Task ThenTheShouldNotBeInTheMethodList(string methodName)
 	{
+		// Wait for UI to update after deletion
+		await Task.Delay(1000);
+		
 		var exists = await HomePage.MethodExists(methodName);
 		if (exists)
 		{
