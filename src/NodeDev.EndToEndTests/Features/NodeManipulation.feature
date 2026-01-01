@@ -34,6 +34,13 @@ Scenario: Disconnect and reconnect nodes
 	When I connect the 'Entry' 'Exec' output to the 'Return' 'Exec' input
 	Then I take a screenshot named 'reconnected'
 
+Scenario: Delete connection between Entry and Return nodes
+	Given I load the default project
+	And I open the 'Main' method in the 'Program' class
+	When I delete the connection between 'Entry' 'Exec' output and 'Return' 'Exec' input
+	Then There should be no console errors
+	And I take a screenshot named 'connection-deleted'
+
 Scenario: Open method and check for browser errors
 	Given I load the default project
 	When I check for console errors
