@@ -84,7 +84,8 @@ public class Hooks
 		//Initialize a browser - 'Chromium' can be changed to 'Firefox' or 'Web kit
 		var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
 		{
-			Headless = Environment.GetEnvironmentVariable("HEADLESS") == "true" // -> Use this option to be able to see your test running
+			// Default to headless mode, unless explicitly set to "false" for local debugging
+			Headless = Environment.GetEnvironmentVariable("HEADLESS") != "false"
 		});
 		//Setup a browser context
 		var context1 = await browser.NewContextAsync(new()
