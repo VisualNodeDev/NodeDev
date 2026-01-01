@@ -213,6 +213,8 @@ public class HomePage
 
 	public async Task ConnectPorts(string sourceNodeName, string sourcePortName, string targetNodeName, string targetPortName)
 	{
+		Console.WriteLine($"Connecting ports: {sourceNodeName}.{sourcePortName} -> {targetNodeName}.{targetPortName}");
+		
 		// Get source port (output)
 		var sourcePort = GetGraphPort(sourceNodeName, sourcePortName, isInput: false);
 		await sourcePort.WaitForVisible();
@@ -229,19 +231,22 @@ public class HomePage
 			throw new Exception("Could not get bounding boxes for ports");
 
 		// Calculate centers
-		var sourceX = sourceBox.X + sourceBox.Width / 2;
-		var sourceY = sourceBox.Y + sourceBox.Height / 2;
-		var targetX = targetBox.X + targetBox.Width / 2;
-		var targetY = targetBox.Y + targetBox.Height / 2;
+		var sourceX = (float)(sourceBox.X + sourceBox.Width / 2);
+		var sourceY = (float)(sourceBox.Y + sourceBox.Height / 2);
+		var targetX = (float)(targetBox.X + targetBox.Width / 2);
+		var targetY = (float)(targetBox.Y + targetBox.Height / 2);
 
-		// Perform drag from source to target
-		await _user.Mouse.MoveAsync((float)sourceX, (float)sourceY);
+		Console.WriteLine($"Port positions: ({sourceX}, {sourceY}) -> ({targetX}, {targetY})");
+
+		// Perform drag from source port to target port using same approach as node dragging
+		await _user.Mouse.MoveAsync(sourceX, sourceY);
+		await Task.Delay(50);
 		await _user.Mouse.DownAsync();
 		await Task.Delay(50);
-		await _user.Mouse.MoveAsync((float)targetX, (float)targetY, new() { Steps = 10 });
+		await _user.Mouse.MoveAsync(targetX, targetY, new() { Steps = 20 });
 		await Task.Delay(50);
 		await _user.Mouse.UpAsync();
-		await Task.Delay(100); // Wait for connection to be established
+		await Task.Delay(200); // Wait for connection to be established
 	}
 
 	public async Task TakeScreenshot(string fileName)

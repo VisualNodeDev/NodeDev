@@ -26,12 +26,20 @@ The main UI consists of:
 - **GraphPortModel**: Represents input/output ports on nodes
 - **GraphCanvas**: Main component managing the diagram, node creation, and connections
 
+### Node System
+- **Flow Nodes**: Control execution (Entry, Return, Branch, While, For, etc.) - have Exec connections
+- **Data Nodes**: Compute values without flow (Math operations, comparisons) - no Exec connections
+- **Mixed Nodes**: Both Exec and data (DeclareVariable, SetProperty, etc.)
+- **Generic Types**: Automatically resolve based on connections (T, T1, T2 → concrete types)
+
 ## Testing
 - E2E tests use Playwright with Reqnroll for BDD-style scenarios
 - Tests start a Blazor Server instance and automate browser interactions
 - Components use `data-test-id` attributes for test targeting
+- Mouse event sequences critical for drag operations: MoveAsync → DownAsync → MoveAsync(with steps) → UpAsync
 
 ## Documentation
 Detailed topic-specific documentation is maintained in the `docs/` folder:
 
 - `docs/e2e-testing.md` - End-to-end testing patterns, node interaction, connection testing, and screenshot validation
+- `docs/node-types-and-connections.md` - Comprehensive guide to node types, connection system, port identification, and testing strategies

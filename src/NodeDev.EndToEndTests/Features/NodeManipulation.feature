@@ -16,3 +16,11 @@ Scenario: Move Return node multiple times
 	Then The 'Return' node should have moved from its original position
 	When I drag the 'Return' node by -200 pixels to the right and -100 pixels down
 	Then The 'Return' node should have moved from its original position
+
+Scenario: Create connection between Entry and Return nodes
+	Given I load the default project
+	And I open the 'Main' method in the 'Program' class
+	When I move the 'Return' node away from 'Entry' node
+	And I take a screenshot named 'nodes-separated'
+	When I connect the 'Entry' 'Exec' output to the 'Return' 'Exec' input
+	Then I take a screenshot named 'after-connection'
