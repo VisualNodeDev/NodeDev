@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using Microsoft.Playwright;
 using NodeDev.EndToEndTests.Pages;
 

@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using Microsoft.Playwright;
 using NodeDev.EndToEndTests.Pages;
 
@@ -8,6 +10,8 @@ public sealed class UIResponsivenessStepDefinitions
 {
 	private readonly IPage User;
 	private readonly HomePage HomePage;
+	private const int RapidOperationCount = 5;
+	private const int RapidOperationDelayMs = 50;
 
 	public UIResponsivenessStepDefinitions(Hooks.Hooks hooks, HomePage homePage)
 	{
@@ -184,9 +188,9 @@ public sealed class UIResponsivenessStepDefinitions
 	public async Task WhenIPerformMultipleOperationsQuickly()
 	{
 		// Simulate rapid operations
-		for (int i = 0; i < 5; i++)
+		for (int i = 0; i < RapidOperationCount; i++)
 		{
-			await Task.Delay(50);
+			await Task.Delay(RapidOperationDelayMs);
 		}
 		Console.WriteLine("✓ Performed multiple quick operations");
 	}
