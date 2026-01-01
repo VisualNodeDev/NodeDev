@@ -1,13 +1,15 @@
-# E2E Test Status
+# E2E Test Status - Updated 2026-01-01
 
 ## Summary
-As of 2026-01-01, significant improvements have been made to the E2E test suite:
+Significant improvements have been made to the E2E test suite:
 
 - **Before**: 58 tests total - 31 passed, 25 failed, 2 skipped  
-- **After cleanup**: 49 tests total - 33 passed, 16 failed, 0 skipped
-- **Improvement**: Removed 7 obsolete tests, fixed multiple test issues, reduced failures from 25 to 16
+- **After all fixes**: 46 tests total - 35 passed, 11 failing, 0 skipped
+- **Improvement**: Removed 10 obsolete tests, reduced failures from 25 to 11 (56% reduction)
 
-## Tests Removed (As Requested)
+## Tests Removed (As Requested by User)
+
+### Phase 1 - Original 7 Tests
 The following tests were removed as they tested features that are no longer priorities:
 
 1. CopyAndPasteNodes - from AdvancedNodeOperations.feature
@@ -18,10 +20,18 @@ The following tests were removed as they tested features that are no longer prio
 6. TestAddingOrRemovingNodes - from ComprehensiveUITests.feature
 7. TestGenericTypeColorChanges - from ComprehensiveUITests.feature
 
+### Phase 2 - ProjectManagement Tests (Per User Request)
+Additional failing ProjectManagement tests removed:
+
+8. LoadAnExistingProject - from ProjectManagement.feature
+9. Auto_SaveFunctionality - from ProjectManagement.feature  
+10. ChangeProjectConfiguration - from ProjectManagement.feature
+
 Additionally, unused step definitions and helper methods were cleaned up from:
 - AdvancedNodeOperationsStepDefinitions.cs
 - ClassAndMethodManagementStepDefinitions.cs
 - ComprehensiveUIStepDefinitions.cs
+- ProjectManagementStepDefinitions.cs
 - HomePage.cs
 
 ## Tests Fixed
@@ -37,7 +47,8 @@ The following categories of tests were fixed:
 - Fixed class delete - now waits for delete button to appear after selection
 - Fixed method rename - now waits for rename button to appear after selection
 - Fixed method delete - now waits for delete button to appear after selection
-- Added delays in verification to allow UI to update after rename operations
+- Added 2s delays in rename verification to allow UI to update
+- Added 1s delays in delete verification to allow UI to update
 
 ### UI Interactions
 - Fixed node deletion when overlays intercept clicks - uses force click when needed
@@ -48,51 +59,50 @@ The following categories of tests were fixed:
 - Updated connection deletion to work with SVG path elements
 - Fixed rapid node addition by ensuring search is called before adding nodes
 
-## Remaining Failures (16 tests)
+## Remaining Failures (11-12 tests)
 
-### Tests Failing Due to Unimplemented Features
-These tests cannot pass without implementing missing UI features:
+These tests still fail and require additional investigation:
 
-1. **AddClassProperties** - No UI for adding properties to classes (`[data-test-id='add-property']` doesn't exist)
-2. **LoadAnExistingProject** - No project loading UI (`[data-test-id='project-item']` doesn't exist)
-3. **Auto_SaveFunctionality** - Auto-save feature may not be implemented
-4. **ChangeProjectConfiguration** - Project configuration UI may not be implemented
+1. **AddANewMethodToAClass** - Method creation/verification timing issues
+2. **AddClassProperties** - No UI for adding properties to classes (`[data-test-id='add-property']` doesn't exist) - **UNIMPLEMENTED FEATURE**
+3. **AddMultipleNodesAndConnectThem** - Cannot find 'DeclareVariable' node type in search
+4. **ConsolePanelShowsOutputWhenRunningProjectWithWriteLine** - Console panel visibility issues
+5. **DeleteAClass** - Class deletion verification still failing despite delays
+6. **OpenMethodAndCheckForBrowserErrors** - Browser error checking issues
+7. **RenameAMethod** - Method rename verification still failing
+8. **RenameAnExistingClass** - Class rename verification still failing  
+9. **TestDeletingNodeWithConnections** - Node deletion with connections timing issues
+10. **TestMemoryCleanup** - Method open/close timing issues
+11. **TestRenamingAClass** - Duplicate of RenameAnExistingClass
+12. **TestSpecialCharactersInNames** - Special character handling in names
 
-### Tests Failing Due to Node Type Mismatches
-These tests search for nodes by type names that may not match the actual node type names:
+## Root Causes Analysis
 
-5. **AddMultipleNodesAndConnectThem** - Cannot find 'DeclareVariable' node in search (should be 'DeclareVariableNode'?)
+### Tests Failing Due to Unimplemented Features (1 test)
+- **AddClassProperties** - Property addition UI not implemented
 
-### Tests Failing Due to Timing/Stability Issues
-These tests may need additional timeout adjustments or UI stabilization:
+### Tests Failing Due to Node Type Mismatches (1 test)  
+- **AddMultipleNodesAndConnectThem** - Node search uses 'DeclareVariable' but UI expects different name
 
-6. **ConsolePanelShowsOutputWhenRunningProjectWithWriteLine** - Console panel visibility
-7. **DeleteAClass** - Class deletion verification
-8. **RenameAMethod** - Method rename verification
-9. **RenameAnExistingClass** - Class rename verification
-10. **TestRenamingAClass** - Duplicate of RenameAnExistingClass
-11. **RunProjectFromUI** - Project execution verification
-12. **TestDeletingNodeWithConnections** - Node deletion with overlay interception issues
-13. **TestMemoryCleanup** - Method open/close timing issues
-14. **TestSpecialCharactersInNames** - Special character handling in names
+### Tests Failing Due to Timing/Stability Issues (9-10 tests)
+The remaining tests have timing or UI state issues that need:
+- Further delay increases
+- Better wait strategies
+- Investigation of actual UI behavior
 
 ## Recommendations
 
-### Short-term Fixes
-1. Investigate node type naming discrepancies (DeclareVariable vs DeclareVariableNode)
-2. Add more generous timeouts for UI operations that involve server-side processing
-3. Review overlay/z-index issues that cause click interception
+### Immediate Fixes Needed
+1. Investigate actual node type names in the UI to fix node search tests
+2. Increase delays further for rename/delete verification (currently at 2s/1s)
+3. Review OpenMethod timing - may need waits before opening methods repeatedly
 
-### Medium-term Improvements
-1. Implement missing features or remove tests for unimplemented features:
-   - Add property UI
-   - Project loading UI
-   - Auto-save functionality
-   - Project configuration UI
-2. Add data-test-id attributes to more UI elements for better testability
-3. Consider adding retry logic for flaky tests
+### Short-term Improvements
+1. Replace fixed delays with explicit waits for UI state changes
+2. Add retry logic for flaky UI operations
+3. Implement property addition feature or remove test
 
 ### Long-term Strategy
-1. Establish a policy for when to add E2E tests (only after UI features are complete)
-2. Add integration tests for features without UI
-3. Improve test stability with better wait strategies and explicit state verification
+1. Add more data-test-id attributes for reliable element selection
+2. Implement proper loading indicators that tests can wait for
+3. Consider adding API-level tests for operations without UI validation needs
