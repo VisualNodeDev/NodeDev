@@ -8,55 +8,12 @@ namespace NodeDev.Tests;
 
 public class NodeClassTypeCreatorTests
 {
-	[Theory(Skip = "This test uses the old IL emission system (NodeClassTypeCreator). Roslyn compilation tested elsewhere.")]
-	[MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
-	public void SimpleProjectTest(SerializableBuildOptions options)
-	{
-		var project = new Project(Guid.NewGuid());
-
-		var myClass = new NodeClass("TestClass", "MyProject", project);
-		project.AddClass(myClass);
-
-		myClass.Properties.Add(new(myClass, "MyProp", project.TypeFactory.Get<float>()));
-
-		var buildOptions = (BuildOptions)options;
-		var path = project.Build(buildOptions);
-		try
-		{
-			var assembly = Assembly.Load(File.ReadAllBytes(path));
-
-			Assert.Single(assembly.DefinedTypes, x => x.IsVisible);
-			Assert.Contains(assembly.DefinedTypes, x => x.Name == "TestClass");
-
-			var instance = assembly.CreateInstance(myClass.Name);
-
-			Assert.NotNull(instance);
-			Assert.NotNull(project.NodeClassTypeCreator);
-			Assert.Equal(project.NodeClassTypeCreator.GeneratedTypes[project.GetNodeClassType(myClass)].Type.FullName!, instance.GetType().FullName);
-		}
-		finally
-		{
-			Directory.Delete(buildOptions.OutputPath, true);
-		}
-	}
-
 	[Fact]
 	public void TestClassProjectOwnership()
 	{
 		var graph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
 
 		Assert.Equal(graph.SelfClass, graph.SelfClass.Project.Classes.First());
-	}
-
-
-	[Theory(Skip = "This test uses the old IL emission system (NodeClassTypeCreator). Roslyn compilation tested elsewhere.")]
-	[MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
-	public void SimpleAddGenerationTest(SerializableBuildOptions options)
-	{
-		var graph = GraphExecutorTests.CreateSimpleAddGraph<int, int>(out _, out _, out _);
-
-		var creator = graph.SelfClass.Project.CreateNodeClassTypeCreator(options);
-		creator.CreateProjectClassesAndAssembly();
 	}
 
 	[Theory]
