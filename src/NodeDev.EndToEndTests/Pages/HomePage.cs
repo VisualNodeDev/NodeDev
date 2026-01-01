@@ -72,6 +72,16 @@ public class HomePage
 		await locator.WaitForVisible();
 	}
 
+	public async Task OpenMethod(string name)
+	{
+		var locator = await FindMethodByName(name);
+
+		await locator.WaitForVisible();
+		await locator.ClickAsync();
+		
+		await Task.Delay(200); // Wait for method to open
+	}
+
 	public async Task SaveProject()
 	{
 		await SearchSaveButton.WaitForVisible();
@@ -183,7 +193,9 @@ public class HomePage
 	public ILocator GetGraphPort(string nodeName, string portName, bool isInput)
 	{
 		var node = GetGraphNode(nodeName);
-		return node.Locator($"[data-test-id='graph-port'][data-test-port-name='{portName}'][data-test-port-is-input='{isInput}']");
+		var portType = isInput ? "input" : "output";
+		// Look for the port by its name within the node's ports
+		return node.Locator($".col.{portType}").Filter(new() { HasText = portName }).Locator(".diagram-port").First;
 	}
 
 	public async Task ConnectPorts(string sourceNodeName, string sourcePortName, string targetNodeName, string targetPortName)

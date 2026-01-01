@@ -4,7 +4,7 @@
 	</div>
 
 	<MudTooltip TooltipContent="GetDebugValueFragment(Port)" Placement="Placement.Top">
-		<PortRenderer @key="Port" Port="Port" Class="rounded-full absolute" Style="@($"background-color: {Port.PortColor}")" data-test-id="graph-port" data-test-port-name="@Port.Connection.Name" data-test-port-is-input="@IsInput" />
+		<PortRenderer @key="Port" Port="Port" Class="rounded-full absolute" Style="@($"background-color: {Port.PortColor}")" />
 	</MudTooltip>
 
 	@if (IsInput && Port.Connection.Type.AllowTextboxEdit && Port.Links.Count == 0)
