@@ -9,6 +9,8 @@ public sealed class NodeManipulationStepDefinitions
 	private readonly IPage User;
 	private readonly HomePage HomePage;
 	private readonly Dictionary<string, (float X, float Y)> _originalNodePositions = new();
+	private readonly List<string> _consoleErrors = new();
+	private readonly List<string> _consoleWarnings = new();
 
 	public NodeManipulationStepDefinitions(Hooks.Hooks hooks, HomePage homePage)
 	{
@@ -17,6 +19,7 @@ public sealed class NodeManipulationStepDefinitions
 	}
 
 	[Given("I open the {string} method in the {string} class")]
+	[When("I open the {string} method in the {string} class")]
 	public async Task GivenIOpenTheMethodInTheClass(string method, string className)
 	{
 		await HomePage.OpenProjectExplorerProjectTab();
@@ -142,5 +145,64 @@ public sealed class NodeManipulationStepDefinitions
 		// A more robust check would inspect the DOM for the SVG connection line
 		await Task.Delay(100);
 		Console.WriteLine($"Connection verification: {sourceNode}.{sourcePort} -> {targetNode}.{targetPort}");
+	}
+
+	[When("I check for console errors")]
+	public void WhenICheckForConsoleErrors()
+	{
+		// Clear previous errors
+		_consoleErrors.Clear();
+		_consoleWarnings.Clear();
+		
+		// Set up console monitoring
+		User.Console += (_, msg) =>
+		{
+			var msgType = msg.Type;
+			var text = msg.Text;
+			
+			Console.WriteLine($"[BROWSER {msgType.ToUpper()}] {text}");
+			
+			if (msgType == "error")
+			{
+				_consoleErrors.Add(text);
+			}
+			else if (msgType == "warning")
+			{
+				_consoleWarnings.Add(text);
+			}
+		};
+		
+		User.PageError += (_, error) =>
+		{
+			Console.WriteLine($"[PAGE ERROR] {error}");
+			_consoleErrors.Add(error);
+		};
+	}
+
+	[Then("There should be no console errors")]
+	public void ThenThereShouldBeNoConsoleErrors()
+	{
+		if (_consoleErrors.Count > 0)
+		{
+			var errorList = string.Join("\n  - ", _consoleErrors);
+			throw new Exception($"Found {_consoleErrors.Count} console error(s):\n  - {errorList}");
+		}
+		
+		Console.WriteLine("✓ No console errors detected");
+	}
+
+	[Then("The graph canvas should be visible")]
+	public async Task ThenTheGraphCanvasShouldBeVisible()
+	{
+		var canvas = HomePage.GetGraphCanvas();
+		var isVisible = await canvas.IsVisibleAsync();
+		
+		if (!isVisible)
+		{
+			await HomePage.TakeScreenshot("/tmp/graph-canvas-not-visible.png");
+			throw new Exception("Graph canvas is not visible");
+		}
+		
+		Console.WriteLine("✓ Graph canvas is visible");
 	}
 }

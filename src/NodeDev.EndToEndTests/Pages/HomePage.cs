@@ -135,6 +135,11 @@ public class HomePage
 
 	// Graph Node and Connection Methods
 
+	public ILocator GetGraphCanvas()
+	{
+		return _user.Locator("[data-test-id='graph-canvas']");
+	}
+
 	public ILocator GetGraphNode(string nodeName)
 	{
 		return _user.Locator($"[data-test-id='graph-node'][data-test-node-name='{nodeName}']");

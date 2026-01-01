@@ -13,6 +13,7 @@ This document describes the E2E testing capabilities for NodeDev, specifically f
 3. **Check position changes** - Validate `Current position`, `Position after drag`, and `Movement delta` in logs
 4. **Verify connection operations** - Look for `Connecting ports:` messages with port coordinates
 5. **Ensure no steps were skipped** - Look for `-> skipped because of previous errors` which indicates failures
+6. **Monitor browser console errors** - Tests now capture and report console errors during test execution
 
 ### Example of Proper Test Log Validation
 
@@ -30,6 +31,31 @@ When I connect the 'Entry' 'Exec' output to the 'Return' 'Exec' input
 -> skipped because of previous errors
   Skipped CreateConnectionBetweenEntryAndReturnNodes [0 s]
 ```
+
+## .NET 10 Upgrade Findings
+
+### Changes Required for .NET 10 Compatibility
+
+The upgrade to .NET 10 required the following changes:
+- Updated all project files from `net9.0` to `net10.0`
+- Changed `MudDialogInstance` to `IMudDialogInstance` in all dialog components (MudBlazor API change)
+- Updated test dependencies and Playwright browser version
+
+### Known Issues After Upgrade
+
+1. **SignalR Connection Errors**: After test completion, Blazor SignalR shows connection errors when the server shuts down. These are expected and don't affect test validity.
+   - Error: `Connection disconnected with error 'Error: WebSocket closed with status code: 1006'`
+   - These occur AFTER tests complete and can be ignored
+
+2. **Browser Console Monitoring**: New test scenario added to detect frontend errors during method opening. The test passes, confirming no errors occur during normal UI operations.
+
+### Test Coverage for .NET 10
+
+- ✅ All existing tests pass on .NET 10
+- ✅ Node movement and dragging works correctly
+- ✅ Connection creation between ports works correctly  
+- ✅ Method opening in UI works without console errors
+- ✅ Graph canvas renders properly after method opening
 
 ## Overview
 

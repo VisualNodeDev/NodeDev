@@ -105,7 +105,7 @@ namespace NodeDev.EndToEndTests.Features
         
         private static global::Reqnroll.Formatters.RuntimeSupport.FeatureLevelCucumberMessages InitializeCucumberMessages()
         {
-            return new global::Reqnroll.Formatters.RuntimeSupport.FeatureLevelCucumberMessages("Features/NodeManipulation.feature.ndjson", 6);
+            return new global::Reqnroll.Formatters.RuntimeSupport.FeatureLevelCucumberMessages("Features/NodeManipulation.feature.ndjson", 7);
         }
         
         [global::NUnit.Framework.TestAttribute()]
@@ -274,6 +274,45 @@ this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
 #line 35
  await testRunner.ThenAsync("I take a screenshot named \'reconnected\'", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [global::NUnit.Framework.TestAttribute()]
+        [global::NUnit.Framework.DescriptionAttribute("Open method and check for browser errors")]
+        public async global::System.Threading.Tasks.Task OpenMethodAndCheckForBrowserErrors()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
+            string pickleIndex = "4";
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Open method and check for browser errors", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            string[] tagsOfRule = ((string[])(null));
+            global::Reqnroll.RuleInfo ruleInfo = null;
+#line 37
+this.ScenarioInitialize(scenarioInfo, ruleInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                await testRunner.SkipScenarioAsync();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 38
+ await testRunner.GivenAsync("I load the default project", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+#line hidden
+#line 39
+ await testRunner.WhenAsync("I check for console errors", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 40
+ await testRunner.AndAsync("I open the \'Main\' method in the \'Program\' class", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 41
+ await testRunner.ThenAsync("There should be no console errors", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 42
+ await testRunner.AndAsync("The graph canvas should be visible", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
