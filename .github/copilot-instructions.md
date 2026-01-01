@@ -34,4 +34,4 @@ The main UI consists of:
 ## Documentation
 Detailed topic-specific documentation is maintained in the `docs/` folder:
 
-- `docs/e2e-testing.md` - End-to-end testing patterns, node interaction, and screenshot validation
+- `docs/e2e-testing.md` - End-to-end testing patterns, node interaction, connection testing, and screenshot validation
