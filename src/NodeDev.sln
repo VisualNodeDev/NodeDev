@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.5.33516.290
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11312.210 d18.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.Blazor.Server", "NodeDev.Blazor.Server\NodeDev.Blazor.Server.csproj", "{A73FFB19-1791-4E6E-829C-A6B85E1BD8F2}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -19,6 +19,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		..\.github\workflows\dotnet.yml = ..\.github\workflows\dotnet.yml
 		..\.github\workflows\release.yml = ..\.github\workflows\release.yml
+		..\.github\workflows\workflow-build.yml = ..\.github\workflows\workflow-build.yml
+		..\.github\workflows\workflow-e2e-tests.yml = ..\.github\workflows\workflow-e2e-tests.yml
+		..\.github\workflows\workflow-tests.yml = ..\.github\workflows\workflow-tests.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NodeDev.EndToEndTests", "NodeDev.EndToEndTests\NodeDev.EndToEndTests.csproj", "{DFA6D765-BFC3-407F-9330-B92B89310DCA}"
