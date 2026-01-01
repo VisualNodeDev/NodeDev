@@ -1,6 +1,9 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
 
@@ -82,5 +85,48 @@ public class New : NormalFlowNode
 			var arguments = Inputs.Skip(1).Select(x => info.LocalVariables[x]).ToArray();
 			return Expression.Assign(info.LocalVariables[Outputs[1]], Expression.New(constructor, arguments));
 		}
+	}
+
+	internal override StatementSyntax GenerateRoslynStatement(Dictionary<Connection, Graph.NodePathChunks>? subChunks, GenerationContext context)
+	{
+		if (subChunks != null)
+			throw new Exception("New node should not have subchunks");
+
+		var outputVarName = context.GetVariableName(Outputs[1]);
+		if (outputVarName == null)
+			throw new Exception("Output variable not found for New node");
+
+		ExpressionSyntax newExpression;
+
+		if (Outputs[1].Type.IsArray)
+		{
+			// Array instantiation: new Type[length]
+			var elementType = RoslynHelpers.GetTypeSyntax(Outputs[1].Type.ArrayInnerType);
+			var lengthVar = SF.IdentifierName(context.GetVariableName(Inputs[1])!);
+			
+			newExpression = SF.ArrayCreationExpression(
+				SF.ArrayType(elementType)
+					.WithRankSpecifiers(
+						SF.SingletonList(
+							SF.ArrayRankSpecifier(
+								SF.SingletonSeparatedList<ExpressionSyntax>(lengthVar)))));
+		}
+		else
+		{
+			// Object instantiation: new Type(args)
+			var typeSyntax = RoslynHelpers.GetTypeSyntax(Outputs[1].Type);
+			var args = Inputs.Skip(1).Select(input => 
+				SF.Argument(SF.IdentifierName(context.GetVariableName(input)!))).ToArray();
+			
+			newExpression = SF.ObjectCreationExpression(typeSyntax)
+				.WithArgumentList(SF.ArgumentList(SF.SeparatedList(args)));
+		}
+
+		// Generate outputVar = new ...;
+		return SF.ExpressionStatement(
+			SF.AssignmentExpression(
+				Microsoft.CodeAnalysis.CSharp.SyntaxKind.SimpleAssignmentExpression,
+				SF.IdentifierName(outputVarName),
+				newExpression));
 	}
 }

@@ -1,6 +1,10 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes.Debug;
 
@@ -23,5 +27,24 @@ public class WriteLine : NormalFlowNode
 			throw new Exception("Unable to find Console.WriteLine method");
 
 		return Expression.Call(null, method, Expression.Convert(info.LocalVariables[Inputs[1]], typeof(object)));
+	}
+
+	internal override StatementSyntax GenerateRoslynStatement(Dictionary<Connection, Graph.NodePathChunks>? subChunks, GenerationContext context)
+	{
+		if (subChunks != null)
+			throw new Exception("WriteLine node should not have subchunks");
+
+		var value = SF.IdentifierName(context.GetVariableName(Inputs[1])!);
+		
+		// Generate Console.WriteLine(value)
+		var memberAccess = SF.MemberAccessExpression(
+			SyntaxKind.SimpleMemberAccessExpression,
+			SF.IdentifierName("Console"),
+			SF.IdentifierName("WriteLine"));
+		
+		var invocation = SF.InvocationExpression(memberAccess)
+			.WithArgumentList(SF.ArgumentList(SF.SingletonSeparatedList(SF.Argument(value))));
+		
+		return SF.ExpressionStatement(invocation);
 	}
 }

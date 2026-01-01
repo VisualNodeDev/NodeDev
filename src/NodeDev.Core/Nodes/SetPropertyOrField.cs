@@ -1,7 +1,11 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static NodeDev.Core.Nodes.GetPropertyOrField;
 
 namespace NodeDev.Core.Nodes;
@@ -72,5 +76,48 @@ public class SetPropertyOrField : NormalFlowNode
 		var assignOutput = Expression.Assign(info.LocalVariables[Outputs[1]], assign); // "output = (field = value)". This allows returning one expression for both assignations
 
 		return assignOutput;
+	}
+
+	internal override StatementSyntax GenerateRoslynStatement(Dictionary<Connection, Graph.NodePathChunks>? subChunks, GenerationContext context)
+	{
+		if (TargetMember == null)
+			throw new Exception($"Target member is not set in SetPropertyOrField {Name}");
+
+		// Build the member access expression
+		ExpressionSyntax memberAccess;
+		if (TargetMember.IsStatic)
+		{
+			// Static: ClassName.MemberName
+			var typeSyntax = RoslynHelpers.GetTypeSyntax(TargetMember.DeclaringType);
+			memberAccess = SF.MemberAccessExpression(
+				SyntaxKind.SimpleMemberAccessExpression,
+				typeSyntax,
+				SF.IdentifierName(TargetMember.Name));
+		}
+		else
+		{
+			// Instance: target.MemberName
+			var targetVar = SF.IdentifierName(context.GetVariableName(Inputs[0])!);
+			memberAccess = SF.MemberAccessExpression(
+				SyntaxKind.SimpleMemberAccessExpression,
+				targetVar,
+				SF.IdentifierName(TargetMember.Name));
+		}
+
+		var valueVar = SF.IdentifierName(context.GetVariableName(Inputs[^1])!);
+		var outputVar = SF.IdentifierName(context.GetVariableName(Outputs[1])!);
+
+		// Generate: output = (member = value)
+		var innerAssignment = SF.AssignmentExpression(
+			SyntaxKind.SimpleAssignmentExpression,
+			memberAccess,
+			valueVar);
+
+		var outerAssignment = SF.AssignmentExpression(
+			SyntaxKind.SimpleAssignmentExpression,
+			outputVar,
+			SF.ParenthesizedExpression(innerAssignment));
+
+		return SF.ExpressionStatement(outerAssignment);
 	}
 }

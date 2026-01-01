@@ -1,9 +1,13 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
 
@@ -101,6 +105,32 @@ public class GetPropertyOrField : NoFlowNode
 			var property = type.GetProperty(TargetMember.Name, binding | BindingFlags.GetProperty) ?? throw new Exception($"Unable to find property: {TargetMember.Name}");
 
 			info.LocalVariables[Outputs[0]] = Expression.Property(TargetMember.IsStatic ? null : info.LocalVariables[Inputs[0]], property);
+		}
+	}
+
+	internal override ExpressionSyntax GenerateRoslynExpression(GenerationContext context)
+	{
+		if (TargetMember == null)
+			throw new InvalidOperationException("Target member is not set");
+
+		// Build the member access expression
+		if (TargetMember.IsStatic)
+		{
+			// Static: ClassName.MemberName
+			var typeSyntax = RoslynHelpers.GetTypeSyntax(TargetMember.DeclaringType);
+			return SF.MemberAccessExpression(
+				SyntaxKind.SimpleMemberAccessExpression,
+				typeSyntax,
+				SF.IdentifierName(TargetMember.Name));
+		}
+		else
+		{
+			// Instance: target.MemberName
+			var targetVar = SF.IdentifierName(context.GetVariableName(Inputs[0])!);
+			return SF.MemberAccessExpression(
+				SyntaxKind.SimpleMemberAccessExpression,
+				targetVar,
+				SF.IdentifierName(TargetMember.Name));
 		}
 	}
 }
