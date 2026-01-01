@@ -508,6 +508,7 @@ public class HomePage
 
 	public async Task RenameClass(string oldName, string newName)
 	{
+		await OpenProjectExplorerProjectTab(); // Make sure we're on Project tab
 		await ClickClass(oldName);
 		// Right-click or use rename button
 		var renameButton = _user.Locator("[data-test-id='rename-class']");
@@ -526,6 +527,7 @@ public class HomePage
 
 	public async Task DeleteClass(string className)
 	{
+		await OpenProjectExplorerProjectTab(); // Make sure we're on Project tab
 		await ClickClass(className);
 		var deleteButton = _user.Locator("[data-test-id='delete-class']");
 		if (await deleteButton.CountAsync() == 0)
@@ -622,22 +624,36 @@ public class HomePage
 
 	public async Task AddMethodParameter(string paramName, string paramType)
 	{
+		// First check if we need to open the edit menu
 		var addParamButton = _user.Locator("[data-test-id='add-parameter']");
+		if (await addParamButton.CountAsync() == 0)
+		{
+			// Try to open edit menu by clicking the edit button for the currently opened method
+			// The method should already be open/selected
+			var editButton = _user.Locator("[data-test-id='classExplorer'] [data-test-id='Method'] .mud-icon-button").First;
+			if (await editButton.CountAsync() > 0)
+			{
+				await editButton.ClickAsync();
+				await Task.Delay(200);
+			}
+			else
+			{
+				throw new NotImplementedException($"Cannot find edit button to access parameter menu. This feature may not be implemented yet.");
+			}
+		}
+		
+		// Now try to find the add parameter button
 		if (await addParamButton.CountAsync() > 0)
 		{
 			await addParamButton.ClickAsync();
-			var nameInput = _user.Locator("[data-test-id='param-name-input']");
-			await nameInput.FillAsync(paramName);
-			var typeInput = _user.Locator("[data-test-id='param-type-input']");
-			await typeInput.FillAsync(paramType);
-			var confirmButton = _user.Locator("[data-test-id='confirm-add-param']");
-			await confirmButton.ClickAsync();
+			// The actual implementation in EditMethodMenu just adds a parameter directly
+			// No dialog is opened, so we don't need to fill in name/type
+			await Task.Delay(200);
 		}
 		else
 		{
 			throw new NotImplementedException($"Add parameter UI element not found - [data-test-id='add-parameter']. This feature may not be implemented yet.");
 		}
-		await Task.Delay(200);
 	}
 
 	public async Task ChangeReturnType(string returnType)
