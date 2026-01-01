@@ -24,3 +24,12 @@ Scenario: Create connection between Entry and Return nodes
 	And I take a screenshot named 'nodes-separated'
 	When I connect the 'Entry' 'Exec' output to the 'Return' 'Exec' input
 	Then I take a screenshot named 'after-connection'
+
+Scenario: Disconnect and reconnect nodes
+	Given I load the default project
+	And I open the 'Main' method in the 'Program' class
+	When I take a screenshot named 'initial-connection'
+	And I move the 'Return' node away from 'Entry' node
+	Then I take a screenshot named 'after-move'
+	When I connect the 'Entry' 'Exec' output to the 'Return' 'Exec' input
+	Then I take a screenshot named 'reconnected'

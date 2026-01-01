@@ -2,6 +2,35 @@
 
 This document describes the E2E testing capabilities for NodeDev, specifically focused on testing node manipulation and connections in the visual programming interface.
 
+## ⚠️ CRITICAL: Always Validate Test Logs
+
+**IMPORTANT**: When running E2E tests, you MUST always check the test output logs to ensure tests actually ran correctly. 
+
+### How to Validate Tests Properly
+
+1. **Check for "No matching step definition" warnings** - These indicate step definitions are missing
+2. **Verify step execution** - Look for `-> done:` messages showing each step executed
+3. **Check position changes** - Validate `Current position`, `Position after drag`, and `Movement delta` in logs
+4. **Verify connection operations** - Look for `Connecting ports:` messages with port coordinates
+5. **Ensure no steps were skipped** - Look for `-> skipped because of previous errors` which indicates failures
+
+### Example of Proper Test Log Validation
+
+```
+✅ CORRECT - Test actually ran:
+Current position of Return: (370, 168)
+Position after drag: (670, 168)
+Movement delta: (300, 0)
+Connecting ports: Entry.Exec -> Return.Exec
+-> done: NodeManipulationStepDefinitions.WhenIConnectTheOutputToTheInput("Entry", "Exec", "Return", "Exec") (1.2s)
+  Passed CreateConnectionBetweenEntryAndReturnNodes [5 s]
+
+❌ INCORRECT - Test was skipped:
+When I connect the 'Entry' 'Exec' output to the 'Return' 'Exec' input
+-> skipped because of previous errors
+  Skipped CreateConnectionBetweenEntryAndReturnNodes [0 s]
+```
+
 ## Overview
 
 NodeDev uses Playwright with Reqnroll (successor to SpecFlow) for end-to-end testing. Tests automate browser interactions to verify the entire application stack from UI to backend.
@@ -63,7 +92,44 @@ Ports are identified using:
 
 ### Connection Testing Approach
 
+### Connection Testing Approach
+
 Connections are created using the same drag-and-drop mechanism as node movement:
+1. Locate the source port (output)
+2. Locate the target port (input)
+3. Perform mouse drag from source to target
+4. Verify connection was established
+
+### Example Connection Test
+
+```gherkin
+Scenario: Create connection between Entry and Return nodes
+    Given I load the default project
+    And I open the 'Main' method in the 'Program' class
+    When I move the 'Return' node away from 'Entry' node
+    And I take a screenshot named 'nodes-separated'
+    When I connect the 'Entry' 'Exec' output to the 'Return' 'Exec' input
+    Then I take a screenshot named 'after-connection'
+```
+
+### Validating Connection Tests
+
+**ALWAYS check test logs** for connection operations:
+
+```
+✅ Connection succeeded - Look for these in logs:
+Connecting ports: Entry.Exec -> Return.Exec
+Port positions: (422.4375, 231.01562) -> (671, 231.01562)
+-> done: NodeManipulationStepDefinitions.WhenIConnectTheOutputToTheInput(...) (1.2s)
+
+✅ Movement succeeded - Look for these in logs:
+Current position of Return: (370, 168)
+Position after drag: (670, 168)
+Movement delta: (300, 0)
+-> done: NodeManipulationStepDefinitions.WhenIMoveTheNodeAwayFromNode(...) (1.3s)
+```
+
+Without these log entries, the test may have been skipped or failed silently.
 1. Locate the source port (output)
 2. Locate the target port (input)
 3. Perform mouse drag from source to target

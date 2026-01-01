@@ -112,6 +112,7 @@ public sealed class NodeManipulationStepDefinitions
 		await WhenIDragTheNodeByPixelsToTheRightAndPixelsDown(nodeName, 300, 0);
 	}
 
+	[When("I take a screenshot named {string}")]
 	[Then("I take a screenshot named {string}")]
 	public async Task ThenITakeAScreenshotNamed(string name)
 	{
