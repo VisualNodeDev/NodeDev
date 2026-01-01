@@ -35,12 +35,10 @@ public class NodeClassTypeCreator
 
 	public void CreateProjectClassesAndAssembly()
 	{
-		// For .NET 10: Use AssemblyBuilder for now because FastExpressionCompiler v5.3.0  
-		// has compatibility issues with PersistedAssemblyBuilder
-		// This means assembly saving to disk won't work until FastExpressionCompiler is updated
-		// TODO: Monitor https://github.com/dadhi/FastExpressionCompiler for .NET 10 support
+		// .NET 10: Use PersistedAssemblyBuilder for saving assemblies to disk
 		var assemblyName = new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_'));
-		Assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndCollect);
+		var persisted = new PersistedAssemblyBuilder(assemblyName, typeof(object).Assembly);
+		Assembly = persisted;
 
 		// The module name is usually the same as the assembly name.
 		var mb = Assembly.DefineDynamicModule(Assembly.GetName().Name!);
