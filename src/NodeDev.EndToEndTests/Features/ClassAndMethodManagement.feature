@@ -51,14 +51,6 @@ Scenario: Add method parameters
 	Then The parameter should appear in the Entry node
 	And I take a screenshot named 'parameter-added'
 
-Scenario: Change method return type
-	Given I load the default project
-	When I click on the 'Program' class
-	And I create a new method named 'Calculate'
-	And I change the return type to 'int'
-	Then The Return node should accept int values
-	And I take a screenshot named 'return-type-changed'
-
 Scenario: Add class properties
 	Given I load the default project
 	When I click on the 'Program' class

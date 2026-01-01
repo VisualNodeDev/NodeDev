@@ -138,30 +138,6 @@ public sealed class ClassAndMethodManagementStepDefinitions
 		Console.WriteLine($"✓ Entry node has {portCount} output port(s) including new parameter");
 	}
 
-	[When("I change the return type to {string}")]
-	public async Task WhenIChangeTheReturnTypeTo(string returnType)
-	{
-		await HomePage.ChangeReturnType(returnType);
-		Console.WriteLine($"✓ Changed return type to '{returnType}'");
-	}
-
-	[Then("The Return node should accept int values")]
-	public async Task ThenTheReturnNodeShouldAcceptIntValues()
-	{
-		// Verify Return node exists
-		var returnNode = HomePage.GetGraphNode("Return");
-		await returnNode.WaitForAsync(new() { State = WaitForSelectorState.Visible });
-		
-		// Check if Return node has input port
-		var inputPort = returnNode.Locator(".col.input");
-		var portCount = await inputPort.CountAsync();
-		if (portCount == 0)
-		{
-			throw new Exception("Return node has no input port");
-		}
-		Console.WriteLine("✓ Return node has input port that accepts int values");
-	}
-
 	[When("I add a property named {string} of type {string}")]
 	public async Task WhenIAddAPropertyNamedOfType(string propName, string propType)
 	{

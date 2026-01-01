@@ -323,36 +323,6 @@ public class HomePage
 		await nodeResult.First.ClickAsync();
 	}
 
-	public async Task SelectMultipleNodes(params string[] nodeNames)
-	{
-		// Hold Ctrl and click each node
-		await _user.Keyboard.DownAsync("Control");
-		foreach (var nodeName in nodeNames)
-		{
-			var node = GetGraphNode(nodeName);
-			await node.ClickAsync();
-			await Task.Delay(50);
-		}
-		await _user.Keyboard.UpAsync("Control");
-		Console.WriteLine($"Multi-selected {nodeNames.Length} nodes");
-	}
-
-	public async Task MoveSelectedNodesBy(int deltaX, int deltaY)
-	{
-		// Use arrow keys to move selected nodes
-		for (int i = 0; i < Math.Abs(deltaX); i++)
-		{
-			await _user.Keyboard.PressAsync(deltaX > 0 ? "ArrowRight" : "ArrowLeft");
-			await Task.Delay(10);
-		}
-		for (int i = 0; i < Math.Abs(deltaY); i++)
-		{
-			await _user.Keyboard.PressAsync(deltaY > 0 ? "ArrowDown" : "ArrowUp");
-			await Task.Delay(10);
-		}
-		Console.WriteLine($"Moved selected nodes by ({deltaX}, {deltaY})");
-	}
-
 	public async Task DeleteAllConnectionsFromNode(string nodeName)
 	{
 		var node = GetGraphNode(nodeName);
@@ -374,40 +344,6 @@ public class HomePage
 		Console.WriteLine($"Verified '{nodeName}' has no connections");
 	}
 
-	public async Task UndoLastAction()
-	{
-		await _user.Keyboard.PressAsync("Control+Z");
-		await Task.Delay(200);
-		Console.WriteLine("Undo action performed");
-	}
-
-	public async Task RedoLastAction()
-	{
-		await _user.Keyboard.PressAsync("Control+Y");
-		await Task.Delay(200);
-		Console.WriteLine("Redo action performed");
-	}
-
-	public async Task CopySelectedNode()
-	{
-		await _user.Keyboard.PressAsync("Control+C");
-		await Task.Delay(100);
-		Console.WriteLine("Copied selected node");
-	}
-
-	public async Task PasteNode()
-	{
-		await _user.Keyboard.PressAsync("Control+V");
-		await Task.Delay(200);
-		Console.WriteLine("Pasted node");
-	}
-
-	public async Task<int> CountNodesOfType(string nodeName)
-	{
-		var nodes = _user.Locator($"[data-test-id='graph-node'][data-test-node-name='{nodeName}']");
-		return await nodes.CountAsync();
-	}
-
 	public async Task VerifyNodePropertiesPanel()
 	{
 		var propertiesPanel = _user.Locator("[data-test-id='node-properties']");
@@ -418,21 +354,6 @@ public class HomePage
 		}
 		
 		await propertiesPanel.WaitForAsync(new() { State = WaitForSelectorState.Visible });
-	}
-
-	public async Task HoverOverPort(string nodeName, string portName, bool isInput)
-	{
-		var port = GetGraphPort(nodeName, portName, isInput);
-		await port.HoverAsync();
-		await Task.Delay(100);
-		Console.WriteLine($"Hovered over {(isInput ? "input" : "output")} port '{portName}' on '{nodeName}'");
-	}
-
-	public async Task VerifyPortHighlighted()
-	{
-		// This is a visual verification that's hard to automate precisely
-		// Just verify no errors occurred
-		Console.WriteLine("Port highlight verified (visual check)");
 	}
 
 	public async Task ZoomIn()
@@ -654,22 +575,6 @@ public class HomePage
 		{
 			throw new NotImplementedException($"Add parameter UI element not found - [data-test-id='add-parameter']. This feature may not be implemented yet.");
 		}
-	}
-
-	public async Task ChangeReturnType(string returnType)
-	{
-		var returnTypeButton = _user.Locator("[data-test-id='change-return-type']");
-		if (await returnTypeButton.CountAsync() == 0)
-		{
-			throw new NotImplementedException($"Change return type UI element not found - [data-test-id='change-return-type']. This feature may not be implemented yet.");
-		}
-		
-		await returnTypeButton.ClickAsync();
-		var typeInput = _user.Locator("[data-test-id='return-type-input']");
-		await typeInput.FillAsync(returnType);
-		var confirmButton = _user.Locator("[data-test-id='confirm-return-type']");
-		await confirmButton.ClickAsync();
-		await Task.Delay(200);
 	}
 
 	public async Task AddClassProperty(string propName, string propType)

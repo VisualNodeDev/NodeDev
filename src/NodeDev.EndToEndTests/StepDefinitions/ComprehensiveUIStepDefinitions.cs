@@ -143,18 +143,6 @@ public sealed class ComprehensiveUIStepDefinitions
 		Console.WriteLine("✓ Connection removed");
 	}
 
-	[When("I connect a generic type port")]
-	public async Task WhenIConnectAGenericTypePort()
-	{
-		Console.WriteLine("⚠️  Connecting generic type port - needs implementation");
-	}
-
-	[Then("The port color should change to reflect the type")]
-	public async Task ThenThePortColorShouldChangeToReflectTheType()
-	{
-		Console.WriteLine("⚠️  Port color verification - needs implementation");
-	}
-
 	[When("I go back to class explorer")]
 	public async Task WhenIGoBackToClassExplorer()
 	{

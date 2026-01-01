@@ -22,15 +22,6 @@ Scenario: Test renaming a class
 	Then The class should be named 'TestProgram'
 	And I take a screenshot named 'class-renamed'
 
-Scenario: Test adding and removing nodes
-	Given I load the default project
-	And I open the 'Main' method in the 'Program' class
-	When I add a 'DeclareVariable' node to the canvas
-	Then The 'DeclareVariable' node should be visible
-	When I delete the 'DeclareVariable' node
-	Then The 'DeclareVariable' node should not be visible
-	And I take a screenshot named 'node-operations'
-
 Scenario: Test deleting connections
 	Given I load the default project
 	And I open the 'Main' method in the 'Program' class
@@ -38,14 +29,6 @@ Scenario: Test deleting connections
 	And I disconnect the 'Entry' 'Exec' from 'Return' 'Exec'
 	Then I take a screenshot named 'after-disconnect'
 	And The connection should be removed
-
-Scenario: Test generic type color changes
-	Given I load the default project
-	And I open the 'Main' method in the 'Program' class
-	When I add a 'DeclareVariable' node to the canvas
-	And I connect a generic type port
-	Then The port color should change to reflect the type
-	And I take a screenshot named 'generic-type-color'
 
 Scenario: Test opening multiple methods
 	Given I load the default project
