@@ -254,6 +254,41 @@ public class HomePage
 		await Task.Delay(200); // Wait for connection to be established
 	}
 
+	public async Task DeleteConnection(string sourceNodeName, string sourcePortName, string targetNodeName, string targetPortName)
+	{
+		Console.WriteLine($"Deleting connection: {sourceNodeName}.{sourcePortName} -> {targetNodeName}.{targetPortName}");
+		
+		// In Blazor.Diagrams, connections are rendered as SVG paths
+		// We need to click on the connection to select it, then press Delete
+		
+		// Get source and target port positions
+		var sourcePort = GetGraphPort(sourceNodeName, sourcePortName, isInput: false);
+		await sourcePort.WaitForVisible();
+		
+		var targetPort = GetGraphPort(targetNodeName, targetPortName, isInput: true);
+		await targetPort.WaitForVisible();
+		
+		var sourceBox = await sourcePort.BoundingBoxAsync();
+		var targetBox = await targetPort.BoundingBoxAsync();
+		
+		if (sourceBox == null || targetBox == null)
+			throw new Exception("Could not get bounding boxes for ports");
+		
+		// Calculate midpoint between source and target
+		var midX = (float)(sourceBox.X + sourceBox.Width / 2 + targetBox.X + targetBox.Width / 2) / 2;
+		var midY = (float)(sourceBox.Y + sourceBox.Height / 2 + targetBox.Y + targetBox.Height / 2) / 2;
+		
+		Console.WriteLine($"Clicking on connection midpoint: ({midX}, {midY})");
+		
+		// Click on the connection to select it
+		await _user.Mouse.ClickAsync(midX, midY);
+		await Task.Delay(100);
+		
+		// Press Delete key to remove the connection
+		await _user.Keyboard.PressAsync("Delete");
+		await Task.Delay(100);
+	}
+
 	public async Task TakeScreenshot(string fileName)
 	{
 		await _user.ScreenshotAsync(new() { Path = fileName });

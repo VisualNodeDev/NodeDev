@@ -205,4 +205,22 @@ public sealed class NodeManipulationStepDefinitions
 		
 		Console.WriteLine("✓ Graph canvas is visible");
 	}
+
+	[When("I delete the connection between {string} {string} output and {string} {string} input")]
+	public async Task WhenIDeleteTheConnectionBetweenOutputAndInput(string sourceNode, string sourcePort, string targetNode, string targetPort)
+	{
+		Console.WriteLine($"Deleting connection: {sourceNode}.{sourcePort} (output) -> {targetNode}.{targetPort} (input)");
+		
+		// Take screenshot before
+		await HomePage.TakeScreenshot($"/tmp/before-delete-connection-{Guid.NewGuid()}.png");
+		
+		// Delete the connection
+		await HomePage.DeleteConnection(sourceNode, sourcePort, targetNode, targetPort);
+		
+		// Take screenshot after
+		await HomePage.TakeScreenshot($"/tmp/after-delete-connection-{Guid.NewGuid()}.png");
+		
+		// Wait for UI to update
+		await Task.Delay(200);
+	}
 }
