@@ -760,16 +760,11 @@ public class HomePage
 
 	public async Task RunProject()
 	{
-		var runButton = _user.Locator("[data-test-id='run-project']");
-		if (await runButton.CountAsync() > 0)
-		{
-			await runButton.ClickAsync();
-		}
-		else
-		{
-			Console.WriteLine("Running project - UI action simulated");
-		}
-		await Task.Delay(500);
+		var runButton = _user.Locator("[data-test-id='runProject']");
+		await runButton.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+		await runButton.ClickAsync();
+		Console.WriteLine("✓ Clicked Run button");
+		await Task.Delay(500); // Wait for project to start
 	}
 
 	public async Task ChangeBuildConfiguration(string config)
@@ -866,5 +861,41 @@ public class HomePage
 			}
 		}
 		Console.WriteLine($"Opened/closed methods {iterations} times");
+	}
+
+	// Console Output Testing
+	
+	public async Task<bool> IsConsolePanelVisible()
+	{
+		var consolePanel = _user.Locator("[data-test-id='consolePanel']");
+		var count = await consolePanel.CountAsync();
+		return count > 0 && await consolePanel.IsVisibleAsync();
+	}
+
+	public async Task WaitForProjectToComplete(int timeoutMs = 10000)
+	{
+		// Wait for the console panel to appear and stabilize
+		var consolePanel = _user.Locator("[data-test-id='consolePanel']");
+		await consolePanel.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeoutMs });
+		
+		// Wait a bit for the process to complete
+		await Task.Delay(2000);
+		Console.WriteLine("✓ Project execution completed");
+	}
+
+	public async Task<string[]> GetConsoleOutput()
+	{
+		var consoleLines = _user.Locator("[data-test-id='consoleLine']");
+		var count = await consoleLines.CountAsync();
+		var lines = new List<string>();
+		for (int i = 0; i < count; i++)
+		{
+			var text = await consoleLines.Nth(i).TextContentAsync();
+			if (!string.IsNullOrWhiteSpace(text))
+			{
+				lines.Add(text);
+			}
+		}
+		return lines.ToArray();
 	}
 }

@@ -250,8 +250,10 @@ public class Project
 
 			return process.ExitCode;
 		}
-		catch (Exception)
+		catch (Exception ex)
 		{
+			// Log the exception before notifying completion
+			Console.WriteLine($"Exception in Project.Run: {ex}");
 			// Notify that execution has completed even on error
 			GraphExecutionChangedSubject.OnNext(false);
 			return null;
