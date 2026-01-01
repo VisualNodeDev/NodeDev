@@ -50,6 +50,13 @@ public class RoslynNodeClassCompiler
 		// Add references to required assemblies
 		var references = GetMetadataReferences();
 
+		// Determine output kind - if there's a Program.Main method, create an executable
+		var program = _project.Classes.FirstOrDefault(x => x.Name == "Program");
+		var mainMethod = program?.Methods.FirstOrDefault(x => x.Name == "Main" && x.IsStatic);
+		var outputKind = (program != null && mainMethod != null) 
+			? OutputKind.ConsoleApplication 
+			: OutputKind.DynamicallyLinkedLibrary;
+
 		// Create compilation
 		var assemblyName = $"NodeProject_{_project.Id.ToString().Replace('-', '_')}";
 		var compilation = CSharpCompilation.Create(
@@ -57,7 +64,7 @@ public class RoslynNodeClassCompiler
 			syntaxTrees: new[] { syntaxTree },
 			references: references,
 			options: new CSharpCompilationOptions(
-				OutputKind.DynamicallyLinkedLibrary,
+				outputKind,
 				optimizationLevel: _options.BuildExpressionOptions.RaiseNodeExecutedEvents 
 					? OptimizationLevel.Debug 
 					: OptimizationLevel.Release,

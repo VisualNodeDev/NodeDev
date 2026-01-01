@@ -115,18 +115,21 @@ public class Project
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
 		var result = compiler.Compile();
 
+		// Check if this is an executable (has a Program.Main method)
+		var program = Classes.FirstOrDefault(x => x.Name == "Program");
+		var main = program?.Methods.FirstOrDefault(x => x.Name == "Main" && x.IsStatic);
+		bool isExecutable = program != null && main != null;
+
 		Directory.CreateDirectory(buildOptions.OutputPath);
-		var filePath = Path.Combine(buildOptions.OutputPath, $"{name}.dll");
+		var fileExtension = isExecutable ? ".exe" : ".dll";
+		var filePath = Path.Combine(buildOptions.OutputPath, $"{name}{fileExtension}");
 		var pdbPath = Path.Combine(buildOptions.OutputPath, $"{name}.pdb");
 
 		// Write the PE and PDB to files
 		File.WriteAllBytes(filePath, result.PEBytes);
 		File.WriteAllBytes(pdbPath, result.PDBBytes);
 
-		// Check if this is an executable (has a Program.Main method)
-		var program = Classes.FirstOrDefault(x => x.Name == "Program");
-		var main = program?.Methods.FirstOrDefault(x => x.Name == "Main" && x.IsStatic);
-		if (program != null && main != null)
+		if (isExecutable)
 		{
 			// Create runtime config for executables
 			File.WriteAllText(Path.Combine(buildOptions.OutputPath, $"{name}.runtimeconfig.json"), @$"{{

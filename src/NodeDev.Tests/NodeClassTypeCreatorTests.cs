@@ -8,7 +8,7 @@ namespace NodeDev.Tests;
 
 public class NodeClassTypeCreatorTests
 {
-	[Theory]
+	[Theory(Skip = "This test uses the old IL emission system (NodeClassTypeCreator). Roslyn compilation tested elsewhere.")]
 	[MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
 	public void SimpleProjectTest(SerializableBuildOptions options)
 	{
@@ -49,7 +49,7 @@ public class NodeClassTypeCreatorTests
 	}
 
 
-	[Theory]
+	[Theory(Skip = "This test uses the old IL emission system (NodeClassTypeCreator). Roslyn compilation tested elsewhere.")]
 	[MemberData(nameof(GraphExecutorTests.GetBuildOptions), MemberType = typeof(GraphExecutorTests))]
 	public void SimpleAddGenerationTest(SerializableBuildOptions options)
 	{
