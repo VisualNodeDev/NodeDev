@@ -110,40 +110,26 @@ public class Project
 	public string Build(BuildOptions buildOptions)
 	{
 		var name = "project";
-		dynamic assemblyBuilder = BuildAndGetAssembly(buildOptions); // TODO remove 'dynamic' when the new System.Reflection.Emit is released in .NET
+		
+		// Use Roslyn compilation
+		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
+		var result = compiler.Compile();
 
 		Directory.CreateDirectory(buildOptions.OutputPath);
 		var filePath = Path.Combine(buildOptions.OutputPath, $"{name}.dll");
+		var pdbPath = Path.Combine(buildOptions.OutputPath, $"{name}.pdb");
 
+		// Write the PE and PDB to files
+		File.WriteAllBytes(filePath, result.PEBytes);
+		File.WriteAllBytes(pdbPath, result.PDBBytes);
+
+		// Check if this is an executable (has a Program.Main method)
 		var program = Classes.FirstOrDefault(x => x.Name == "Program");
 		var main = program?.Methods.FirstOrDefault(x => x.Name == "Main" && x.IsStatic);
-		if (program != null && main != null && NodeClassTypeCreator != null)
+		if (program != null && main != null)
 		{
-			// Find the entry point in the generate assembly
-			var entry = NodeClassTypeCreator.GeneratedTypes[program.ClassTypeBase].Methods[main];
-			if (entry != null)
-			{
-				var metadataBuilder = assemblyBuilder.GenerateMetadata(out BlobBuilder? ilStream, out BlobBuilder? fieldData);
-				var peHeaderBuilder = new PEHeaderBuilder(imageCharacteristics: Characteristics.ExecutableImage);
-
-				if(ilStream == null || fieldData == null)
-					throw new InvalidOperationException("Unable to generate assembly metadata. ilStream or fieldData was null. This shouldn't happen");
-
-				var peBuilder = new ManagedPEBuilder(
-								header: peHeaderBuilder,
-								metadataRootBuilder: new MetadataRootBuilder(metadataBuilder),
-								ilStream: ilStream,
-								mappedFieldData: fieldData,
-								entryPoint: MetadataTokens.MethodDefinitionHandle(entry.MetadataToken));
-
-				var peBlob = new BlobBuilder();
-				peBuilder.Serialize(peBlob);
-
-				using var fileStream = File.Create(filePath);
-
-				peBlob.WriteContentTo(fileStream);
-
-				File.WriteAllText(Path.Combine(buildOptions.OutputPath, $"{name}.runtimeconfig.json"), @$"{{
+			// Create runtime config for executables
+			File.WriteAllText(Path.Combine(buildOptions.OutputPath, $"{name}.runtimeconfig.json"), @$"{{
     ""runtimeOptions"": {{
         ""tfm"": ""net{Environment.Version.Major}.{Environment.Version.Minor}"",
         ""framework"": {{
@@ -152,12 +138,7 @@ public class Project
         }}
     }}
 }}");
-			}
-			else
-				throw new Exception("Unable to find entry point of Main method, this shouldn't happen");
 		}
-		else // not an executable, just save the generated assembly (dll)
-			assemblyBuilder.Save(filePath);
 
 		return filePath;
 	}

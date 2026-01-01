@@ -140,7 +140,28 @@ public class RoslynCompilationTests
 
 		// Compile with Roslyn
 		var buildOptions = BuildOptions.Debug;
-		var assembly = project.BuildWithRoslyn(buildOptions);
+		
+		var compiler = new RoslynNodeClassCompiler(project, buildOptions);
+		RoslynNodeClassCompiler.CompilationResult result;
+		try
+		{
+			result = compiler.Compile();
+		}
+		catch (RoslynNodeClassCompiler.CompilationException ex)
+		{
+			// Print source code for debugging
+			Console.WriteLine("=== Generated Source Code (Compilation Failed) ===");
+			Console.WriteLine(ex.SourceCode);
+			Console.WriteLine("=== End of Source Code ===");
+			throw;
+		}
+		
+		// Print generated source code for debugging
+		Console.WriteLine("=== Generated Source Code ===");
+		Console.WriteLine(result.SourceCode);
+		Console.WriteLine("=== End of Source Code ===");
+
+		var assembly = result.Assembly;
 
 		// Verify
 		Assert.NotNull(assembly);

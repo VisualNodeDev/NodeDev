@@ -141,13 +141,14 @@ public class RoslynGraphBuilder
 				ResolveInputConnection(input);
 			}
 
+			// Get auxiliary statements generated during input resolution (like inline variable declarations)
+			// These need to be added BEFORE the main statement
+			statements.AddRange(_context.GetAndClearAuxiliaryStatements());
+
 			try
 			{
 				// Generate the statement for this node
 				var statement = chunk.Input.Parent.GenerateRoslynStatement(chunk.SubChunk, _context);
-				
-				// Add any auxiliary statements first
-				statements.AddRange(_context.GetAndClearAuxiliaryStatements());
 				
 				// Add the main statement
 				statements.Add(statement);
@@ -291,7 +292,7 @@ public class RoslynGraphBuilder
 		}
 		catch (Exception ex) when (ex is not BuildError)
 		{
-			throw new BuildError(ex.Message, node, ex);
+			throw new BuildError($"Failed to generate inline expression for node type {node.GetType().Name}: {ex.Message}", node, ex);
 		}
 	}
 
