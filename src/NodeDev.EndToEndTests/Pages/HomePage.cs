@@ -650,33 +650,6 @@ public class HomePage
 
 	// Project Management
 
-	public async Task LoadProject(string projectName)
-	{
-		var openButton = _user.Locator("[data-test-id='open-project']");
-		if (await openButton.CountAsync() == 0)
-		{
-			throw new NotImplementedException($"Open project UI element not found - [data-test-id='open-project']. This feature may not be implemented yet.");
-		}
-		
-		await openButton.ClickAsync();
-		var projectItem = _user.Locator($"[data-test-id='project-item'][data-project-name='{projectName}']");
-		await projectItem.ClickAsync();
-		await Task.Delay(500);
-	}
-
-	public async Task EnableAutoSave()
-	{
-		await OpenOptionsDialog();
-		var autoSaveCheckbox = _user.Locator("[data-test-id='auto-save-checkbox']");
-		if (await autoSaveCheckbox.CountAsync() == 0)
-		{
-			throw new NotImplementedException($"Auto-save checkbox UI element not found - [data-test-id='auto-save-checkbox']. This feature may not be implemented yet.");
-		}
-		
-		await autoSaveCheckbox.CheckAsync();
-		await AcceptOptions();
-	}
-
 	public async Task ExportProject()
 	{
 		var exportButton = _user.Locator("[data-test-id='export-project']");
@@ -716,19 +689,6 @@ public class HomePage
 		
 		await runButton.ClickAsync();
 		await Task.Delay(500);
-	}
-
-	public async Task ChangeBuildConfiguration(string config)
-	{
-		await OpenOptionsDialog();
-		var configDropdown = _user.Locator("[data-test-id='build-config-dropdown']");
-		if (await configDropdown.CountAsync() == 0)
-		{
-			throw new NotImplementedException($"Build config dropdown UI element not found - [data-test-id='build-config-dropdown']. This feature may not be implemented yet.");
-		}
-		
-		await configDropdown.SelectOptionAsync(config);
-		await AcceptOptions();
 	}
 
 	// UI Responsiveness

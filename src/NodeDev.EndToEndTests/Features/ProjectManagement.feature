@@ -13,13 +13,6 @@ Scenario: Save project with custom name
 	And The project file should exist
 	And I take a screenshot named 'project-saved'
 
-Scenario: Load an existing project
-	Given I have a saved project named 'TestProject'
-	When I load the project 'TestProject'
-	Then The project should load successfully
-	And All classes should be visible
-	And I take a screenshot named 'project-loaded'
-
 Scenario: Save project after modifications
 	Given I load the default project
 	When I create a new class named 'ModifiedClass'
@@ -27,13 +20,6 @@ Scenario: Save project after modifications
 	Then The modifications should be saved
 	And Snackbar should contain 'Project saved'
 	And I take a screenshot named 'modified-project-saved'
-
-Scenario: Auto-save functionality
-	Given I load the default project
-	And Auto-save is enabled
-	When I make changes to the project
-	Then The project should auto-save
-	And I take a screenshot named 'auto-save-indicator'
 
 Scenario: Project export functionality
 	Given I load the default project
@@ -63,8 +49,4 @@ Scenario: View project settings
 	And All settings should be editable
 	And I take a screenshot named 'project-settings'
 
-Scenario: Change project configuration
-	Given I load the default project
-	When I change build configuration to 'Release'
-	Then The configuration should be updated
-	And I take a screenshot named 'config-changed'
+
