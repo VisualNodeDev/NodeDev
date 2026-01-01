@@ -188,7 +188,7 @@ public sealed class ClassAndMethodManagementStepDefinitions
 		// Look for property items
 		var properties = classExplorer.Locator("[data-test-id='Property']");
 		var count = await properties.CountAsync();
-		Console.WriteLine($"✓ Class explorer shows {count} propert(y/ies)");
+		Console.WriteLine($"✓ Class explorer shows {count} properties");
 	}
 
 	[Then("All methods should be visible and not overlapping")]

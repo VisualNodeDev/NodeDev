@@ -292,7 +292,7 @@ public sealed class ProjectManagementStepDefinitions
 		// Verify settings dialog is closed (configuration saved)
 		await Task.Delay(300);
 		var optionsDialog = User.Locator("[data-test-id='optionsDialog'], .mud-dialog");
-		var dialogVisible = await optionsDialog.First.IsVisibleAsync().ConfigureAwait(false);
+		var dialogVisible = await optionsDialog.First.IsVisibleAsync();
 		if (dialogVisible)
 		{
 			Console.WriteLine("⚠️ Settings dialog still visible, configuration may not have been saved");
