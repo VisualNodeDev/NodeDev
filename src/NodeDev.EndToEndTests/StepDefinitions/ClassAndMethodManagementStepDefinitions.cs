@@ -49,27 +49,6 @@ public sealed class ClassAndMethodManagementStepDefinitions
 		Console.WriteLine($"✓ Verified class name '{expectedName}' in project explorer");
 	}
 
-	[When("I delete the {string} class")]
-	public async Task WhenIDeleteTheClass(string className)
-	{
-		await HomePage.DeleteClass(className);
-		Console.WriteLine($"✓ Deleted class '{className}'");
-	}
-
-	[Then("The {string} should not be in the project explorer")]
-	public async Task ThenTheShouldNotBeInTheProjectExplorer(string className)
-	{
-		// Wait for UI to update after deletion
-		await Task.Delay(1000);
-		
-		var exists = await HomePage.ClassExists(className);
-		if (exists)
-		{
-			throw new Exception($"Class '{className}' still exists in project explorer");
-		}
-		Console.WriteLine($"✓ Class '{className}' not in project explorer");
-	}
-
 	[When("I create a new method named {string}")]
 	public async Task WhenICreateANewMethodNamed(string methodName)
 	{
@@ -148,26 +127,6 @@ public sealed class ClassAndMethodManagementStepDefinitions
 			throw new Exception("Entry node has no output ports for parameters");
 		}
 		Console.WriteLine($"✓ Entry node has {portCount} output port(s) including new parameter");
-	}
-
-	[When("I add a property named {string} of type {string}")]
-	public async Task WhenIAddAPropertyNamedOfType(string propName, string propType)
-	{
-		await HomePage.AddClassProperty(propName, propType);
-		Console.WriteLine($"✓ Added property '{propName}' of type '{propType}'");
-	}
-
-	[Then("The property should appear in the class explorer")]
-	public async Task ThenThePropertyShouldAppearInTheClassExplorer()
-	{
-		// Check class explorer for properties section
-		var classExplorer = User.Locator("[data-test-id='classExplorer']");
-		await classExplorer.WaitForAsync(new() { State = WaitForSelectorState.Visible });
-		
-		// Look for property items
-		var properties = classExplorer.Locator("[data-test-id='Property']");
-		var count = await properties.CountAsync();
-		Console.WriteLine($"✓ Class explorer shows {count} properties");
 	}
 
 	[Then("All methods should be visible and not overlapping")]

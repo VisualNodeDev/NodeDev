@@ -482,32 +482,6 @@ public class HomePage
 		await Task.Delay(500); // Wait for rename to complete
 	}
 
-	public async Task DeleteClass(string className)
-	{
-		await OpenProjectExplorerProjectTab(); // Make sure we're on Project tab
-		await ClickClass(className);
-		
-		// Wait for delete button to appear after class selection
-		var deleteButton = _user.Locator("[data-test-id='delete-class']");
-		await deleteButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
-		
-		await deleteButton.ClickAsync();
-		
-		// Wait for confirmation dialog if it appears
-		var confirmButton = _user.Locator("[data-test-id='confirm-delete']");
-		try
-		{
-			await confirmButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 2000 });
-			await confirmButton.ClickAsync();
-		}
-		catch (TimeoutException)
-		{
-			// No confirmation dialog appeared, continue
-		}
-		
-		await Task.Delay(500); // Wait for deletion to complete
-	}
-
 	public async Task<bool> ClassExists(string className)
 	{
 		try
@@ -630,24 +604,6 @@ public class HomePage
 		}
 	}
 
-	public async Task AddClassProperty(string propName, string propType)
-	{
-		var addPropButton = _user.Locator("[data-test-id='add-property']");
-		if (await addPropButton.CountAsync() == 0)
-		{
-			throw new NotImplementedException($"Add property UI element not found - [data-test-id='add-property']. This feature may not be implemented yet.");
-		}
-		
-		await addPropButton.ClickAsync();
-		var nameInput = _user.Locator("[data-test-id='prop-name-input']");
-		await nameInput.FillAsync(propName);
-		var typeInput = _user.Locator("[data-test-id='prop-type-input']");
-		await typeInput.FillAsync(propType);
-		var confirmButton = _user.Locator("[data-test-id='confirm-add-prop']");
-		await confirmButton.ClickAsync();
-		await Task.Delay(200);
-	}
-
 	// Project Management
 
 	public async Task ExportProject()
@@ -753,11 +709,6 @@ public class HomePage
 		await CreateMethod(longName);
 	}
 
-	public async Task CreateClassWithSpecialCharacters(string name)
-	{
-		await CreateClass(name);
-	}
-
 	public async Task PerformRapidOperations(int count)
 	{
 		for (int i = 0; i < count; i++)
@@ -767,19 +718,6 @@ public class HomePage
 			await Task.Delay(50);
 		}
 		Console.WriteLine($"Performed {count} rapid operations");
-	}
-
-	public async Task OpenAndCloseMethodsRepeatedly(string[] methodNames, int iterations)
-	{
-		for (int i = 0; i < iterations; i++)
-		{
-			foreach (var methodName in methodNames)
-			{
-				await OpenMethod(methodName);
-				await Task.Delay(100);
-			}
-		}
-		Console.WriteLine($"Opened/closed methods {iterations} times");
 	}
 
 	// Console Output Testing

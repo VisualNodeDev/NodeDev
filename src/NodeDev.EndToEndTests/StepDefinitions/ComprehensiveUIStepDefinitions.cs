@@ -197,38 +197,6 @@ public sealed class ComprehensiveUIStepDefinitions
 		}
 	}
 
-	[Then("No text should overlap or appear corrupted")]
-	public async Task ThenNoTextShouldOverlapOrAppearCorrupted()
-	{
-		// Take a screenshot for visual verification
-		await HomePage.TakeScreenshot("/tmp/text-overlap-check.png");
-		
-		// Check for common corruption patterns
-		var allText = User.Locator("[data-test-id='classExplorer']");
-		var content = await allText.TextContentAsync();
-		
-		// Check for null characters or unusual patterns
-		if (content?.Contains("\u0000") == true)
-		{
-			throw new Exception("Detected null characters in text - possible corruption");
-		}
-		
-		// Check for suspiciously short method names
-		var methodItems = User.Locator("[data-test-id='Method']");
-		var count = await methodItems.CountAsync();
-		
-		for (int i = 0; i < count; i++)
-		{
-			var methodText = await methodItems.Nth(i).TextContentAsync();
-			if (methodText?.Length < 3)
-			{
-				throw new Exception($"Method {i} has suspiciously short text: '{methodText}' - possible overlap or corruption");
-			}
-		}
-		
-		Console.WriteLine("✓ No text overlap or corruption detected");
-	}
-
 	[When("I click on a different class if available")]
 	public async Task WhenIClickOnADifferentClassIfAvailable()
 	{

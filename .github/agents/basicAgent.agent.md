@@ -60,6 +60,29 @@ The main UI consists of:
 - Components use `data-test-id` attributes for test targeting
 - Mouse event sequences critical for drag operations: MoveAsync → DownAsync → MoveAsync(with steps) → UpAsync
 
+### Installing Playwright for E2E Tests
+Before running E2E tests, Playwright browsers must be installed:
+
+1. Build the test project first:
+   ```bash
+   dotnet build src/NodeDev.EndToEndTests/NodeDev.EndToEndTests.csproj
+   ```
+
+2. Install Playwright Chromium browser:
+   ```bash
+   cd src/NodeDev.EndToEndTests
+   pwsh bin/Debug/net10.0/playwright.ps1 install chromium
+   ```
+
+3. The browser will be installed to `~/.cache/ms-playwright/`
+
+**Important**: Playwright must be reinstalled after:
+- Cleaning the build output
+- Updating the Playwright NuGet package
+- Running tests in a fresh CI environment
+
+Without Playwright installed, all E2E tests will fail with browser launch errors.
+
 ## Documentation
 Detailed topic-specific documentation is maintained in the `docs/` folder:
 

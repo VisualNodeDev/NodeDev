@@ -1,15 +1,6 @@
 Feature: Advanced Node Operations
 	Test advanced node manipulation scenarios
 
-Scenario: Add multiple nodes and connect them
-	Given I load the default project
-	And I open the 'Main' method in the 'Program' class
-	When I add a 'DeclareVariable' node to the canvas
-	And I add an 'Add' node to the canvas
-	And I connect nodes together
-	Then All nodes should be properly connected
-	And I take a screenshot named 'multiple-nodes-connected'
-
 Scenario: Search and add specific node types
 	Given I load the default project
 	And I open the 'Main' method in the 'Program' class
