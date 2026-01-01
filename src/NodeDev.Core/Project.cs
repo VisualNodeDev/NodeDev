@@ -116,9 +116,7 @@ public class Project
 		var result = compiler.Compile();
 
 		// Check if this is an executable (has a Program.Main method)
-		var program = Classes.FirstOrDefault(x => x.Name == "Program");
-		var main = program?.Methods.FirstOrDefault(x => x.Name == "Main" && x.IsStatic);
-		bool isExecutable = program != null && main != null;
+		bool isExecutable = HasMainMethod();
 
 		Directory.CreateDirectory(buildOptions.OutputPath);
 		var fileExtension = isExecutable ? ".exe" : ".dll";
@@ -144,6 +142,16 @@ public class Project
 		}
 
 		return filePath;
+	}
+
+	/// <summary>
+	/// Checks if the project has a static Main method in a Program class (indicating an executable)
+	/// </summary>
+	internal bool HasMainMethod()
+	{
+		var program = Classes.FirstOrDefault(x => x.Name == "Program");
+		var mainMethod = program?.Methods.FirstOrDefault(x => x.Name == "Main" && x.IsStatic);
+		return program != null && mainMethod != null;
 	}
 
 	private static string GetNetCoreVersion()

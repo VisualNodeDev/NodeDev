@@ -51,9 +51,7 @@ public class RoslynNodeClassCompiler
 		var references = GetMetadataReferences();
 
 		// Determine output kind - if there's a Program.Main method, create an executable
-		var program = _project.Classes.FirstOrDefault(x => x.Name == "Program");
-		var mainMethod = program?.Methods.FirstOrDefault(x => x.Name == "Main" && x.IsStatic);
-		var outputKind = (program != null && mainMethod != null) 
+		var outputKind = _project.HasMainMethod() 
 			? OutputKind.ConsoleApplication 
 			: OutputKind.DynamicallyLinkedLibrary;
 
