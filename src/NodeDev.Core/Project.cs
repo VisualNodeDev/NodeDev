@@ -119,45 +119,21 @@ public class Project
 		var main = program?.Methods.FirstOrDefault(x => x.Name == "Main" && x.IsStatic);
 		if (program != null && main != null && NodeClassTypeCreator != null)
 		{
-			// Find the entry point in the generate assembly
-			var entry = NodeClassTypeCreator.GeneratedTypes[program.ClassTypeBase].Methods[main];
-			if (entry != null)
-			{
-				var metadataBuilder = assemblyBuilder.GenerateMetadata(out BlobBuilder? ilStream, out BlobBuilder? fieldData);
-				var peHeaderBuilder = new PEHeaderBuilder(imageCharacteristics: Characteristics.ExecutableImage);
-
-				if(ilStream == null || fieldData == null)
-					throw new InvalidOperationException("Unable to generate assembly metadata. ilStream or fieldData was null. This shouldn't happen");
-
-				var peBuilder = new ManagedPEBuilder(
-								header: peHeaderBuilder,
-								metadataRootBuilder: new MetadataRootBuilder(metadataBuilder),
-								ilStream: ilStream,
-								mappedFieldData: fieldData,
-								entryPoint: MetadataTokens.MethodDefinitionHandle(entry.MetadataToken));
-
-				var peBlob = new BlobBuilder();
-				peBuilder.Serialize(peBlob);
-
-				using var fileStream = File.Create(filePath);
-
-				peBlob.WriteContentTo(fileStream);
-
-				File.WriteAllText(Path.Combine(buildOptions.OutputPath, $"{name}.runtimeconfig.json"), @$"{{
-    ""runtimeOptions"": {{
-        ""tfm"": ""net{Environment.Version.Major}.{Environment.Version.Minor}"",
-        ""framework"": {{
-            ""name"": ""Microsoft.NETCore.App"",
-            ""version"": ""{GetNetCoreVersion()}""
-        }}
-    }}
-}}");
-			}
-			else
-				throw new Exception("Unable to find entry point of Main method, this shouldn't happen");
+			// .NET 10: GenerateMetadata only exists on PersistedAssemblyBuilder
+			// Since we're using regular AssemblyBuilder due to FastExpressionCompiler compatibility,
+			// we can't generate executables
+			throw new NotSupportedException(
+				"Executable generation is temporarily disabled in .NET 10 due to FastExpressionCompiler compatibility issues. " +
+				"This will be resolved when FastExpressionCompiler is updated for .NET 10 support.");
 		}
 		else // not an executable, just save the generated assembly (dll)
-			assemblyBuilder.Save(filePath);
+		{
+			// .NET 10: AssemblyBuilder doesn't support Save()
+			// We need to use PersistedAssemblyBuilder, but it's incompatible with FastExpressionCompiler v5.3.0
+			throw new NotSupportedException(
+				"Assembly saving is temporarily disabled in .NET 10 due to FastExpressionCompiler compatibility issues. " +
+				"This will be resolved when FastExpressionCompiler is updated for .NET 10 support.");
+		}
 
 		return filePath;
 	}

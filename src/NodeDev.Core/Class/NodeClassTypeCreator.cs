@@ -1,6 +1,7 @@
 ﻿using Dis2Msil;
 using FastExpressionCompiler;
 using NodeDev.Core.Types;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.Loader;
@@ -32,24 +33,14 @@ public class NodeClassTypeCreator
 		Options = buildOptions;
 	}
 
-	private static Assembly? TemporaryReflectionAssembly;
 	public void CreateProjectClassesAndAssembly()
 	{
-		// TODO Remove this when the new System.Reflection.Emit is available in .NET 10
-		if (TemporaryReflectionAssembly == null)
-		{
-			var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-			using var stream = assembly.GetManifestResourceStream("NodeDev.Core.Dependencies.System.Reflection.Emit.dll")!;
-			var bytes = new byte[stream.Length];
-			stream.ReadExactly(bytes);
-			TemporaryReflectionAssembly = System.Reflection.Assembly.Load(bytes);
-		}
-		var persisted = Activator.CreateInstance(TemporaryReflectionAssembly.ExportedTypes.First(), new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly, null)!;
-		Assembly = (AssemblyBuilder)persisted;
-
-		// https://learn.microsoft.com/en-us/dotnet/api/system.reflection.emit.assemblybuilder?view=net-7.0
-		//var persisted = new PersistedAssemblyBuilder(new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_')), typeof(object).Assembly);
-		//Assembly = persisted;
+		// For .NET 10: Use AssemblyBuilder for now because FastExpressionCompiler v5.3.0  
+		// has compatibility issues with PersistedAssemblyBuilder
+		// This means assembly saving to disk won't work until FastExpressionCompiler is updated
+		// TODO: Monitor https://github.com/dadhi/FastExpressionCompiler for .NET 10 support
+		var assemblyName = new AssemblyName("NodeProject_" + this.Project.Id.ToString().Replace('-', '_'));
+		Assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndCollect);
 
 		// The module name is usually the same as the assembly name.
 		var mb = Assembly.DefineDynamicModule(Assembly.GetName().Name!);
