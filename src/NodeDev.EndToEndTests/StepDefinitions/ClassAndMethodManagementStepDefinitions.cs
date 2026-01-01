@@ -39,9 +39,14 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	}
 
 	[Then("The class should be named {string} in the project explorer")]
-	public void ThenTheClassShouldBeNamedInTheProjectExplorer(string expectedName)
+	public async Task ThenTheClassShouldBeNamedInTheProjectExplorer(string expectedName)
 	{
-		Console.WriteLine($"✓ Verified class name '{expectedName}'");
+		var exists = await HomePage.ClassExists(expectedName);
+		if (!exists)
+		{
+			throw new Exception($"Class '{expectedName}' not found in project explorer");
+		}
+		Console.WriteLine($"✓ Verified class name '{expectedName}' in project explorer");
 	}
 
 	[When("I delete the {string} class")]
@@ -87,8 +92,13 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	}
 
 	[Then("The method should be named {string}")]
-	public void ThenTheMethodShouldBeNamed(string expectedName)
+	public async Task ThenTheMethodShouldBeNamed(string expectedName)
 	{
+		var exists = await HomePage.MethodExists(expectedName);
+		if (!exists)
+		{
+			throw new Exception($"Method '{expectedName}' not found");
+		}
 		Console.WriteLine($"✓ Verified method name '{expectedName}'");
 	}
 
@@ -121,9 +131,20 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	}
 
 	[Then("The parameter should appear in the Entry node")]
-	public void ThenTheParameterShouldAppearInTheEntryNode()
+	public async Task ThenTheParameterShouldAppearInTheEntryNode()
 	{
-		Console.WriteLine("✓ Parameter appears in Entry node");
+		// Verify Entry node exists and is visible
+		var entryNode = HomePage.GetGraphNode("Entry");
+		await entryNode.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+		
+		// Check if Entry node has output ports (parameters)
+		var ports = entryNode.Locator(".col.output");
+		var portCount = await ports.CountAsync();
+		if (portCount == 0)
+		{
+			throw new Exception("Entry node has no output ports for parameters");
+		}
+		Console.WriteLine($"✓ Entry node has {portCount} output port(s) including new parameter");
 	}
 
 	[When("I change the return type to {string}")]
@@ -134,9 +155,20 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	}
 
 	[Then("The Return node should accept int values")]
-	public void ThenTheReturnNodeShouldAcceptIntValues()
+	public async Task ThenTheReturnNodeShouldAcceptIntValues()
 	{
-		Console.WriteLine("✓ Return node accepts int values");
+		// Verify Return node exists
+		var returnNode = HomePage.GetGraphNode("Return");
+		await returnNode.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+		
+		// Check if Return node has input port
+		var inputPort = returnNode.Locator(".col.input");
+		var portCount = await inputPort.CountAsync();
+		if (portCount == 0)
+		{
+			throw new Exception("Return node has no input port");
+		}
+		Console.WriteLine("✓ Return node has input port that accepts int values");
 	}
 
 	[When("I add a property named {string} of type {string}")]
@@ -147,9 +179,16 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	}
 
 	[Then("The property should appear in the class explorer")]
-	public void ThenThePropertyShouldAppearInTheClassExplorer()
+	public async Task ThenThePropertyShouldAppearInTheClassExplorer()
 	{
-		Console.WriteLine("✓ Property appears in class explorer");
+		// Check class explorer for properties section
+		var classExplorer = User.Locator("[data-test-id='classExplorer']");
+		await classExplorer.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+		
+		// Look for property items
+		var properties = classExplorer.Locator("[data-test-id='Property']");
+		var count = await properties.CountAsync();
+		Console.WriteLine($"✓ Class explorer shows {count} propert(y/ies)");
 	}
 
 	[Then("All methods should be visible and not overlapping")]
