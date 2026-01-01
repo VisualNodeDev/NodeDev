@@ -117,7 +117,7 @@ public class Hooks
 	}
 
 
-	[AfterScenario] // -> Notice how we're doing these steps after each scenario
+	[AfterFeature] // -> Stop server after all scenarios in the feature are complete
 	public static async Task StopServer()
 	{
 		App.Kill(true);

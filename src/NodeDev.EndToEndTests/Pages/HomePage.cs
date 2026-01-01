@@ -154,29 +154,40 @@ public class HomePage
 		}
 	}
 
-	public async Task DragNodeTo(string nodeName, int x, int y)
+	public async Task DragNodeTo(string nodeName, float targetX, float targetY)
 	{
 		var node = GetGraphNode(nodeName);
 		await node.WaitForVisible();
 
-		// Get the current position of the node
+		// Get the current bounding box of the node
 		var box = await node.BoundingBoxAsync();
 		if (box == null)
 			throw new Exception($"Could not get bounding box for node '{nodeName}'");
 
-		// Calculate center of node
-		var startX = box.X + box.Width / 2;
-		var startY = box.Y + box.Height / 2;
+		// Calculate center of node as the starting point
+		var sourceX = (float)(box.X + box.Width / 2);
+		var sourceY = (float)(box.Y + box.Height / 2);
 
-		// Perform drag operation
-		await _user.Mouse.MoveAsync((float)startX, (float)startY);
-		await Task.Delay(100); // Wait before starting drag
+		Console.WriteLine($"Dragging {nodeName} from ({sourceX}, {sourceY}) to ({targetX}, {targetY})");
+
+		// Perform manual drag with proper event sequence for Blazor.Diagrams
+		// 1. Move mouse to starting position
+		await _user.Mouse.MoveAsync(sourceX, sourceY);
+		await Task.Delay(50);
+		
+		// 2. Press mouse button down (pointerdown event)
 		await _user.Mouse.DownAsync();
-		await Task.Delay(100); // Small delay to ensure drag starts
-		await _user.Mouse.MoveAsync(x, y, new() { Steps = 20 }); // More steps for smoother drag
-		await Task.Delay(100);
+		await Task.Delay(50);
+		
+		// 3. Move mouse to target position with multiple steps (pointermove events)
+		await _user.Mouse.MoveAsync(targetX, targetY, new() { Steps = 30 });
+		await Task.Delay(50);
+		
+		// 4. Release mouse button (pointerup event)
 		await _user.Mouse.UpAsync();
-		await Task.Delay(200); // Wait for position to update
+		
+		// Wait for the UI to update after drag
+		await Task.Delay(300);
 	}
 
 	public async Task<(float X, float Y)> GetNodePosition(string nodeName)

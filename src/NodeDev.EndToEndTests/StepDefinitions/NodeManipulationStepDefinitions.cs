@@ -29,28 +29,46 @@ public sealed class NodeManipulationStepDefinitions
 	public async Task WhenIDragTheNodeByPixelsToTheRightAndPixelsDown(string nodeName, int deltaX, int deltaY)
 	{
 		// Take screenshot before
-		await HomePage.TakeScreenshot($"/tmp/before-drag-{nodeName}-{Guid.NewGuid()}.png");
+		var beforeGuid = Guid.NewGuid();
+		await HomePage.TakeScreenshot($"/tmp/before-drag-{nodeName}-{beforeGuid}.png");
 		
-		// Store original position
-		_originalNodePositions[nodeName] = await HomePage.GetNodePosition(nodeName);
+		// Get current position (before this drag operation)
+		var currentPos = await HomePage.GetNodePosition(nodeName);
 		
+		// Store as original if not already stored (for first drag in scenario)
+		if (!_originalNodePositions.ContainsKey(nodeName))
+		{
+			_originalNodePositions[nodeName] = currentPos;
+		}
+		
+		Console.WriteLine($"Current position of {nodeName}: ({currentPos.X}, {currentPos.Y})");
 		Console.WriteLine($"Original position of {nodeName}: ({_originalNodePositions[nodeName].X}, {_originalNodePositions[nodeName].Y})");
 		
-		// Calculate new position
-		var newX = (int)(_originalNodePositions[nodeName].X + deltaX);
-		var newY = (int)(_originalNodePositions[nodeName].Y + deltaY);
+		// Calculate new absolute position (current position + delta)
+		// We need to drag to the center of where the node should end up
+		var currentBox = await HomePage.GetGraphNode(nodeName).BoundingBoxAsync();
+		if (currentBox == null)
+			throw new Exception($"Could not get bounding box for {nodeName}");
+			
+		var targetX = currentBox.X + currentBox.Width / 2 + deltaX;
+		var targetY = currentBox.Y + currentBox.Height / 2 + deltaY;
 		
-		Console.WriteLine($"Target position: ({newX}, {newY})");
+		Console.WriteLine($"Target position (page coords): ({targetX}, {targetY})");
 		
-		// Drag the node
-		await HomePage.DragNodeTo(nodeName, newX, newY);
+		// Drag the node to the target position
+		await HomePage.DragNodeTo(nodeName, (float)targetX, (float)targetY);
 		
 		// Take screenshot after for validation
-		await HomePage.TakeScreenshot($"/tmp/after-drag-{nodeName}-{Guid.NewGuid()}.png");
+		var afterGuid = Guid.NewGuid();
+		await HomePage.TakeScreenshot($"/tmp/after-drag-{nodeName}-{afterGuid}.png");
 		
 		// Check position immediately after drag
 		var posAfterDrag = await HomePage.GetNodePosition(nodeName);
 		Console.WriteLine($"Position after drag: ({posAfterDrag.X}, {posAfterDrag.Y})");
+		Console.WriteLine($"Movement delta: ({posAfterDrag.X - currentPos.X}, {posAfterDrag.Y - currentPos.Y})");
+		
+		// Update the stored position for the next validation
+		_originalNodePositions[nodeName] = currentPos; // Store the position BEFORE this drag as "original" for validation
 	}
 
 	[Then("The {string} node should have moved from its original position")]
