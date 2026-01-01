@@ -1,7 +1,11 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
+using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes.Flow;
 
@@ -49,6 +53,42 @@ public class ReturnNode : FlowNode
 			return Expression.Return(info.ReturnLabel, info.LocalVariables[Inputs[^1]]);
 		else
 			return Expression.Return(info.ReturnLabel);
+	}
+
+	internal override StatementSyntax GenerateRoslynStatement(Dictionary<Connection, Graph.NodePathChunks>? subChunks, GenerationContext context)
+	{
+		// Assign any out parameters before returning
+		var inputs = CollectionsMarshal.AsSpan(Inputs)[1..^(HasReturnValue ? 1 : 0)];
+		var statements = new List<StatementSyntax>();
+
+		foreach (var input in inputs)
+		{
+			var varName = context.GetVariableName(input);
+			if (varName == null)
+				throw new Exception($"Variable not found for out parameter {input.Name}");
+
+			var assignment = SyntaxHelper.Assignment(
+				SyntaxHelper.Identifier(input.Name),
+				SyntaxHelper.Identifier(varName));
+			statements.Add(assignment);
+		}
+
+		// Add the return statement
+		if (HasReturnValue)
+		{
+			var returnVarName = context.GetVariableName(Inputs[^1]);
+			if (returnVarName == null)
+				throw new Exception("Return value variable not found");
+
+			statements.Add(ReturnStatement(SyntaxHelper.Identifier(returnVarName)));
+		}
+		else
+		{
+			statements.Add(ReturnStatement());
+		}
+
+		// If there are multiple statements, wrap in a block, otherwise return the single statement
+		return statements.Count == 1 ? statements[0] : Block(statements);
 	}
 
 	internal void Refresh()
