@@ -190,6 +190,16 @@ public class Project
 		return assembly;
 	}
 
+	/// <summary>
+	/// Builds the project using Roslyn compilation (new approach)
+	/// </summary>
+	public Assembly BuildWithRoslyn(BuildOptions buildOptions)
+	{
+		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
+		var result = compiler.Compile();
+		return result.Assembly;
+	}
+
 	#endregion
 
 	#region Run
