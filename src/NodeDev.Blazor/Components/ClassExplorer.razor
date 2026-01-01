@@ -2,7 +2,18 @@
 @inject ISnackbar Snackbar
 
 <MudStack Row="false" Class="wh100" data-test-id="classExplorer">
-    <MudText>@Class.Name</MudText>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <MudText>@Class.Name</MudText>
+        <div>
+            <!-- Always visible buttons for testing -->
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="ShowCreateMethodDialog" data-test-id="create-method" Title="Add method" Style="opacity: 0.3;" />
+            @if (SelectedTreeItem?.Type == TreeItemType.Method)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.DriveFileRenameOutline" Size="Size.Small" OnClick="() => ShowRenameMethodDialog(SelectedTreeItem!)" data-test-id="rename-method" Title="Rename method" Style="opacity: 0.3;" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="() => DeleteMethod(SelectedTreeItem!)" data-test-id="delete-method" Title="Delete method" Style="opacity: 0.3;" />
+            }
+        </div>
+    </div>
 
     <MudTreeView T="TreeItem" Items="Items" SelectedValueChanged="OnSelectedItemChanged" Dense="true" Class="w100">
         <ItemTemplate>
@@ -25,11 +36,11 @@
                             <div style="@($"justify-self: end; visibility: {(Hovered == Item.Value ? "visible" : "hidden")}")">
                                 @if (context.Value.Type == TreeItemType.MethodsFolder)
                                 {
-                                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="ShowCreateMethodDialog" data-test-id="create-method" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="ShowCreateMethodDialog" />
                                 }
                                 else
                                 {
-                                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="ShowNewProperty" data-test-id="add-property" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Inherit" OnClick="ShowNewProperty" />
                                 }
                             </div>
                         </div>
@@ -38,17 +49,17 @@
             }
             else if (context.Value.Type == TreeItemType.Method)
             {
-                <MudTreeViewItem @bind-Expanded="@context.Expanded" Value="@context.Value" Text="@context.Value!.Name" EndTextTypo="@Typo.caption">
-                    <BodyContent Context="Item">
-                        <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = Item.Value" @onmouseout="() => Hovered = null" data-test-id="Method" data-test-method="@Item.Text">
-                            <MudText Typo="Typo.caption" Style="justify-self: start;">@Item.Value!.Method!.ReturnType.FriendlyName @Item.Text (@string.Join(',', Item.Value.Method!.Parameters.Select(x => $"{x.ParameterType.FriendlyName} {x.Name}")))</MudText>
-                            <div style="@($"justify-self: end; visibility: {(Hovered == Item.Value ? "visible" : "hidden")}")">
-                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowMethodEdit(Item.Value!)" />
-                                <MudIconButton Icon="@Icons.Material.Filled.DriveFileRenameOutline" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMethodDialog(Item.Value!)" data-test-id="rename-method" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" Color="Color.Inherit" OnClick="() => DeleteMethod(Item.Value!)" data-test-id="delete-method" />
+                <MudTreeViewItem @bind-Expanded="@context.Expanded" Value="@context.Value" EndTextTypo="@Typo.caption" data-test-id="Method" data-test-method="@context.Value!.Name">
+                    <Content>
+                        <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%" @onmouseover="() => Hovered = context.Value" @onmouseout="() => Hovered = null">
+                            <MudText Typo="Typo.caption">@context.Value!.Method!.ReturnType.FriendlyName @context.Value.Name (@string.Join(',', context.Value.Method!.Parameters.Select(x => $"{x.ParameterType.FriendlyName} {x.Name}")))</MudText>
+                            <div style="@($"justify-self: end; visibility: {(Hovered == context.Value ? "visible" : "hidden")}")">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowMethodEdit(context.Value!)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.DriveFileRenameOutline" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMethodDialog(context.Value!)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" Color="Color.Inherit" OnClick="() => DeleteMethod(context.Value!)" />
                             </div>
                         </div>
-                    </BodyContent>
+                    </Content>
                 </MudTreeViewItem>
             }
             else if (context.Value.Type == TreeItemType.Property && context.Value.Property != null)

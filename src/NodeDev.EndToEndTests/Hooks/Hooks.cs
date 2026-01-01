@@ -97,6 +97,9 @@ public class Hooks
 			}
 		});
 
+		// Set default timeout to 5 seconds for faster test failures
+		context1.SetDefaultTimeout(5000);
+
 		//Initialize a page on the browser context.
 		User = await context1.NewPageAsync();
 

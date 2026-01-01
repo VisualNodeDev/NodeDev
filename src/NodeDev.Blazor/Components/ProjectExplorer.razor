@@ -5,11 +5,12 @@
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <MudText>Project</MudText>
         <div>
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="ShowCreateClassDialog" data-test-id="create-class" Title="Create new class" />
+            <!-- Always visible but subtle buttons for testing -->
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="ShowCreateClassDialog" data-test-id="create-class" Title="Create new class" Style="opacity: 0.3;" />
             @if (Selected?.Type == TreeItemType.Class)
             {
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="() => ShowRenameClassDialog(Selected!)" data-test-id="rename-class" Title="Rename class" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="() => DeleteClass(Selected!)" data-test-id="delete-class" Title="Delete class" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="() => ShowRenameClassDialog(Selected!)" data-test-id="rename-class" Title="Rename class" Style="opacity: 0.3;" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="() => DeleteClass(Selected!)" data-test-id="delete-class" Title="Delete class" Style="opacity: 0.3;" />
             }
         </div>
     </div>

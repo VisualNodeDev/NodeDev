@@ -20,6 +20,7 @@ public sealed class ComprehensiveUIStepDefinitions
 	public async Task WhenIClickOnTheClass(string className)
 	{
 		await HomePage.ClickClass(className);
+		await HomePage.OpenProjectExplorerClassTab(); // Switch to Class tab after clicking
 		await Task.Delay(200);
 		Console.WriteLine($"✓ Clicked on class '{className}'");
 	}
