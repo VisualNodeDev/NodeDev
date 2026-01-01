@@ -24,7 +24,7 @@ public class RealMemberInfo : IMemberInfo
 		{
 			var t = MemberInfo switch
 			{
-				FieldInfo field => field.FieldType,
+				FieldInfo f => f.FieldType,
 				PropertyInfo property => property.PropertyType,
 				_ => throw new Exception("Invalid member type")
 			};
@@ -37,7 +37,7 @@ public class RealMemberInfo : IMemberInfo
 
 	public bool IsStatic => MemberInfo switch
 	{
-		FieldInfo field => field.IsStatic,
+		FieldInfo f => f.IsStatic,
 		PropertyInfo property => property.GetMethod?.IsStatic ?? false,
 		_ => throw new Exception("Invalid member type")
 	};
