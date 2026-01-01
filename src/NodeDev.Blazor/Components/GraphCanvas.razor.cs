@@ -586,7 +586,11 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
         DisableConnectionUpdate = true;
         try
         {
-            Diagram.Links.Remove(Diagram.Links.First(x => (x.Source.Model as GraphPortModel)?.Connection == source && (x.Target.Model as GraphPortModel)?.Connection == destination));
+            var link = Diagram.Links.FirstOrDefault(x => (x.Source.Model as GraphPortModel)?.Connection == source && (x.Target.Model as GraphPortModel)?.Connection == destination);
+            if (link != null)
+            {
+                Diagram.Links.Remove(link);
+            }
         }
         finally
         {
