@@ -73,9 +73,6 @@ public class ConsoleOutputTests
 			var result = project.Run(BuildOptions.Debug);
 			output.WriteLine($"Project run completed with result: {result}");
 
-			// Wait a bit for any remaining async operations
-			Thread.Sleep(1000);
-
 			// Assert
 			Assert.True(executionStarted, "Execution should have started");
 			Assert.True(executionEnded, "Execution should have ended");

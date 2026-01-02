@@ -112,7 +112,8 @@ public class Project
 
 	public string Build(BuildOptions buildOptions)
 	{
-		var name = "project";
+		// Use unique name based on project ID to avoid conflicts when running tests in parallel
+		var name = $"project_{Id.ToString().Replace("-", "_")}";
 		
 		// Use Roslyn compilation
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
@@ -274,15 +275,25 @@ public class Project
 			
 			var process = System.Diagnostics.Process.Start(processStartInfo) ?? throw new Exception("Unable to start process");
 
+			// Use ManualResetEvents to track when async output handlers complete
+			var outputComplete = new System.Threading.ManualResetEvent(false);
+			var errorComplete = new System.Threading.ManualResetEvent(false);
+
 			// Notify that execution has started
 			GraphExecutionChangedSubject.OnNext(true);
 
 			// Capture output and error streams
+			// The null event signals end of stream
 			process.OutputDataReceived += (sender, e) =>
 			{
 				if (e.Data != null)
 				{
 					ConsoleOutputSubject.OnNext(e.Data + Environment.NewLine);
+				}
+				else
+				{
+					// End of stream
+					outputComplete.Set();
 				}
 			};
 
@@ -292,12 +303,21 @@ public class Project
 				{
 					ConsoleOutputSubject.OnNext(e.Data + Environment.NewLine);
 				}
+				else
+				{
+					// End of stream
+					errorComplete.Set();
+				}
 			};
 
 			process.BeginOutputReadLine();
 			process.BeginErrorReadLine();
 
 			process.WaitForExit();
+
+			// Wait for output streams to be fully consumed (with timeout)
+			outputComplete.WaitOne(TimeSpan.FromSeconds(5));
+			errorComplete.WaitOne(TimeSpan.FromSeconds(5));
 
 			// Notify that execution has completed
 			GraphExecutionChangedSubject.OnNext(false);
