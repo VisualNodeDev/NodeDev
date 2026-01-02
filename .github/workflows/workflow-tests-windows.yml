@@ -1,0 +1,27 @@
+name: .Run Unit Tests (Windows)
+
+on:
+    workflow_call:
+    
+jobs:
+  tests:
+    runs-on: windows-latest
+
+    steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: buildArtifact
+        path: ./src
+
+    - name: Restore packages for tests
+      working-directory: ./src/NodeDev.Tests
+      run: dotnet restore
+
+    - name: Test
+      working-directory: ./src/NodeDev.Tests
+      run: dotnet test --no-build --verbosity normal
