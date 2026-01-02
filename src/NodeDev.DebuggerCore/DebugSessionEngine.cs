@@ -55,18 +55,17 @@ public class DebugSessionEngine : IDisposable
         try
         {
             var shimPath = _dbgShimPath ?? DbgShimResolver.Resolve();
+            // NativeLibrary.Load throws on failure, so no need to check for IntPtr.Zero
             _dbgShimHandle = NativeLibrary.Load(shimPath);
-
-            if (_dbgShimHandle == IntPtr.Zero)
-            {
-                throw new DebugEngineException($"Failed to load dbgshim library from: {shimPath}");
-            }
-
             _dbgShim = new DbgShim(_dbgShimHandle);
         }
         catch (FileNotFoundException ex)
         {
             throw new DebugEngineException("DbgShim library not found. Debug support may not be installed.", ex);
+        }
+        catch (DllNotFoundException ex)
+        {
+            throw new DebugEngineException($"Failed to load dbgshim library: {ex.Message}", ex);
         }
         catch (Exception ex) when (ex is not DebugEngineException)
         {

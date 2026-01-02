@@ -34,5 +34,7 @@
 /src/NodeDev.Blazor.Server/AppOptions.json
 /src/NodeDev.ScriptRunner/bin
 /src/NodeDev.ScriptRunner/obj
+/src/NodeDev.DebuggerCore/bin
+/src/NodeDev.DebuggerCore/obj
 
 /src/NodeDev.EndToEndTests/Features/*.feature.cs

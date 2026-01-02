@@ -129,15 +129,22 @@ public static class DbgShimResolver
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                     RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    var fileInfo = new FileInfo(dotnetExe);
-                    if (fileInfo.LinkTarget != null)
+                    try
                     {
-                        var resolvedPath = Path.GetDirectoryName(Path.GetFullPath(
-                            Path.Combine(dotnetDir, fileInfo.LinkTarget)));
-                        if (resolvedPath != null && Directory.Exists(resolvedPath))
+                        var fileInfo = new FileInfo(dotnetExe);
+                        if (fileInfo.LinkTarget != null)
                         {
-                            return resolvedPath;
+                            var resolvedPath = Path.GetDirectoryName(Path.GetFullPath(
+                                Path.Combine(dotnetDir, fileInfo.LinkTarget)));
+                            if (resolvedPath != null && Directory.Exists(resolvedPath))
+                            {
+                                return resolvedPath;
+                            }
                         }
+                    }
+                    catch
+                    {
+                        // LinkTarget not supported or symlink resolution failed - fall through to default
                     }
                 }
 
