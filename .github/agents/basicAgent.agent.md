@@ -89,6 +89,7 @@ Detailed topic-specific documentation is maintained in the `docs/` folder:
 
 - `docs/e2e-testing.md` - End-to-end testing patterns, node interaction, connection testing, and screenshot validation
 - `docs/node-types-and-connections.md` - Comprehensive guide to node types, connection system, port identification, and testing strategies
+- `docs/script-runner.md` - ScriptRunner architecture, usage, and ICorDebug debugging infrastructure
 
 ## Debugging Infrastructure
 
