@@ -210,6 +210,13 @@ public class DebugSessionEngine : IDisposable
 
 		try
 		{
+			// Check if process is still running before attempting CLR enumeration
+			var process = System.Diagnostics.Process.GetProcessById(processId);
+			if (process.HasExited)
+			{
+				throw new DebugEngineException($"Cannot enumerate CLRs: Target process {processId} has already exited.");
+			}
+
 			var result = _dbgShim!.EnumerateCLRs(processId);
 			return result.Items.Select(item => item.Path).ToArray();
 		}

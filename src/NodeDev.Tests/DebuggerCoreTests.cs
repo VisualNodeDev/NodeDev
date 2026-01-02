@@ -1,6 +1,6 @@
-using ClrDebug;
 using NodeDev.Core;
 using NodeDev.Core.Debugger;
+using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Debug;
 using NodeDev.Core.Nodes.Flow;
 using System.Diagnostics;
@@ -461,10 +461,23 @@ public class DebuggerCoreTests
 		var project = Project.CreateNewDefaultProject(out var mainMethod);
 		var graph = mainMethod.Graph;
 
-		// Add a simple program that prints and waits before exiting
-		// This gives us time to attach the debugger
 		var writeLineNode = new WriteLine(graph);
 		graph.Manager.AddNode(writeLineNode);
+
+		// Get NodeDev.Core.Types.RealType for System.Threading.Thread
+		var threadType = project.TypeFactory.Get(typeof(System.Threading.Thread), null);
+		// Find the correct IMethodInfo for Sleep(int)
+		var sleepMethodInfo = threadType.GetMethods("Sleep")
+			.FirstOrDefault(m => m.GetParameters().Count() == 1 && m.GetParameters().First().ParameterType == project.TypeFactory.Get<int>());
+		if (sleepMethodInfo == null)
+			throw new InvalidOperationException("Could not find Thread.Sleep(int) method");
+
+		// Add a MethodCall node for Thread.Sleep(5000)
+		var sleepNode = new MethodCall(graph);
+		graph.Manager.AddNode(sleepNode);
+		sleepNode.SetMethodTarget(sleepMethodInfo);
+		// Inputs: [0]=Exec, [1]=millisecondsTimeout
+		sleepNode.Inputs[1].UpdateTextboxText("30000");
 
 		var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
 		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
@@ -472,7 +485,8 @@ public class DebuggerCoreTests
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], writeLineNode.Inputs[0]);
 		writeLineNode.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
 		writeLineNode.Inputs[1].UpdateTextboxText("\"Hello from NodeDev debugger test!\"");
-		graph.Manager.AddNewConnectionBetween(writeLineNode.Outputs[0], returnNode.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(writeLineNode.Outputs[0], sleepNode.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(sleepNode.Outputs[0], returnNode.Inputs[0]);
 
 		// Build the project
 		var dllPath = project.Build(BuildOptions.Debug);
@@ -512,7 +526,6 @@ public class DebuggerCoreTests
 		{
 			// Register for runtime startup to get notified when CLR is ready
 			var clrReadyEvent = new ManualResetEvent(false);
-			CorDebug? corDebugFromCallback = null;
 
 			var token = engine.RegisterForRuntimeStartup(launchResult.ProcessId, (pCorDebug, hr) =>
 			{
@@ -561,8 +574,6 @@ public class DebuggerCoreTests
 					var corDebug = engine.AttachToProcess(launchResult.ProcessId);
 					Assert.NotNull(corDebug);
 					_output.WriteLine("Successfully attached to process - ICorDebug obtained!");
-
-					// Initialize the debugging interface
 					corDebug.Initialize();
 					_output.WriteLine("ICorDebug initialized successfully!");
 
@@ -596,7 +607,7 @@ public class DebuggerCoreTests
 						debugProcess.Detach();
 						_output.WriteLine("Detached from process");
 					}
-					catch
+					catch(Exception ex) when (ex is not ClrDebug.DebugException)
 					{
 						_output.WriteLine("Process already terminated");
 					}

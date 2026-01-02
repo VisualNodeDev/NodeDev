@@ -135,6 +135,7 @@ public class RoslynNodeClassCompiler
 			{
 				SF.UsingDirective(SF.ParseName("System")),
 				SF.UsingDirective(SF.ParseName("System.Collections.Generic")),
+				SF.UsingDirective(SF.ParseName("System.Threading")),
 				SF.UsingDirective(SF.ParseName("System.Linq")),
 			}))
 			.WithMembers(SF.List(namespaceDeclarations));
@@ -217,6 +218,10 @@ public class RoslynNodeClassCompiler
 		// Add System.Collections
 		var collectionsAssembly = Assembly.Load("System.Collections");
 		references.Add(MetadataReference.CreateFromFile(collectionsAssembly.Location));
+
+		// Add System.Threading
+		var threadingAssembly = Assembly.Load("System.Threading");
+		references.Add(MetadataReference.CreateFromFile(threadingAssembly.Location));
 
 		return references;
 	}
