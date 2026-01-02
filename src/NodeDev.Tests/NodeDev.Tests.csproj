@@ -21,6 +21,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- Required for debugger tests - DbgShim must be available in NuGet cache -->
+    <PackageReference Include="Microsoft.Diagnostics.DbgShim" Version="9.0.652701" />
   </ItemGroup>
 
   <ItemGroup>

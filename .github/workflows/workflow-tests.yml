@@ -18,6 +18,10 @@ jobs:
         name: buildArtifact
         path: ./src
 
+    - name: Restore packages for tests
+      working-directory: ./src/NodeDev.Tests
+      run: dotnet restore
+
     - name: Test
       working-directory: ./src/NodeDev.Tests
       run: dotnet test --no-build --verbosity normal
