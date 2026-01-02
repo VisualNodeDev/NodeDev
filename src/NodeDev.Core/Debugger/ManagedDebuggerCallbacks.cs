@@ -21,19 +21,52 @@ public static class ManagedDebuggerCallbackFactory
 		// Subscribe to all events via OnAnyEvent
 		callback.OnAnyEvent += (sender, e) =>
 		{
-			var eventKind = e.Kind.ToString();
-			var description = GetEventDescription(e);
+			var eventKind = e.Kind;
 
-			// Log breakpoint hits to console as required
-			if (e.Kind == CorDebugManagedCallbackKind.Breakpoint)
+			// 1. Notify your engine/UI logic
+			var description = GetEventDescription(e);
+			if (eventKind == CorDebugManagedCallbackKind.Breakpoint)
 			{
-				Console.WriteLine("Breakpoint Hit");
+				Console.WriteLine(">>> BREAKPOINT HIT <<<");
 			}
 
-			engine.OnDebugCallback(new DebugCallbackEventArgs(eventKind, description));
+			engine.OnDebugCallback(new DebugCallbackEventArgs(eventKind.ToString(), description));
 
-			// Always continue execution (callbacks auto-continue by default in ClrDebug)
-			// e.Controller.Continue(false) is called automatically unless explicitly prevented
+			// 2. THE TRAFFIC COP LOGIC
+			// We must decide whether to Resume (Continue) or Pause (Wait for User).
+
+			switch (eventKind)
+			{
+				// --- EVENTS THAT SHOULD PAUSE ---
+				case CorDebugManagedCallbackKind.Breakpoint:
+				case CorDebugManagedCallbackKind.StepComplete:
+				case CorDebugManagedCallbackKind.Exception:
+				case CorDebugManagedCallbackKind.Exception2:
+				case CorDebugManagedCallbackKind.Break:
+					// Do NOT call Continue(). 
+					// The process remains suspended so the UI can highlight the node.
+					break;
+
+				// --- EVENTS THAT ARE TERMINAL ---
+				case CorDebugManagedCallbackKind.ExitProcess:
+					// Process is dead, cannot continue.
+					break;
+
+				// --- EVENTS THAT SHOULD AUTO-RESUME ---
+				default:
+					// LoadModule, CreateThread, LogMessage, etc. 
+					// These are just setup/noise. We must resume immediately.
+					try
+					{
+						// e.Controller is the ICorDebugController (Process or AppDomain)
+						e.Controller.Continue(false);
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine($"Failed to auto-continue: {ex.Message}");
+					}
+					break;
+			}
 		};
 
 		return callback;
