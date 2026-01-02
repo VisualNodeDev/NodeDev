@@ -22,14 +22,6 @@
     </ProjectReference>
   </ItemGroup>
 
-  <!-- Copy ScriptRunner to output directory after build -->
-  <Target Name="CopyScriptRunner" AfterTargets="Build">
-    <ItemGroup>
-      <ScriptRunnerFiles Include="..\NodeDev.ScriptRunner\bin\$(Configuration)\$(TargetFramework)\**\*.*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(ScriptRunnerFiles)" DestinationFolder="$(OutputPath)%(RecursiveDir)" />
-  </Target>
-
   <ItemGroup>
     <EmbeddedResource Include="Dependencies\System.Reflection.Emit.dll">
     </EmbeddedResource>
