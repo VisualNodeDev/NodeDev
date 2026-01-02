@@ -10,13 +10,6 @@ public class PlaywrightFixture : IAsyncLifetime
 
 	public async Task InitializeAsync()
 	{
-		// Install Playwright if needed
-		var exitCode = Microsoft.Playwright.Program.Main(new[] { "install", "chromium" });
-		if (exitCode != 0)
-		{
-			Console.WriteLine($"Warning: Playwright install returned code {exitCode}");
-		}
-
 		Playwright = await Microsoft.Playwright.Playwright.CreateAsync();
 		Browser = await Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
 		{
