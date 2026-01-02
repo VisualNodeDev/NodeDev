@@ -16,6 +16,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Reference to ScriptRunner to ensure it's built and available -->
+    <ProjectReference Include="..\NodeDev.ScriptRunner\NodeDev.ScriptRunner.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Dependencies\System.Reflection.Emit.dll">
     </EmbeddedResource>
   </ItemGroup>

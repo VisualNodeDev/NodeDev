@@ -15,6 +15,7 @@ description: Used for general purpose NodeDev development
 3) Disabling, removing, skipping, deleting, bypassing or converting to warnings ANY tests IS NOT ALLOWED and is not considered the right way of fixing a problematic test. The test must be functional and actually testing what it is intended to test.
 4) Document newly added content or concepts in this `.github/agents/basicAgent.agent.md` file or any related documentation file.
 5) When the user corrects major mistakes done during your development, document them in this file to ensure it is never done again.
+6) You must always install playwright BEFORE trying to run the tests. build the projects and install playwright. If you struggle (take multiple iterations to do it), document the steps you took in this file to make it easier next time.
 
 ## Programming style
 
@@ -34,6 +35,7 @@ NodeDev is a visual programming environment built with Blazor and Blazor.Diagram
 - **NodeDev.Blazor.MAUI**: MAUI-based desktop application wrapper
 - **NodeDev.Tests**: Unit tests for core functionality
 - **NodeDev.EndToEndTests**: Playwright-based E2E tests with Reqnroll (SpecFlow successor)
+- **NodeDev.ScriptRunner**: Console application that executes compiled user code as a separate process, serving as the target for the ICorDebug debugging infrastructure
 
 ### UI Structure
 The main UI consists of:
@@ -88,3 +90,35 @@ Detailed topic-specific documentation is maintained in the `docs/` folder:
 
 - `docs/e2e-testing.md` - End-to-end testing patterns, node interaction, connection testing, and screenshot validation
 - `docs/node-types-and-connections.md` - Comprehensive guide to node types, connection system, port identification, and testing strategies
+- `docs/script-runner.md` - ScriptRunner architecture, usage, and ICorDebug debugging infrastructure
+
+## Debugging Infrastructure
+
+### ScriptRunner
+NodeDev includes a separate console application called **ScriptRunner** that serves as the target process for debugging. This architecture is being developed to support "Hard Debugging" via the ICorDebug API (.NET's unmanaged debugging interface).
+
+**Architecture:**
+- **Host Process**: The Visual IDE (NodeDev.Blazor.Server or NodeDev.Blazor.MAUI)
+- **Target Process**: ScriptRunner - a separate console application that executes the user's compiled code
+
+**ScriptRunner Features:**
+- Accepts a DLL path as command-line argument
+- Loads assemblies using `Assembly.LoadFrom()`
+- Finds and invokes entry points:
+  - Static `Program.Main` method (in any namespace)
+  - Types implementing `IRunnable` interface (future extensibility)
+- Wraps execution in try/catch blocks to print exceptions to console
+- Proper exit code handling for CI/CD integration
+
+**Build System:**
+- ScriptRunner is automatically built with NodeDev.Core
+- MSBuild targets copy ScriptRunner to the output directory of dependent projects
+- The `Project.Run()` method automatically locates and launches ScriptRunner
+
+**Future: ICorDebug Integration**
+This infrastructure prepares NodeDev for implementing advanced debugging features:
+- Breakpoints in visual graphs
+- Step-through execution
+- Variable inspection at runtime
+- Exception handling and catching
+- Live debugging across process boundaries

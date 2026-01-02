@@ -199,19 +199,63 @@ public class Project
 
 	#region Run
 
+	/// <summary>
+	/// Locates the ScriptRunner executable in the build output directory.
+	/// ScriptRunner is a console application that serves as the target process for debugging.
+	/// </summary>
+	private static string FindScriptRunnerExecutable()
+	{
+		// Get the directory where NodeDev.Core assembly is located
+		string coreAssemblyLocation = Assembly.GetExecutingAssembly().Location;
+		string coreDirectory = Path.GetDirectoryName(coreAssemblyLocation) ?? throw new Exception("Unable to determine NodeDev.Core assembly directory");
+
+		// ScriptRunner should be in the same build output directory
+		string scriptRunnerDll = Path.Combine(coreDirectory, "NodeDev.ScriptRunner.dll");
+
+		if (File.Exists(scriptRunnerDll))
+		{
+			return scriptRunnerDll;
+		}
+
+		// If not found in the same directory, try looking in sibling directories (for development scenarios)
+		string? buildOutputRoot = Path.GetDirectoryName(coreDirectory);
+		if (buildOutputRoot != null)
+		{
+			string scriptRunnerPath = Path.Combine(buildOutputRoot, "NodeDev.ScriptRunner", "NodeDev.ScriptRunner.dll");
+			if (File.Exists(scriptRunnerPath))
+			{
+				return scriptRunnerPath;
+			}
+		}
+
+		throw new FileNotFoundException("ScriptRunner executable not found. Please ensure NodeDev.ScriptRunner is built and available.");
+	}
+
 	public object? Run(BuildOptions options, params object?[] inputs)
 	{
 		try
 		{
 			var assemblyPath = Build(options);
 
-			var arguments = Path.GetFileName(assemblyPath) + " " + string.Join(" ", inputs.Select(x => '"' + (x?.ToString() ?? "") + '"'));
+			// Find the ScriptRunner executable
+			string scriptRunnerPath = FindScriptRunnerExecutable();
+			
+			// Convert to absolute path to avoid confusion with working directory
+			string absoluteAssemblyPath = Path.GetFullPath(assemblyPath);
+			
+			// Build arguments: ScriptRunner.dll path-to-user-dll [user-args...]
+			var userArgsString = string.Join(" ", inputs.Select(x => '"' + (x?.ToString() ?? "") + '"'));
+			var arguments = $"\"{scriptRunnerPath}\" \"{absoluteAssemblyPath}\"";
+			if (!string.IsNullOrEmpty(userArgsString))
+			{
+				arguments += $" {userArgsString}";
+			}
 			
 			var processStartInfo = new System.Diagnostics.ProcessStartInfo()
 			{
 				FileName = "dotnet",
 				Arguments = arguments,
-				WorkingDirectory = Path.GetDirectoryName(assemblyPath),
+				WorkingDirectory = Path.GetDirectoryName(absoluteAssemblyPath),
 				RedirectStandardOutput = true,
 				RedirectStandardError = true,
 				UseShellExecute = false,
