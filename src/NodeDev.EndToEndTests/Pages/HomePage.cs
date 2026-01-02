@@ -6,9 +6,9 @@ public class HomePage
 {
 	private readonly IPage _user;
 
-	public HomePage(Hooks.Hooks hooks)
+	public HomePage(IPage page)
 	{
-		_user = hooks.User;
+		_user = page;
 	}
 
 	private ILocator SearchAppBar => _user.Locator("[data-test-id='appBar']");
