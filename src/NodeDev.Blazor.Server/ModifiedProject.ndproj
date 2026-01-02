@@ -1,5 +1,5 @@
 {
-  "Id": "d1ebbefa-4518-4752-9a8e-bde02576887f",
+  "Id": "6abe59da-0999-4e04-91a2-ae348edb5e9b",
   "NodeDevVersion": "1.0.1.0",
   "Classes": [
     {
@@ -17,19 +17,19 @@
             "Nodes": [
               {
                 "Type": "NodeDev.Core.Nodes.Flow.EntryNode",
-                "Id": "80282eef-9024-4d05-988f-1e69a2d0dd7c",
+                "Id": "f6131908-0ca7-4358-af48-da0f129d5979",
                 "Name": "Entry",
                 "Inputs": [],
                 "Outputs": [
                   {
-                    "Id": "4c7cb1fb-7673-4111-8f9c-88de994d4a63",
+                    "Id": "65c896f9-ceea-41d7-bd1d-3cc3822c35e5",
                     "Name": "Exec",
                     "SerializedType": {
                       "TypeFullName": "NodeDev.Core.Types.ExecType",
                       "SerializedTypeCustom": ""
                     },
                     "Connections": [
-                      "df7aa573-bf47-4d25-9ce0-714fb00ead1e"
+                      "4b5895c0-1145-43ea-8354-3306e4043c3f"
                     ],
                     "TextboxValue": null,
                     "Vertices": [],
@@ -40,25 +40,25 @@
               },
               {
                 "Type": "NodeDev.Core.Nodes.Flow.ReturnNode",
-                "Id": "fa993c4e-5b06-4cb3-9dd4-7013a51ab20e",
+                "Id": "9d54067d-4019-435b-840c-6b659928e24e",
                 "Name": "Return",
                 "Inputs": [
                   {
-                    "Id": "df7aa573-bf47-4d25-9ce0-714fb00ead1e",
+                    "Id": "4b5895c0-1145-43ea-8354-3306e4043c3f",
                     "Name": "Exec",
                     "SerializedType": {
                       "TypeFullName": "NodeDev.Core.Types.ExecType",
                       "SerializedTypeCustom": ""
                     },
                     "Connections": [
-                      "4c7cb1fb-7673-4111-8f9c-88de994d4a63"
+                      "65c896f9-ceea-41d7-bd1d-3cc3822c35e5"
                     ],
                     "TextboxValue": null,
                     "Vertices": [],
                     "LinkedExec": null
                   },
                   {
-                    "Id": "56760475-e977-4a68-a642-44950f243287",
+                    "Id": "1ba2ff03-4009-4e7f-8100-c09c4311648b",
                     "Name": "Return",
                     "SerializedType": {
                       "TypeFullName": "NodeDev.Core.Types.RealType",
@@ -79,9 +79,15 @@
         }
       ],
       "Properties": []
+    },
+    {
+      "Name": "ModifiedClass",
+      "Namespace": "MyApp",
+      "Methods": [],
+      "Properties": []
     }
   ],
   "Settings": {
-    "ProjectName": "EmptyProject"
+    "ProjectName": "ModifiedProject"
   }
 }
