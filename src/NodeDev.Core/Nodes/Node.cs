@@ -250,6 +250,31 @@ namespace NodeDev.Core.Nodes
 			return v;
 		}
 
+		public bool HasDecoration<T>() where T : INodeDecoration => Decorations.ContainsKey(typeof(T));
+
+		public void RemoveDecoration<T>() where T : INodeDecoration => Decorations.Remove(typeof(T));
+
+		/// <summary>
+		/// Gets whether this node has a breakpoint set.
+		/// Only non-inlinable nodes can have breakpoints.
+		/// </summary>
+		public bool HasBreakpoint => HasDecoration<NodeDecorations.BreakpointDecoration>();
+
+		/// <summary>
+		/// Toggles the breakpoint on this node.
+		/// Only works for non-inlinable nodes (nodes with exec connections).
+		/// </summary>
+		public void ToggleBreakpoint()
+		{
+			if (CanBeInlined)
+				return; // Cannot set breakpoints on inlinable nodes
+
+			if (HasBreakpoint)
+				RemoveDecoration<NodeDecorations.BreakpointDecoration>();
+			else
+				AddDecoration(NodeDecorations.BreakpointDecoration.Instance);
+		}
+
 		#endregion
 
 		#region Serialization

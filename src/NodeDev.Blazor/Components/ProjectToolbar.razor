@@ -17,12 +17,18 @@
 <MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
 <MudButton OnClick="Run" Class="ml-3">Run</MudButton>
 <MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
+<MudButton OnClick="ToggleBreakpoint" Class="ml-3" data-test-id="toggle-breakpoint" Title="Toggle Breakpoint (F9)">
+    <MudIcon Icon="@Icons.Material.Filled.FiberManualRecord" Color="Color.Error" Size="Size.Small" />
+</MudButton>
 <MudSpacer />
 <MudButton OnClick="OpenOptionsDialogAsync" Class="ml-3" data-test-id="options">Options</MudButton>
 <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
 
 
 @code {
+
+    [CascadingParameter]
+    public Index? IndexPage { get; set; }
 
     private Project Project => ProjectService.Project;
 
@@ -108,6 +114,11 @@
             Project.StopLiveDebugging();
         else
             Project.StartLiveDebugging();
+    }
+
+    private void ToggleBreakpoint()
+    {
+        IndexPage?.ToggleBreakpointOnSelectedNode();
     }
 
     private Task OpenOptionsDialogAsync()
