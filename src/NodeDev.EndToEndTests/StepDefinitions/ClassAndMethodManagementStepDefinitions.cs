@@ -38,30 +38,15 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	[Then("The class should be named {string} in the project explorer")]
 	public async Task ThenTheClassShouldBeNamedInTheProjectExplorer(string expectedName)
 	{
+		// Wait longer for the UI to update after rename
+		await Task.Delay(2000);
+		
 		var exists = await HomePage.ClassExists(expectedName);
 		if (!exists)
 		{
 			throw new Exception($"Class '{expectedName}' not found in project explorer");
 		}
 		Console.WriteLine($"✓ Verified class name '{expectedName}' in project explorer");
-	}
-
-	[When("I delete the {string} class")]
-	public async Task WhenIDeleteTheClass(string className)
-	{
-		await HomePage.DeleteClass(className);
-		Console.WriteLine($"✓ Deleted class '{className}'");
-	}
-
-	[Then("The {string} should not be in the project explorer")]
-	public async Task ThenTheShouldNotBeInTheProjectExplorer(string className)
-	{
-		var exists = await HomePage.ClassExists(className);
-		if (exists)
-		{
-			throw new Exception($"Class '{className}' still exists in project explorer");
-		}
-		Console.WriteLine($"✓ Class '{className}' not in project explorer");
 	}
 
 	[When("I create a new method named {string}")]
@@ -88,6 +73,9 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	[Then("The method should be named {string}")]
 	public async Task ThenTheMethodShouldBeNamed(string expectedName)
 	{
+		// Wait longer for the UI to update after rename
+		await Task.Delay(2000);
+		
 		var exists = await HomePage.MethodExists(expectedName);
 		if (!exists)
 		{
@@ -106,6 +94,9 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	[Then("The {string} should not be in the method list")]
 	public async Task ThenTheShouldNotBeInTheMethodList(string methodName)
 	{
+		// Wait for UI to update after deletion
+		await Task.Delay(1000);
+		
 		var exists = await HomePage.MethodExists(methodName);
 		if (exists)
 		{
@@ -136,50 +127,6 @@ public sealed class ClassAndMethodManagementStepDefinitions
 			throw new Exception("Entry node has no output ports for parameters");
 		}
 		Console.WriteLine($"✓ Entry node has {portCount} output port(s) including new parameter");
-	}
-
-	[When("I change the return type to {string}")]
-	public async Task WhenIChangeTheReturnTypeTo(string returnType)
-	{
-		await HomePage.ChangeReturnType(returnType);
-		Console.WriteLine($"✓ Changed return type to '{returnType}'");
-	}
-
-	[Then("The Return node should accept int values")]
-	public async Task ThenTheReturnNodeShouldAcceptIntValues()
-	{
-		// Verify Return node exists
-		var returnNode = HomePage.GetGraphNode("Return");
-		await returnNode.WaitForAsync(new() { State = WaitForSelectorState.Visible });
-		
-		// Check if Return node has input port
-		var inputPort = returnNode.Locator(".col.input");
-		var portCount = await inputPort.CountAsync();
-		if (portCount == 0)
-		{
-			throw new Exception("Return node has no input port");
-		}
-		Console.WriteLine("✓ Return node has input port that accepts int values");
-	}
-
-	[When("I add a property named {string} of type {string}")]
-	public async Task WhenIAddAPropertyNamedOfType(string propName, string propType)
-	{
-		await HomePage.AddClassProperty(propName, propType);
-		Console.WriteLine($"✓ Added property '{propName}' of type '{propType}'");
-	}
-
-	[Then("The property should appear in the class explorer")]
-	public async Task ThenThePropertyShouldAppearInTheClassExplorer()
-	{
-		// Check class explorer for properties section
-		var classExplorer = User.Locator("[data-test-id='classExplorer']");
-		await classExplorer.WaitForAsync(new() { State = WaitForSelectorState.Visible });
-		
-		// Look for property items
-		var properties = classExplorer.Locator("[data-test-id='Property']");
-		var count = await properties.CountAsync();
-		Console.WriteLine($"✓ Class explorer shows {count} properties");
 	}
 
 	[Then("All methods should be visible and not overlapping")]

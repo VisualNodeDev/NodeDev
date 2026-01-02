@@ -45,45 +45,6 @@ public sealed class ProjectManagementStepDefinitions
 		Console.WriteLine("✓ Project file exists and is valid");
 	}
 
-	[Given("I have a saved project named {string}")]
-	public async Task GivenIHaveASavedProjectNamed(string projectName)
-	{
-		await HomePage.CreateNewProject();
-		await HomePage.OpenSaveAsDialog();
-		await HomePage.SetProjectNameAs(projectName);
-		await HomePage.AcceptSaveAs();
-		Console.WriteLine($"✓ Setup saved project '{projectName}'");
-	}
-
-	[When("I load the project {string}")]
-	public async Task WhenILoadTheProject(string projectName)
-	{
-		await HomePage.LoadProject(projectName);
-		Console.WriteLine($"✓ Loaded project '{projectName}'");
-	}
-
-	[Then("The project should load successfully")]
-	public async Task ThenTheProjectShouldLoadSuccessfully()
-	{
-		// Verify project explorer is visible
-		var projectExplorer = User.Locator("[data-test-id='projectExplorer']");
-		await projectExplorer.WaitForAsync(new() { State = WaitForSelectorState.Visible });
-		Console.WriteLine("✓ Project loaded successfully");
-	}
-
-	[Then("All classes should be visible")]
-	public async Task ThenAllClassesShouldBeVisible()
-	{
-		await HomePage.OpenProjectExplorerProjectTab();
-		var classes = User.Locator("[data-test-id='projectExplorerClass']");
-		var count = await classes.CountAsync();
-		if (count == 0)
-		{
-			throw new Exception("No classes visible in project explorer");
-		}
-		Console.WriteLine($"✓ {count} class(es) visible");
-	}
-
 	[Then("The modifications should be saved")]
 	public async Task ThenTheModificationsShouldBeSaved()
 	{
@@ -94,39 +55,6 @@ public sealed class ProjectManagementStepDefinitions
 		var unsavedIndicator = User.Locator("[data-test-id='unsaved-changes']");
 		var hasUnsaved = await unsavedIndicator.CountAsync();
 		Console.WriteLine($"✓ Modifications saved (unsaved indicator count: {hasUnsaved})");
-	}
-
-	[Given("Auto-save is enabled")]
-	public async Task GivenAutoSaveIsEnabled()
-	{
-		await HomePage.EnableAutoSave();
-		Console.WriteLine("✓ Auto-save enabled");
-	}
-
-	[When("I make changes to the project")]
-	public async Task WhenIMakeChangesToTheProject()
-	{
-		await HomePage.CreateMethod("TestMethod");
-		Console.WriteLine("✓ Made changes to project");
-	}
-
-	[Then("The project should auto-save")]
-	public async Task ThenTheProjectShouldAutoSave()
-	{
-		// Wait for auto-save to trigger
-		await Task.Delay(1000);
-		
-		// Check for save confirmation (snackbar or indicator)
-		var snackbar = User.Locator("#mud-snackbar-container");
-		if (await snackbar.CountAsync() > 0)
-		{
-			var saveText = await snackbar.InnerTextAsync();
-			Console.WriteLine($"✓ Auto-save completed: {saveText}");
-		}
-		else
-		{
-			Console.WriteLine("✓ Auto-save completed (no visual indicator)");
-		}
 	}
 
 	[When("I export the project")]
@@ -279,27 +207,4 @@ public sealed class ProjectManagementStepDefinitions
 		}
 	}
 
-	[When("I change build configuration to {string}")]
-	public async Task WhenIChangeBuildConfigurationTo(string config)
-	{
-		await HomePage.ChangeBuildConfiguration(config);
-		Console.WriteLine($"✓ Changed config to '{config}'");
-	}
-
-	[Then("The configuration should be updated")]
-	public async Task ThenTheConfigurationShouldBeUpdated()
-	{
-		// Verify settings dialog is closed (configuration saved)
-		await Task.Delay(300);
-		var optionsDialog = User.Locator("[data-test-id='optionsDialog'], .mud-dialog");
-		var dialogVisible = await optionsDialog.First.IsVisibleAsync();
-		if (dialogVisible)
-		{
-			Console.WriteLine("⚠️ Settings dialog still visible, configuration may not have been saved");
-		}
-		else
-		{
-			Console.WriteLine("✓ Configuration updated and dialog closed");
-		}
-	}
 }

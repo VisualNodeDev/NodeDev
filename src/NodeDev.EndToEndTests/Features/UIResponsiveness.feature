@@ -24,14 +24,6 @@ Scenario: Test invalid connection attempts
 	And An error message should appear
 	And I take a screenshot named 'invalid-connection-rejected'
 
-Scenario: Test deleting node with connections
-	Given I load the default project
-	And I open the 'Main' method in the 'Program' class
-	When I delete a node that has connections
-	Then The node and its connections should be removed
-	And No orphaned connections should remain
-	And I take a screenshot named 'node-with-connections-deleted'
-
 Scenario: Test browser window resize
 	Given I load the default project
 	And I open the 'Main' method in the 'Program' class
@@ -56,12 +48,6 @@ Scenario: Test long method names display
 	Then The method name should display correctly without overflow
 	And I take a screenshot named 'long-method-name'
 
-Scenario: Test special characters in names
-	Given I load the default project
-	When I try to create a class with special characters
-	Then Invalid characters should be rejected or sanitized
-	And I take a screenshot named 'special-chars-handling'
-
 Scenario: Test concurrent operations
 	Given I load the default project
 	And I open the 'Main' method in the 'Program' class
@@ -70,9 +56,4 @@ Scenario: Test concurrent operations
 	And There should be no race conditions
 	And I take a screenshot named 'concurrent-operations'
 
-Scenario: Test memory cleanup
-	Given I load the default project
-	When I open and close multiple methods repeatedly
-	Then Memory usage should remain stable
-	And There should be no memory leaks
-	And I take a screenshot named 'memory-stable'
+

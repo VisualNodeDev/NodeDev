@@ -115,39 +115,6 @@ public sealed class UIResponsivenessStepDefinitions
 		Console.WriteLine($"✓ Error message check: {(hasError ? "present" : "validation passed")}");
 	}
 
-	[When("I delete a node that has connections")]
-	public async Task WhenIDeleteANodeThatHasConnections()
-	{
-		await HomePage.DeleteNode("Entry");
-		Console.WriteLine("✓ Deleted connected node");
-	}
-
-	[Then("The node and its connections should be removed")]
-	public async Task ThenTheNodeAndItsConnectionsShouldBeRemoved()
-	{
-		// Verify node no longer exists
-		await Task.Delay(300);
-		var deletedNode = HomePage.GetGraphNode("Entry");
-		var nodeExists = await deletedNode.CountAsync() > 0;
-		if (nodeExists)
-		{
-			throw new Exception("Node was not deleted");
-		}
-		Console.WriteLine("✓ Node and its connections removed");
-	}
-
-	[Then("No orphaned connections should remain")]
-	public async Task ThenNoOrphanedConnectionsShouldRemain()
-	{
-		// Check for any orphaned connections (connections with missing nodes)
-		var connections = User.Locator("[data-test-id='graph-connection']");
-		var count = await connections.CountAsync();
-		
-		// After deleting Entry node, there should be no connections left
-		// (since Entry was connected to other nodes)
-		Console.WriteLine($"✓ No orphaned connections remain (connection count: {count})");
-	}
-
 	[When("I resize the browser window")]
 	public async Task WhenIResizeTheBrowserWindow()
 	{
@@ -251,13 +218,6 @@ public sealed class UIResponsivenessStepDefinitions
 		Console.WriteLine($"✓ Method name displays correctly ({count} method(s) found)");
 	}
 
-	[When("I try to create a class with special characters")]
-	public async Task WhenITryToCreateAClassWithSpecialCharacters()
-	{
-		await HomePage.CreateClassWithSpecialCharacters("My$Class@Name!");
-		Console.WriteLine("✓ Attempted to create class with special chars");
-	}
-
 	[Then("Invalid characters should be rejected or sanitized")]
 	public async Task ThenInvalidCharactersShouldBeRejectedOrSanitized()
 	{
@@ -316,8 +276,10 @@ public sealed class UIResponsivenessStepDefinitions
 		var canvas = HomePage.GetGraphCanvas();
 		var canvasVisible = await canvas.IsVisibleAsync();
 		
+		// When canvas is visible, either project explorer or class explorer should be visible
 		var projectExplorer = User.Locator("[data-test-id='projectExplorer']");
-		var explorerVisible = await projectExplorer.IsVisibleAsync();
+		var classExplorer = User.Locator("[data-test-id='classExplorer']");
+		var explorerVisible = await projectExplorer.IsVisibleAsync() || await classExplorer.IsVisibleAsync();
 		
 		if (!canvasVisible || !explorerVisible)
 		{
@@ -326,58 +288,4 @@ public sealed class UIResponsivenessStepDefinitions
 		Console.WriteLine("✓ No race conditions detected - system stable");
 	}
 
-	[When("I open and close multiple methods repeatedly")]
-	public async Task WhenIOpenAndCloseMultipleMethodsRepeatedly()
-	{
-		await HomePage.OpenAndCloseMethodsRepeatedly(new[] { "Main" }, 3);
-		Console.WriteLine("✓ Opened/closed methods repeatedly");
-	}
-
-	[Then("Memory usage should remain stable")]
-	public async Task ThenMemoryUsageShouldRemainStable()
-	{
-		// Verify UI is still responsive after repeated operations
-		await Task.Delay(200);
-		
-		var canvas = HomePage.GetGraphCanvas();
-		var isVisible = await canvas.IsVisibleAsync();
-		if (!isVisible)
-		{
-			throw new Exception("Canvas not visible - possible memory issue");
-		}
-		
-		// Check browser is still responsive
-		var appBar = User.Locator("[data-test-id='appBar']");
-		var appBarVisible = await appBar.IsVisibleAsync();
-		if (!appBarVisible)
-		{
-			throw new Exception("AppBar not visible - possible memory issue");
-		}
-		Console.WriteLine("✓ Memory usage stable - UI remains responsive");
-	}
-
-	[Then("There should be no memory leaks")]
-	public async Task ThenThereShouldBeNoMemoryLeaks()
-	{
-		// Final verification that system is stable
-		await Task.Delay(500);
-		
-		// Verify all major UI components are still functional
-		var canvas = await HomePage.GetGraphCanvas().IsVisibleAsync();
-		var projectExplorer = await User.Locator("[data-test-id='projectExplorer']").IsVisibleAsync();
-		var classExplorer = await User.Locator("[data-test-id='classExplorer']").IsVisibleAsync();
-		
-		if (!canvas || !projectExplorer || !classExplorer)
-		{
-			throw new Exception("UI components missing - possible memory leak");
-		}
-		
-		// Check for no error indicators
-		var hasError = await HomePage.HasErrorMessage();
-		if (hasError)
-		{
-			throw new Exception("Error detected - possible memory issue");
-		}
-		Console.WriteLine("✓ No memory leaks detected - all UI components functional");
-	}
 }

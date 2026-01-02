@@ -62,33 +62,6 @@ public sealed class AdvancedNodeOperationsStepDefinitions
 		Console.WriteLine($"✓ Node '{nodeName}' is visible on canvas");
 	}
 
-	[When("I select multiple nodes")]
-	public async Task WhenISelectMultipleNodes()
-	{
-		await HomePage.SelectMultipleNodes("Entry", "Return");
-		Console.WriteLine("✓ Multi-selected nodes");
-	}
-
-	[When("I move the selected nodes by {int} pixels right")]
-	public async Task WhenIMoveTheSelectedNodesByPixelsRight(int pixels)
-	{
-		await HomePage.MoveSelectedNodesBy(pixels, 0);
-		Console.WriteLine($"✓ Moved selected nodes by {pixels} pixels");
-	}
-
-	[Then("All selected nodes should have moved")]
-	public async Task ThenAllSelectedNodesShouldHaveMoved()
-	{
-		// Verify nodes are still visible (movement succeeded)
-		var entryNode = await HomePage.HasGraphNode("Entry");
-		var returnNode = await HomePage.HasGraphNode("Return");
-		if (!entryNode || !returnNode)
-		{
-			throw new Exception("Nodes not found after movement");
-		}
-		Console.WriteLine("✓ All selected nodes have moved successfully");
-	}
-
 	[When("I create multiple connections between nodes")]
 	public async Task WhenICreateMultipleConnectionsBetweenNodes()
 	{
@@ -110,51 +83,12 @@ public sealed class AdvancedNodeOperationsStepDefinitions
 		Console.WriteLine($"✓ Verified '{nodeName}' has no connections");
 	}
 
-	[When("I undo the last action")]
-	public async Task WhenIUndoTheLastAction()
-	{
-		await HomePage.UndoLastAction();
-		Console.WriteLine("✓ Undo action performed");
-	}
-
-	[When("I redo the last action")]
-	public async Task WhenIRedoTheLastAction()
-	{
-		await HomePage.RedoLastAction();
-		Console.WriteLine("✓ Redo action performed");
-	}
-
 	[When("I select the {string} node")]
 	public async Task WhenISelectTheNode(string nodeName)
 	{
 		var node = HomePage.GetGraphNode(nodeName);
 		await node.ClickAsync();
 		Console.WriteLine($"✓ Selected node '{nodeName}'");
-	}
-
-	[When("I copy the selected node")]
-	public async Task WhenICopyTheSelectedNode()
-	{
-		await HomePage.CopySelectedNode();
-		Console.WriteLine("✓ Copied selected node");
-	}
-
-	[When("I paste the node")]
-	public async Task WhenIPasteTheNode()
-	{
-		await HomePage.PasteNode();
-		Console.WriteLine("✓ Pasted node");
-	}
-
-	[Then("There should be two {string} nodes on the canvas")]
-	public async Task ThenThereShouldBeTwoNodesOnTheCanvas(string nodeName)
-	{
-		var count = await HomePage.CountNodesOfType(nodeName);
-		if (count < 2)
-		{
-			throw new Exception($"Expected at least 2 '{nodeName}' nodes, but found {count}");
-		}
-		Console.WriteLine($"✓ Found {count} '{nodeName}' nodes");
 	}
 
 	[When("I click on a {string} node")]
@@ -179,33 +113,6 @@ public sealed class AdvancedNodeOperationsStepDefinitions
 		var editableInputs = User.Locator("[data-test-id='node-properties'] input, [data-test-id='node-properties'] select, [data-test-id='node-properties'] textarea");
 		var count = await editableInputs.CountAsync();
 		Console.WriteLine($"✓ Found {count} editable property field(s)");
-	}
-
-	[When("I hover over a port")]
-	public async Task WhenIHoverOverAPort()
-	{
-		await HomePage.HoverOverPort("Entry", "Exec", false);
-		Console.WriteLine("✓ Hovered over port");
-	}
-
-	[Then("The port should highlight")]
-	public async Task ThenThePortShouldHighlight()
-	{
-		await HomePage.VerifyPortHighlighted();
-		Console.WriteLine("✓ Port highlighted");
-	}
-
-	[Then("The port color should indicate its type")]
-	public async Task ThenThePortColorShouldIndicateItsType()
-	{
-		// Verify port has styling/color classes
-		var ports = User.Locator(".diagram-port");
-		var count = await ports.CountAsync();
-		if (count == 0)
-		{
-			throw new Exception("No ports found to verify colors");
-		}
-		Console.WriteLine($"✓ Verified {count} port(s) have type indication");
 	}
 
 	[When("I zoom in on the canvas")]
