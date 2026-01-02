@@ -85,20 +85,39 @@ Before running E2E tests, Playwright browsers must be installed:
 
 Without Playwright installed, all E2E tests will fail with browser launch errors.
 
-### Installing Debug Support for ICorDebug Tests
-The debugger integration tests require the `dbgshim` library to be available. On most systems, this is not installed by default.
+### ICorDebug Testing Requirements
+The debugger integration tests require the `dbgshim` library to be available. This is obtained automatically via the **Microsoft.Diagnostics.DbgShim** NuGet package which is referenced by NodeDev.Core.
 
-**Linux (Ubuntu/Debian):**
+**How it works:**
+- The `Microsoft.Diagnostics.DbgShim` NuGet package (v9.0.652701) is included as a dependency in NodeDev.Core
+- When the package is restored, it downloads platform-specific native libraries:
+  - `microsoft.diagnostics.dbgshim.linux-x64` for Linux x64
+  - `microsoft.diagnostics.dbgshim.win-x64` for Windows x64
+  - And other platform variants
+- The `DbgShimResolver` class automatically finds the library in the NuGet packages cache
+
+**Location of dbgshim library:**
+- NuGet cache: `~/.nuget/packages/microsoft.diagnostics.dbgshim.linux-x64/[version]/runtimes/linux-x64/native/libdbgshim.so`
+- Windows: `~/.nuget/packages/microsoft.diagnostics.dbgshim.win-x64/[version]/runtimes/win-x64/native/dbgshim.dll`
+
+**Running the debugger tests:**
 ```bash
-# Install the .NET runtime debug symbols package
-sudo apt-get update
-sudo apt-get install -y dotnet-runtime-dbg-10.0
+# Build and restore packages
+dotnet build src/NodeDev.Tests/NodeDev.Tests.csproj
+
+# Run debugger tests
+dotnet test src/NodeDev.Tests/NodeDev.Tests.csproj --filter "DebuggerCoreTests"
 ```
 
-**Note:** Even with debug symbols installed, the `libdbgshim.so` library may not be available on Linux systems. The debugger tests are designed to gracefully skip when dbgshim is not found. Full debugging tests will run on Windows where `dbgshim.dll` is included with the SDK.
-
-**Windows:**
-The `dbgshim.dll` is typically included with the .NET SDK installation. No additional installation is required.
+The tests demonstrate:
+1. Finding dbgshim from the NuGet package
+2. Loading the dbgshim library
+3. Creating a NodeDev project with nodes
+4. Building the project
+5. Launching the process in suspended mode
+6. Registering for CLR runtime startup
+7. Enumerating CLRs in the target process
+8. Attaching to the process and obtaining ICorDebug interface
 
 ## Documentation
 Detailed topic-specific documentation is maintained in the `docs/` folder:
@@ -112,10 +131,14 @@ Detailed topic-specific documentation is maintained in the `docs/` folder:
 ### Debugger Module (NodeDev.Core.Debugger)
 The debugging infrastructure is located in `src/NodeDev.Core/Debugger/` and provides ICorDebug API access via the ClrDebug NuGet package:
 
-- **DbgShimResolver**: Cross-platform resolution for the dbgshim library (dbgshim.dll/libdbgshim.so)
+- **DbgShimResolver**: Cross-platform resolution for the dbgshim library from NuGet packages or system paths
 - **DebugSessionEngine**: Main debugging engine with process launch, attach, and callback handling
 - **ManagedDebuggerCallbacks**: Implementation of ICorDebugManagedCallback interfaces
 - **DebugEngineException**: Custom exception type for debugging errors
+
+**Dependencies:**
+- `ClrDebug` (v0.3.4): C# wrappers for the unmanaged ICorDebug API
+- `Microsoft.Diagnostics.DbgShim` (v9.0.652701): Native dbgshim library for all platforms
 
 ### ScriptRunner
 NodeDev includes a separate console application called **ScriptRunner** that serves as the target process for debugging. This architecture is being developed to support "Hard Debugging" via the ICorDebug API (.NET's unmanaged debugging interface).

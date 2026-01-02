@@ -22,6 +22,46 @@ public static class DbgShimResolver
             : LinuxShimName;
 
     /// <summary>
+    /// Gets the runtime identifier (RID) for the current platform.
+    /// </summary>
+    private static string RuntimeIdentifier
+    {
+        get
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return RuntimeInformation.OSArchitecture switch
+                {
+                    Architecture.X64 => "win-x64",
+                    Architecture.X86 => "win-x86",
+                    Architecture.Arm64 => "win-arm64",
+                    _ => "win-x64"
+                };
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return RuntimeInformation.OSArchitecture switch
+                {
+                    Architecture.X64 => "linux-x64",
+                    Architecture.Arm64 => "linux-arm64",
+                    Architecture.Arm => "linux-arm",
+                    _ => "linux-x64"
+                };
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return RuntimeInformation.OSArchitecture switch
+                {
+                    Architecture.X64 => "osx-x64",
+                    Architecture.Arm64 => "osx-arm64",
+                    _ => "osx-x64"
+                };
+            }
+            return "linux-x64";
+        }
+    }
+
+    /// <summary>
     /// Attempts to resolve the path to the dbgshim library.
     /// </summary>
     /// <returns>The full path to the dbgshim library if found, null otherwise.</returns>
@@ -30,10 +70,9 @@ public static class DbgShimResolver
         // Try to find dbgshim in standard locations
         foreach (var path in GetSearchPaths())
         {
-            var shimPath = Path.Combine(path, ShimLibraryName);
-            if (File.Exists(shimPath))
+            if (File.Exists(path))
             {
-                return shimPath;
+                return path;
             }
         }
 
@@ -52,9 +91,9 @@ public static class DbgShimResolver
         {
             throw new FileNotFoundException(
                 $"Could not locate {ShimLibraryName}. " +
-                "Make sure you have the .NET SDK or runtime with debugging support installed. " +
+                "Make sure you have the Microsoft.Diagnostics.DbgShim NuGet package installed. " +
                 "On Windows, dbgshim.dll should be in the .NET installation directory. " +
-                "On Linux, you may need to install the dotnet-runtime-dbg package.");
+                "On Linux, the package provides libdbgshim.so in the NuGet cache.");
         }
 
         return path;
@@ -65,17 +104,92 @@ public static class DbgShimResolver
     /// </summary>
     private static IEnumerable<string> GetSearchPaths()
     {
-        // 1. Try to find .NET runtime location using dotnet command
+        // 1. Check NuGet packages first (Microsoft.Diagnostics.DbgShim)
+        foreach (var path in GetNuGetPackagePaths())
+        {
+            yield return path;
+        }
+
+        // 2. Try to find .NET runtime location using dotnet command
         foreach (var path in GetDotNetRuntimePaths())
         {
             yield return path;
         }
 
-        // 2. Standard installation directories
+        // 3. Standard installation directories
         foreach (var standardPath in GetStandardInstallationPaths())
         {
             yield return standardPath;
         }
+    }
+
+    /// <summary>
+    /// Gets paths to search in NuGet package cache for Microsoft.Diagnostics.DbgShim.
+    /// </summary>
+    private static IEnumerable<string> GetNuGetPackagePaths()
+    {
+        var nugetCache = GetNuGetPackagesCachePath();
+        if (nugetCache == null)
+            yield break;
+
+        // The package is microsoft.diagnostics.dbgshim.[rid]
+        // e.g., microsoft.diagnostics.dbgshim.linux-x64
+        var rid = RuntimeIdentifier;
+        var packagePattern = $"microsoft.diagnostics.dbgshim.{rid}";
+        var packageDir = Path.Combine(nugetCache, packagePattern);
+
+        if (Directory.Exists(packageDir))
+        {
+            // Find the latest version
+            var versions = Directory.GetDirectories(packageDir)
+                .OrderByDescending(v => v)
+                .ToList();
+
+            foreach (var version in versions)
+            {
+                // The native library is in runtimes/[rid]/native/
+                var nativePath = Path.Combine(version, "runtimes", rid, "native", ShimLibraryName);
+                yield return nativePath;
+            }
+        }
+
+        // Also check the base package without RID for meta-package references
+        var basePackageDir = Path.Combine(nugetCache, "microsoft.diagnostics.dbgshim");
+        if (Directory.Exists(basePackageDir))
+        {
+            var versions = Directory.GetDirectories(basePackageDir)
+                .OrderByDescending(v => v)
+                .ToList();
+
+            foreach (var version in versions)
+            {
+                var nativePath = Path.Combine(version, "runtimes", rid, "native", ShimLibraryName);
+                yield return nativePath;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the NuGet packages cache path.
+    /// </summary>
+    private static string? GetNuGetPackagesCachePath()
+    {
+        // Check NUGET_PACKAGES environment variable first
+        var nugetPackages = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
+        if (!string.IsNullOrEmpty(nugetPackages) && Directory.Exists(nugetPackages))
+        {
+            return nugetPackages;
+        }
+
+        // Default NuGet packages location
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var defaultPath = Path.Combine(home, ".nuget", "packages");
+        if (Directory.Exists(defaultPath))
+        {
+            return defaultPath;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -97,12 +211,12 @@ public static class DbgShimResolver
 
             foreach (var version in versions)
             {
-                yield return version;
+                yield return Path.Combine(version, ShimLibraryName);
             }
         }
 
         // Also check the root dotnet directory
-        yield return dotnetRoot;
+        yield return Path.Combine(dotnetRoot, ShimLibraryName);
     }
 
     /// <summary>
@@ -190,33 +304,33 @@ public static class DbgShimResolver
             var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
 
-            yield return Path.Combine(programFiles, "dotnet");
-            yield return Path.Combine(programFilesX86, "dotnet");
+            yield return Path.Combine(programFiles, "dotnet", ShimLibraryName);
+            yield return Path.Combine(programFilesX86, "dotnet", ShimLibraryName);
 
             // Also check user-local installation
             var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            yield return Path.Combine(localAppData, "Microsoft", "dotnet");
+            yield return Path.Combine(localAppData, "Microsoft", "dotnet", ShimLibraryName);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             // Linux standard paths
-            yield return "/usr/share/dotnet";
-            yield return "/usr/lib/dotnet";
-            yield return "/opt/dotnet";
+            yield return Path.Combine("/usr/share/dotnet", ShimLibraryName);
+            yield return Path.Combine("/usr/lib/dotnet", ShimLibraryName);
+            yield return Path.Combine("/opt/dotnet", ShimLibraryName);
 
             // User-local
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            yield return Path.Combine(home, ".dotnet");
+            yield return Path.Combine(home, ".dotnet", ShimLibraryName);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
             // macOS standard paths
-            yield return "/usr/local/share/dotnet";
-            yield return "/opt/homebrew/opt/dotnet";
+            yield return Path.Combine("/usr/local/share/dotnet", ShimLibraryName);
+            yield return Path.Combine("/opt/homebrew/opt/dotnet", ShimLibraryName);
 
             // User-local
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            yield return Path.Combine(home, ".dotnet");
+            yield return Path.Combine(home, ".dotnet", ShimLibraryName);
         }
     }
 
@@ -227,8 +341,7 @@ public static class DbgShimResolver
     {
         foreach (var path in GetSearchPaths())
         {
-            var shimPath = Path.Combine(path, ShimLibraryName);
-            yield return (shimPath, File.Exists(shimPath));
+            yield return (path, File.Exists(path));
         }
     }
 }
