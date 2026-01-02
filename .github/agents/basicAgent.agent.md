@@ -29,7 +29,7 @@ NodeDev is a visual programming environment built with Blazor and Blazor.Diagram
 ## Architecture
 
 ### Core Components
-- **NodeDev.Core**: Core business logic, node definitions, graph management, type system, and IL code generation
+- **NodeDev.Core**: Core business logic, node definitions, graph management, type system, IL code generation, and debugging infrastructure (in `Debugger/` folder)
 - **NodeDev.Blazor**: UI components built with Blazor (Razor components, diagrams, project explorer)
 - **NodeDev.Blazor.Server**: Server-side Blazor hosting
 - **NodeDev.Blazor.MAUI**: MAUI-based desktop application wrapper
@@ -85,6 +85,40 @@ Before running E2E tests, Playwright browsers must be installed:
 
 Without Playwright installed, all E2E tests will fail with browser launch errors.
 
+### ICorDebug Testing Requirements
+The debugger integration tests require the `dbgshim` library to be available. This is obtained automatically via the **Microsoft.Diagnostics.DbgShim** NuGet package which is referenced by NodeDev.Core.
+
+**How it works:**
+- The `Microsoft.Diagnostics.DbgShim` NuGet package (v9.0.652701) is included as a dependency in NodeDev.Core
+- When the package is restored, it downloads platform-specific native libraries:
+  - `microsoft.diagnostics.dbgshim.linux-x64` for Linux x64
+  - `microsoft.diagnostics.dbgshim.win-x64` for Windows x64
+  - And other platform variants
+- The `DbgShimResolver` class automatically finds the library in the NuGet packages cache
+
+**Location of dbgshim library:**
+- NuGet cache: `~/.nuget/packages/microsoft.diagnostics.dbgshim.linux-x64/[version]/runtimes/linux-x64/native/libdbgshim.so`
+- Windows: `~/.nuget/packages/microsoft.diagnostics.dbgshim.win-x64/[version]/runtimes/win-x64/native/dbgshim.dll`
+
+**Running the debugger tests:**
+```bash
+# Build and restore packages
+dotnet build src/NodeDev.Tests/NodeDev.Tests.csproj
+
+# Run debugger tests
+dotnet test src/NodeDev.Tests/NodeDev.Tests.csproj --filter "DebuggerCoreTests"
+```
+
+The tests demonstrate:
+1. Finding dbgshim from the NuGet package
+2. Loading the dbgshim library
+3. Creating a NodeDev project with nodes
+4. Building the project
+5. Launching the process in suspended mode
+6. Registering for CLR runtime startup
+7. Enumerating CLRs in the target process
+8. Attaching to the process and obtaining ICorDebug interface
+
 ## Documentation
 Detailed topic-specific documentation is maintained in the `docs/` folder:
 
@@ -93,6 +127,18 @@ Detailed topic-specific documentation is maintained in the `docs/` folder:
 - `docs/script-runner.md` - ScriptRunner architecture, usage, and ICorDebug debugging infrastructure
 
 ## Debugging Infrastructure
+
+### Debugger Module (NodeDev.Core.Debugger)
+The debugging infrastructure is located in `src/NodeDev.Core/Debugger/` and provides ICorDebug API access via the ClrDebug NuGet package:
+
+- **DbgShimResolver**: Cross-platform resolution for the dbgshim library from NuGet packages or system paths
+- **DebugSessionEngine**: Main debugging engine with process launch, attach, and callback handling
+- **ManagedDebuggerCallbacks**: Implementation of ICorDebugManagedCallback interfaces
+- **DebugEngineException**: Custom exception type for debugging errors
+
+**Dependencies:**
+- `ClrDebug` (v0.3.4): C# wrappers for the unmanaged ICorDebug API
+- `Microsoft.Diagnostics.DbgShim` (v9.0.652701): Native dbgshim library for all platforms
 
 ### ScriptRunner
 NodeDev includes a separate console application called **ScriptRunner** that serves as the target process for debugging. This architecture is being developed to support "Hard Debugging" via the ICorDebug API (.NET's unmanaged debugging interface).
@@ -114,6 +160,7 @@ NodeDev includes a separate console application called **ScriptRunner** that ser
 - ScriptRunner is automatically built with NodeDev.Core
 - MSBuild targets copy ScriptRunner to the output directory of dependent projects
 - The `Project.Run()` method automatically locates and launches ScriptRunner
+- The `Project.GetScriptRunnerPath()` method returns the ScriptRunner location for debugging infrastructure
 
 **Future: ICorDebug Integration**
 This infrastructure prepares NodeDev for implementing advanced debugging features:

@@ -3,7 +3,6 @@ using NodeDev.Core.Class;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using NodeDev.Core.Nodes.Math;
-using Xunit;
 
 namespace NodeDev.Tests;
 
@@ -21,13 +20,13 @@ public class RoslynCompilationTests
 		var method = new NodeClassMethod(myClass, "Add", project.TypeFactory.Get<int>());
 		method.IsStatic = true;
 		myClass.AddMethod(method, createEntryAndReturn: false);
-		
+
 		// Add parameters
 		method.Parameters.Add(new("a", project.TypeFactory.Get<int>(), method));
 		method.Parameters.Add(new("b", project.TypeFactory.Get<int>(), method));
 
 		var graph = method.Graph;
-		
+
 		// Create nodes
 		var entryNode = new EntryNode(graph);
 		var addNode = new Add(graph);
@@ -41,18 +40,18 @@ public class RoslynCompilationTests
 		// Connect nodes
 		// entry.Exec -> return.Exec
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], returnNode.Inputs[0]);
-		
+
 		// entry.a -> add.a
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[1], addNode.Inputs[0]);
 		// entry.b -> add.b
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[2], addNode.Inputs[1]);
-		
+
 		// add.c -> return.Return
 		graph.Manager.AddNewConnectionBetween(addNode.Outputs[0], returnNode.Inputs[1]);
 
 		// Compile with Roslyn
 		var buildOptions = BuildOptions.Debug;
-		
+
 		var compiler = new RoslynNodeClassCompiler(project, buildOptions);
 		RoslynNodeClassCompiler.CompilationResult result;
 		try
@@ -67,7 +66,7 @@ public class RoslynCompilationTests
 			Console.WriteLine("=== End of Source Code ===");
 			throw;
 		}
-		
+
 		// Print generated source code for debugging
 		Console.WriteLine("=== Generated Source Code ===");
 		Console.WriteLine(result.SourceCode);
@@ -77,14 +76,14 @@ public class RoslynCompilationTests
 
 		// Verify the assembly was created
 		Assert.NotNull(assembly);
-		
+
 		// Get the type and method
 		var type = assembly.GetType("MyProject.TestClass");
 		Assert.NotNull(type);
-		
+
 		var addMethod = type.GetMethod("Add");
 		Assert.NotNull(addMethod);
-		
+
 		// Invoke the method
 		var invokeResult = addMethod.Invoke(null, new object[] { 5, 3 });
 		Assert.Equal(8, invokeResult);
@@ -101,12 +100,12 @@ public class RoslynCompilationTests
 		var method = new NodeClassMethod(myClass, "Max", project.TypeFactory.Get<int>());
 		method.IsStatic = true;
 		myClass.AddMethod(method, createEntryAndReturn: false);
-		
+
 		method.Parameters.Add(new("a", project.TypeFactory.Get<int>(), method));
 		method.Parameters.Add(new("b", project.TypeFactory.Get<int>(), method));
 
 		var graph = method.Graph;
-		
+
 		// Create nodes
 		var entryNode = new EntryNode(graph);
 		var biggerThanNode = new BiggerThan(graph);
@@ -122,25 +121,25 @@ public class RoslynCompilationTests
 
 		// Connect: entry -> branch
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], branchNode.Inputs[0]);
-		
+
 		// Connect: entry.a -> biggerThan.a, entry.b -> biggerThan.b
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[1], biggerThanNode.Inputs[0]);
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[2], biggerThanNode.Inputs[1]);
-		
+
 		// Connect: biggerThan.c -> branch.Condition
 		graph.Manager.AddNewConnectionBetween(biggerThanNode.Outputs[0], branchNode.Inputs[1]);
-		
+
 		// Connect: branch.IfTrue -> returnNodeTrue, branch.IfFalse -> returnNodeFalse
 		graph.Manager.AddNewConnectionBetween(branchNode.Outputs[0], returnNodeTrue.Inputs[0]);
 		graph.Manager.AddNewConnectionBetween(branchNode.Outputs[1], returnNodeFalse.Inputs[0]);
-		
+
 		// Connect: entry.a -> returnNodeTrue.Return, entry.b -> returnNodeFalse.Return
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[1], returnNodeTrue.Inputs[1]);
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[2], returnNodeFalse.Inputs[1]);
 
 		// Compile with Roslyn
 		var buildOptions = BuildOptions.Debug;
-		
+
 		var compiler = new RoslynNodeClassCompiler(project, buildOptions);
 		RoslynNodeClassCompiler.CompilationResult result;
 		try
@@ -155,7 +154,7 @@ public class RoslynCompilationTests
 			Console.WriteLine("=== End of Source Code ===");
 			throw;
 		}
-		
+
 		// Print generated source code for debugging
 		Console.WriteLine("=== Generated Source Code ===");
 		Console.WriteLine(result.SourceCode);
@@ -169,7 +168,7 @@ public class RoslynCompilationTests
 		Assert.NotNull(type);
 		var maxMethod = type.GetMethod("Max");
 		Assert.NotNull(maxMethod);
-		
+
 		// Test the method
 		Assert.Equal(10, maxMethod.Invoke(null, new object[] { 10, 5 }));
 		Assert.Equal(10, maxMethod.Invoke(null, new object[] { 5, 10 }));
@@ -187,7 +186,7 @@ public class RoslynCompilationTests
 		var method = new NodeClassMethod(myClass, "Calculate", project.TypeFactory.Get<int>());
 		method.IsStatic = true;
 		myClass.AddMethod(method, createEntryAndReturn: false);
-		
+
 		method.Parameters.Add(new("a", project.TypeFactory.Get<int>(), method));
 		method.Parameters.Add(new("b", project.TypeFactory.Get<int>(), method));
 		method.Parameters.Add(new("c", project.TypeFactory.Get<int>(), method));
@@ -216,7 +215,7 @@ public class RoslynCompilationTests
 		var result = compiler.Compile();
 		var type = result.Assembly.GetType("MyProject.TestClass");
 		var calcMethod = type!.GetMethod("Calculate");
-		
+
 		// (2 + 3) * 4 = 20
 		Assert.Equal(20, calcMethod!.Invoke(null, new object[] { 2, 3, 4 }));
 	}
@@ -232,7 +231,7 @@ public class RoslynCompilationTests
 		var method = new NodeClassMethod(myClass, "AndOr", project.TypeFactory.Get<bool>());
 		method.IsStatic = true;
 		myClass.AddMethod(method, createEntryAndReturn: false);
-		
+
 		method.Parameters.Add(new("a", project.TypeFactory.Get<bool>(), method));
 		method.Parameters.Add(new("b", project.TypeFactory.Get<bool>(), method));
 		method.Parameters.Add(new("c", project.TypeFactory.Get<bool>(), method));
@@ -259,7 +258,7 @@ public class RoslynCompilationTests
 		var result = compiler.Compile();
 		var type = result.Assembly.GetType("MyProject.TestClass");
 		var method2 = type!.GetMethod("AndOr");
-		
+
 		Assert.Equal(true, method2!.Invoke(null, new object[] { true, true, false }));
 		Assert.Equal(false, method2.Invoke(null, new object[] { true, false, false }));
 		Assert.Equal(true, method2.Invoke(null, new object[] { false, false, true }));
@@ -276,7 +275,7 @@ public class RoslynCompilationTests
 		var method = new NodeClassMethod(myClass, "Compare", project.TypeFactory.Get<bool>());
 		method.IsStatic = true;
 		myClass.AddMethod(method, createEntryAndReturn: false);
-		
+
 		method.Parameters.Add(new("a", project.TypeFactory.Get<int>(), method));
 		method.Parameters.Add(new("b", project.TypeFactory.Get<int>(), method));
 
@@ -298,7 +297,7 @@ public class RoslynCompilationTests
 		var result = compiler.Compile();
 		var type = result.Assembly.GetType("MyProject.TestClass");
 		var compareMethod = type!.GetMethod("Compare");
-		
+
 		Assert.Equal(true, compareMethod!.Invoke(null, new object[] { 5, 10 }));
 		Assert.Equal(true, compareMethod.Invoke(null, new object[] { 5, 5 }));
 		Assert.Equal(false, compareMethod.Invoke(null, new object[] { 10, 5 }));
@@ -315,7 +314,7 @@ public class RoslynCompilationTests
 		var method = new NodeClassMethod(myClass, "CheckNull", project.TypeFactory.Get<bool>());
 		method.IsStatic = true;
 		myClass.AddMethod(method, createEntryAndReturn: false);
-		
+
 		method.Parameters.Add(new("input", project.TypeFactory.Get<string>(), method));
 
 		var graph = method.Graph;
@@ -335,7 +334,7 @@ public class RoslynCompilationTests
 		var result = compiler.Compile();
 		var type = result.Assembly.GetType("MyProject.TestClass");
 		var checkMethod = type!.GetMethod("CheckNull");
-		
+
 		Assert.Equal(true, checkMethod!.Invoke(null, new object[] { "test" }));
 		Assert.Equal(false, checkMethod.Invoke(null, new object[] { null! }));
 	}
@@ -359,7 +358,7 @@ public class RoslynCompilationTests
 		var method = new NodeClassMethod(myClass, "UseVariable", project.TypeFactory.Get<int>());
 		method.IsStatic = true;
 		myClass.AddMethod(method, createEntryAndReturn: false);
-		
+
 		method.Parameters.Add(new("a", project.TypeFactory.Get<int>(), method));
 
 		var graph = method.Graph;
@@ -375,7 +374,7 @@ public class RoslynCompilationTests
 		// temp = a
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], declareNode.Inputs[0]);
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[1], declareNode.Inputs[1]);
-		
+
 		// return temp
 		graph.Manager.AddNewConnectionBetween(declareNode.Outputs[0], returnNode.Inputs[0]);
 		graph.Manager.AddNewConnectionBetween(declareNode.Outputs[1], returnNode.Inputs[1]);
@@ -384,7 +383,7 @@ public class RoslynCompilationTests
 		var result = compiler.Compile();
 		var type = result.Assembly.GetType("MyProject.TestClass");
 		var useVarMethod = type!.GetMethod("UseVariable");
-		
+
 		// Should just pass through
 		Assert.Equal(5, useVarMethod!.Invoke(null, new object[] { 5 }));
 	}
@@ -418,7 +417,7 @@ public class RoslynCompilationTests
 		// Verify PDB bytes exist
 		Assert.NotNull(result.PDBBytes);
 		Assert.True(result.PDBBytes.Length > 0);
-		
+
 		// Verify source code was generated
 		Assert.NotNull(result.SourceCode);
 		Assert.Contains("namespace MyProject", result.SourceCode);
@@ -456,7 +455,7 @@ public class RoslynCompilationTests
 		Assert.NotNull(type);
 		var mainMethod = type!.GetMethod("Main", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 		Assert.NotNull(mainMethod);
-		
+
 		// Verify HasMainMethod detection works
 		Assert.True(project.HasMainMethod());
 	}

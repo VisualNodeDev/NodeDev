@@ -1,6 +1,6 @@
-﻿using NodeDev.Core.ManagerServices;
-using NodeDev.Core;
+﻿using NodeDev.Core;
 using NodeDev.Core.Connections;
+using NodeDev.Core.ManagerServices;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using NSubstitute;

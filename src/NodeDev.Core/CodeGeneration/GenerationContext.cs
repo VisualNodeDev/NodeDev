@@ -49,7 +49,7 @@ public class GenerationContext
 	{
 		// Sanitize the hint to make it a valid C# identifier
 		var sanitized = SanitizeIdentifier(hint);
-		
+
 		// If the name is already unique, return it
 		if (_usedVariableNames.Add(sanitized))
 			return sanitized;
@@ -108,7 +108,7 @@ public class GenerationContext
 
 		// Avoid C# keywords
 		if (SyntaxFacts.GetKeywordKind(result) != SyntaxKind.None ||
-		    SyntaxFacts.GetContextualKeywordKind(result) != SyntaxKind.None)
+			SyntaxFacts.GetContextualKeywordKind(result) != SyntaxKind.None)
 		{
 			result = "@" + result;
 		}

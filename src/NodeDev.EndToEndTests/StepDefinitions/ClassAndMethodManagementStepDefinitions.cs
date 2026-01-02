@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using Microsoft.Playwright;
 using NodeDev.EndToEndTests.Pages;
 
@@ -40,7 +38,7 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	{
 		// Wait longer for the UI to update after rename
 		await Task.Delay(2000);
-		
+
 		var exists = await HomePage.ClassExists(expectedName);
 		if (!exists)
 		{
@@ -75,7 +73,7 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	{
 		// Wait longer for the UI to update after rename
 		await Task.Delay(2000);
-		
+
 		var exists = await HomePage.MethodExists(expectedName);
 		if (!exists)
 		{
@@ -96,7 +94,7 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	{
 		// Wait for UI to update after deletion
 		await Task.Delay(1000);
-		
+
 		var exists = await HomePage.MethodExists(methodName);
 		if (exists)
 		{
@@ -118,7 +116,7 @@ public sealed class ClassAndMethodManagementStepDefinitions
 		// Verify Entry node exists and is visible
 		var entryNode = HomePage.GetGraphNode("Entry");
 		await entryNode.WaitForAsync(new() { State = WaitForSelectorState.Visible });
-		
+
 		// Check if Entry node has output ports (parameters)
 		var ports = entryNode.Locator(".col.output");
 		var portCount = await ports.CountAsync();
@@ -135,7 +133,7 @@ public sealed class ClassAndMethodManagementStepDefinitions
 		var methodItems = User.Locator("[data-test-id='Method']");
 		var count = await methodItems.CountAsync();
 		Console.WriteLine($"✓ Found {count} method(s) displayed");
-		
+
 		for (int i = 0; i < count; i++)
 		{
 			var methodItem = methodItems.Nth(i);
@@ -152,7 +150,7 @@ public sealed class ClassAndMethodManagementStepDefinitions
 	{
 		var methodItems = User.Locator("[data-test-id='Method']");
 		var count = await methodItems.CountAsync();
-		
+
 		for (int i = 0; i < count; i++)
 		{
 			var text = await methodItems.Nth(i).InnerTextAsync();

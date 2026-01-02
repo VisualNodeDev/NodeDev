@@ -1,6 +1,3 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Playwright;
 using NodeDev.EndToEndTests.Pages;
 
@@ -59,7 +56,7 @@ public sealed class ConsoleOutputStepDefinitions
 	{
 		var output = await HomePage.GetConsoleOutput();
 		var found = output.Any(line => line.Contains(expectedText));
-		
+
 		if (!found)
 		{
 			Console.WriteLine($"Console output ({output.Length} lines):");

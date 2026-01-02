@@ -1,11 +1,9 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
-using System.Text;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.CodeGeneration;
@@ -39,11 +37,11 @@ public class RoslynGraphBuilder
 	public MethodDeclarationSyntax BuildMethod()
 	{
 		var method = _graph.SelfMethod;
-		
+
 		// Find the entry node
 		var entryNode = _graph.Nodes.Values.FirstOrDefault(x => x is EntryNode)
 			?? throw new Exception($"No entry node found in graph {method.Name}");
-		
+
 		var entryOutput = entryNode.Outputs.FirstOrDefault()
 			?? throw new Exception("Entry node has no output");
 
@@ -62,7 +60,7 @@ public class RoslynGraphBuilder
 		{
 			if (node.CanBeInlined)
 				continue; // inline nodes don't need pre-declared variables
-			
+
 			// Entry node parameters are not pre-declared, they are method parameters
 			if (node is EntryNode)
 				continue;
@@ -74,13 +72,13 @@ public class RoslynGraphBuilder
 
 				var varName = _context.GetUniqueName($"{node.Name}_{output.Name}");
 				_context.RegisterVariableName(output, varName);
-				
+
 				// Declare: var <varName> = default(Type);
 				var typeSyntax = RoslynHelpers.GetTypeSyntax(output.Type);
 				var declarator = SF.VariableDeclarator(SF.Identifier(varName))
 					.WithInitializer(SF.EqualsValueClause(
 						SF.DefaultExpression(typeSyntax)));
-				
+
 				variableDeclarations.Add(
 					SF.LocalDeclarationStatement(
 						SF.VariableDeclaration(SF.IdentifierName("var"))
@@ -109,7 +107,7 @@ public class RoslynGraphBuilder
 		if (method.IsStatic)
 			modifiers.Add(SF.Token(SyntaxKind.StaticKeyword));
 
-		var returnType = method.HasReturnValue 
+		var returnType = method.HasReturnValue
 			? RoslynHelpers.GetTypeSyntax(method.ReturnType)
 			: SF.PredefinedType(SF.Token(SyntaxKind.VoidKeyword));
 
@@ -149,7 +147,7 @@ public class RoslynGraphBuilder
 			{
 				// Generate the statement for this node
 				var statement = chunk.Input.Parent.GenerateRoslynStatement(chunk.SubChunk, _context);
-				
+
 				// Add the main statement
 				statements.Add(statement);
 			}
@@ -182,13 +180,13 @@ public class RoslynGraphBuilder
 				// Register as default value
 				var defaultVarName = _context.GetUniqueName($"{input.Parent.Name}_{input.Name}_default");
 				_context.RegisterVariableName(input, defaultVarName);
-				
+
 				// Add declaration: var <varName> = default(Type);
 				var typeSyntax = RoslynHelpers.GetTypeSyntax(input.Type);
 				var declarator = SF.VariableDeclarator(SF.Identifier(defaultVarName))
 					.WithInitializer(SF.EqualsValueClause(
 						SF.DefaultExpression(typeSyntax)));
-				
+
 				_context.AddAuxiliaryStatement(
 					SF.LocalDeclarationStatement(
 						SF.VariableDeclaration(SF.IdentifierName("var"))
@@ -199,7 +197,7 @@ public class RoslynGraphBuilder
 				// Register as constant value
 				var constVarName = _context.GetUniqueName($"{input.Parent.Name}_{input.Name}_const");
 				_context.RegisterVariableName(input, constVarName);
-				
+
 				// Create literal expression
 				ExpressionSyntax constValue = input.ParsedTextboxValue switch
 				{
@@ -213,11 +211,11 @@ public class RoslynGraphBuilder
 					char c => SF.LiteralExpression(SyntaxKind.CharacterLiteralExpression, SF.Literal(c)),
 					_ => SF.DefaultExpression(RoslynHelpers.GetTypeSyntax(input.Type))
 				};
-				
+
 				// Add declaration with constant
 				var declarator = SF.VariableDeclarator(SF.Identifier(constVarName))
 					.WithInitializer(SF.EqualsValueClause(constValue));
-				
+
 				_context.AddAuxiliaryStatement(
 					SF.LocalDeclarationStatement(
 						SF.VariableDeclaration(SF.IdentifierName("var"))
@@ -239,22 +237,22 @@ public class RoslynGraphBuilder
 					_context.RegisterVariableName(input, existingVarName);
 					return;
 				}
-				
+
 				// Generate inline expression
 				var inlineExpr = GenerateInlineExpression(otherNode);
-				
+
 				// Create a variable to hold the result
 				var inlineVarName = _context.GetUniqueName($"{otherNode.Name}_{outputConnection.Name}");
-				
+
 				// Register the variable for BOTH the input and the output
 				// This ensures other inputs that use the same output can find it
 				_context.RegisterVariableName(input, inlineVarName);
 				_context.RegisterVariableName(outputConnection, inlineVarName);
-				
+
 				// Add declaration: var <varName> = <inlineExpr>;
 				var declarator = SF.VariableDeclarator(SF.Identifier(inlineVarName))
 					.WithInitializer(SF.EqualsValueClause(inlineExpr));
-				
+
 				_context.AddAuxiliaryStatement(
 					SF.LocalDeclarationStatement(
 						SF.VariableDeclaration(SF.IdentifierName("var"))
@@ -266,7 +264,7 @@ public class RoslynGraphBuilder
 				var varName = _context.GetVariableName(outputConnection);
 				if (varName == null)
 					throw new Exception($"Variable not found for connection {outputConnection.Name} of node {otherNode.Name}");
-				
+
 				_context.RegisterVariableName(input, varName);
 			}
 		}
@@ -305,14 +303,14 @@ public class RoslynGraphBuilder
 			throw new ArgumentException("Cannot get expression for exec connection");
 
 		var varName = context.GetVariableName(input);
-		
+
 		// If not found, check if it's a method parameter
 		if (varName == null)
 		{
 			var param = _graph.SelfMethod.Parameters.FirstOrDefault(p => p.Name == input.Name);
 			if (param != null)
 				return SF.IdentifierName(param.Name);
-			
+
 			throw new Exception($"Variable name not found for connection {input.Name} of node {input.Parent.Name}");
 		}
 

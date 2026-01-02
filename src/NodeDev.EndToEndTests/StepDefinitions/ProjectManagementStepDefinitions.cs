@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using Microsoft.Playwright;
 using NodeDev.EndToEndTests.Pages;
 
@@ -50,7 +48,7 @@ public sealed class ProjectManagementStepDefinitions
 	{
 		// Wait a moment for auto-save to complete
 		await Task.Delay(500);
-		
+
 		// Verify no unsaved changes indicator
 		var unsavedIndicator = User.Locator("[data-test-id='unsaved-changes']");
 		var hasUnsaved = await unsavedIndicator.CountAsync();

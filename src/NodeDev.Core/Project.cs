@@ -1,17 +1,12 @@
 ﻿using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
-using NodeDev.Core.ManagerServices;
 using NodeDev.Core.Migrations;
 using NodeDev.Core.Nodes;
-using NodeDev.Core.Nodes.Flow;
 using NodeDev.Core.Types;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Reflection.Metadata;
-using System.Reflection.Metadata.Ecma335;
-using System.Reflection.PortableExecutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -21,6 +16,11 @@ namespace NodeDev.Core;
 
 public class Project
 {
+	/// <summary>
+	/// Maximum time to wait for process output streams to be fully consumed after process exits.
+	/// </summary>
+	private static readonly TimeSpan OutputStreamTimeout = TimeSpan.FromSeconds(5);
+
 	internal record class SerializedProject(Guid Id, string NodeDevVersion, List<NodeClass.SerializedNodeClass> Classes, ProjectSettings Settings);
 
 	internal readonly Guid Id;
@@ -112,8 +112,10 @@ public class Project
 
 	public string Build(BuildOptions buildOptions)
 	{
-		var name = "project";
-		
+		// Use unique name based on project ID to avoid conflicts when running tests in parallel
+		// Using "N" format avoids hyphens and is more efficient than Replace
+		var name = $"project_{Id:N}";
+
 		// Use Roslyn compilation
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
 		var result = compiler.Compile();
@@ -231,6 +233,16 @@ public class Project
 		throw new FileNotFoundException("ScriptRunner executable not found. Please ensure NodeDev.ScriptRunner is built and available.");
 	}
 
+	/// <summary>
+	/// Gets the path to the ScriptRunner executable.
+	/// This is useful for debugging infrastructure that needs to locate the runner.
+	/// </summary>
+	/// <returns>The full path to NodeDev.ScriptRunner.dll</returns>
+	public string GetScriptRunnerPath()
+	{
+		return FindScriptRunnerExecutable();
+	}
+
 	public object? Run(BuildOptions options, params object?[] inputs)
 	{
 		try
@@ -239,10 +251,10 @@ public class Project
 
 			// Find the ScriptRunner executable
 			string scriptRunnerPath = FindScriptRunnerExecutable();
-			
+
 			// Convert to absolute path to avoid confusion with working directory
 			string absoluteAssemblyPath = Path.GetFullPath(assemblyPath);
-			
+
 			// Build arguments: ScriptRunner.dll path-to-user-dll [user-args...]
 			var userArgsString = string.Join(" ", inputs.Select(x => '"' + (x?.ToString() ?? "") + '"'));
 			var arguments = $"\"{scriptRunnerPath}\" \"{absoluteAssemblyPath}\"";
@@ -250,7 +262,7 @@ public class Project
 			{
 				arguments += $" {userArgsString}";
 			}
-			
+
 			var processStartInfo = new System.Diagnostics.ProcessStartInfo()
 			{
 				FileName = "dotnet",
@@ -261,18 +273,29 @@ public class Project
 				UseShellExecute = false,
 				CreateNoWindow = true,
 			};
-			
+
 			var process = System.Diagnostics.Process.Start(processStartInfo) ?? throw new Exception("Unable to start process");
+
+			// Use ManualResetEvents to track when async output handlers complete
+			// Using 'using' ensures proper disposal of unmanaged resources
+			using var outputComplete = new System.Threading.ManualResetEvent(false);
+			using var errorComplete = new System.Threading.ManualResetEvent(false);
 
 			// Notify that execution has started
 			GraphExecutionChangedSubject.OnNext(true);
 
 			// Capture output and error streams
+			// The null event signals end of stream
 			process.OutputDataReceived += (sender, e) =>
 			{
 				if (e.Data != null)
 				{
 					ConsoleOutputSubject.OnNext(e.Data + Environment.NewLine);
+				}
+				else
+				{
+					// End of stream
+					outputComplete.Set();
 				}
 			};
 
@@ -282,12 +305,21 @@ public class Project
 				{
 					ConsoleOutputSubject.OnNext(e.Data + Environment.NewLine);
 				}
+				else
+				{
+					// End of stream
+					errorComplete.Set();
+				}
 			};
 
 			process.BeginOutputReadLine();
 			process.BeginErrorReadLine();
 
 			process.WaitForExit();
+
+			// Wait for output streams to be fully consumed (with timeout)
+			outputComplete.WaitOne(OutputStreamTimeout);
+			errorComplete.WaitOne(OutputStreamTimeout);
 
 			// Notify that execution has completed
 			GraphExecutionChangedSubject.OnNext(false);

@@ -21,7 +21,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		..\.github\workflows\dotnet.yml = ..\.github\workflows\dotnet.yml
 		..\.github\workflows\release.yml = ..\.github\workflows\release.yml
 		..\.github\workflows\workflow-build.yml = ..\.github\workflows\workflow-build.yml
+		..\.github\workflows\workflow-e2e-tests-windows.yml = ..\.github\workflows\workflow-e2e-tests-windows.yml
 		..\.github\workflows\workflow-e2e-tests.yml = ..\.github\workflows\workflow-e2e-tests.yml
+		..\.github\workflows\workflow-tests-windows.yml = ..\.github\workflows\workflow-tests-windows.yml
 		..\.github\workflows\workflow-tests.yml = ..\.github\workflows\workflow-tests.yml
 	EndProjectSection
 EndProject

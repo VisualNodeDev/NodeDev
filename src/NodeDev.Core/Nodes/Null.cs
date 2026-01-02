@@ -1,8 +1,8 @@
-﻿using NodeDev.Core.Types;
-using NodeDev.Core.CodeGeneration;
-using System.Linq.Expressions;
-using Microsoft.CodeAnalysis.CSharp;
+﻿using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NodeDev.Core.CodeGeneration;
+using NodeDev.Core.Types;
+using System.Linq.Expressions;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;

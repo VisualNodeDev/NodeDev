@@ -1,5 +1,5 @@
-﻿using NodeDev.Core.CodeGeneration;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NodeDev.Core.CodeGeneration;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;

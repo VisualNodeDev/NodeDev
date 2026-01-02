@@ -1,10 +1,7 @@
 using NodeDev.Core;
-using NodeDev.Core.Class;
-using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Debug;
 using NodeDev.Core.Nodes.Flow;
 using System.Reactive.Linq;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace NodeDev.Tests;
@@ -35,7 +32,7 @@ public class ConsoleOutputTests
 
 		// Connect Entry -> WriteLine -> Return
 		// Note: By default there is already a connection between Entry and Return, so we don't need to remove it
-		
+
 		// Connect Entry.Exec -> WriteLine.Exec
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], writeLineNode.Inputs[0]);
 
@@ -50,13 +47,13 @@ public class ConsoleOutputTests
 		var consoleOutput = new List<string>();
 		var executionStarted = false;
 		var executionEnded = false;
-		
+
 		var outputSubscription = project.ConsoleOutput.Subscribe(text =>
 		{
 			output.WriteLine($"Console output: {text}");
 			consoleOutput.Add(text);
 		});
-		
+
 		var executionSubscription = project.GraphExecutionChanged.Subscribe(status =>
 		{
 			output.WriteLine($"Execution status changed: {status}");
@@ -72,9 +69,6 @@ public class ConsoleOutputTests
 			output.WriteLine("Starting project run...");
 			var result = project.Run(BuildOptions.Debug);
 			output.WriteLine($"Project run completed with result: {result}");
-
-			// Wait a bit for any remaining async operations
-			Thread.Sleep(1000);
 
 			// Assert
 			Assert.True(executionStarted, "Execution should have started");

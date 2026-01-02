@@ -53,24 +53,24 @@ public sealed class ComprehensiveUIStepDefinitions
 		// Check that method text is properly displayed
 		var methodItems = User.Locator("[data-test-id='Method']");
 		var count = await methodItems.CountAsync();
-		
+
 		for (int i = 0; i < count; i++)
 		{
 			var methodItem = methodItems.Nth(i);
 			var text = await methodItem.InnerTextAsync();
-			
+
 			// Check for overlapping text patterns or corruption
 			if (string.IsNullOrWhiteSpace(text))
 			{
 				throw new Exception($"Method {i} has empty or whitespace-only text");
 			}
-			
+
 			// Check for unusual characters that might indicate corruption
 			if (text.Contains("\u0000") || text.Length < 4)
 			{
 				throw new Exception($"Method {i} appears to have corrupted text: '{text}'");
 			}
-			
+
 			Console.WriteLine($"✓ Method {i} text is readable: '{text.Substring(0, Math.Min(50, text.Length))}...'");
 		}
 	}
@@ -164,13 +164,13 @@ public sealed class ComprehensiveUIStepDefinitions
 	{
 		var canvas = HomePage.GetGraphCanvas();
 		var isVisible = await canvas.IsVisibleAsync();
-		
+
 		if (!isVisible)
 		{
 			await HomePage.TakeScreenshot("/tmp/graph-canvas-not-visible-again.png");
 			throw new Exception("Graph canvas is not visible after reopening");
 		}
-		
+
 		Console.WriteLine("✓ Graph canvas is still visible");
 	}
 
@@ -179,20 +179,20 @@ public sealed class ComprehensiveUIStepDefinitions
 	{
 		var methodItems = User.Locator("[data-test-id='Method']");
 		var count = await methodItems.CountAsync();
-		
+
 		Console.WriteLine($"Found {count} method(s) to verify");
-		
+
 		for (int i = 0; i < count; i++)
 		{
 			var methodItem = methodItems.Nth(i);
 			var textContent = await methodItem.TextContentAsync();
-			
+
 			if (string.IsNullOrWhiteSpace(textContent))
 			{
 				await HomePage.TakeScreenshot($"/tmp/method-{i}-empty-text.png");
 				throw new Exception($"Method {i} has empty text content");
 			}
-			
+
 			Console.WriteLine($"✓ Method {i}: '{textContent}'");
 		}
 	}
@@ -202,7 +202,7 @@ public sealed class ComprehensiveUIStepDefinitions
 	{
 		var classes = User.Locator("[data-test-id='projectExplorerClass'] p");
 		var count = await classes.CountAsync();
-		
+
 		if (count > 1)
 		{
 			var secondClass = classes.Nth(1);

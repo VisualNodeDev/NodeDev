@@ -1,5 +1,4 @@
-﻿using NodeDev.Core;
-using NodeDev.Core.Connections;
+﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
 
@@ -129,7 +128,7 @@ public class GraphManagerService
 
 	public void DisconnectConnectionBetween(Connection source, Connection destination)
 	{
-		if(source.IsInput)
+		if (source.IsInput)
 		{
 			(destination, source) = (source, destination);
 		}

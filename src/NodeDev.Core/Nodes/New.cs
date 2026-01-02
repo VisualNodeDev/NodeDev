@@ -1,8 +1,8 @@
-﻿using NodeDev.Core.Connections;
-using NodeDev.Core.Types;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.CodeGeneration;
+using NodeDev.Core.Connections;
+using NodeDev.Core.Types;
 using System.Linq.Expressions;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
@@ -103,7 +103,7 @@ public class New : NormalFlowNode
 			// Array instantiation: new Type[length]
 			var elementType = RoslynHelpers.GetTypeSyntax(Outputs[1].Type.ArrayInnerType);
 			var lengthVar = SF.IdentifierName(context.GetVariableName(Inputs[1])!);
-			
+
 			newExpression = SF.ArrayCreationExpression(
 				SF.ArrayType(elementType)
 					.WithRankSpecifiers(
@@ -115,9 +115,9 @@ public class New : NormalFlowNode
 		{
 			// Object instantiation: new Type(args)
 			var typeSyntax = RoslynHelpers.GetTypeSyntax(Outputs[1].Type);
-			var args = Inputs.Skip(1).Select(input => 
+			var args = Inputs.Skip(1).Select(input =>
 				SF.Argument(SF.IdentifierName(context.GetVariableName(input)!))).ToArray();
-			
+
 			newExpression = SF.ObjectCreationExpression(typeSyntax)
 				.WithArgumentList(SF.ArgumentList(SF.SeparatedList(args)));
 		}
