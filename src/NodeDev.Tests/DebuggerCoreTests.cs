@@ -502,14 +502,8 @@ public class DebuggerCoreTests
         };
 
         // Launch the process suspended for debugging
-        // On Linux, we need to run "dotnet ScriptRunner.dll dllPath"
-        var dotnetExe = "/usr/share/dotnet/dotnet";
-        if (!File.Exists(dotnetExe))
-        {
-            // Try to find dotnet in PATH
-            dotnetExe = "dotnet";
-        }
-
+        // Find dotnet executable in a cross-platform way
+        var dotnetExe = FindDotNetExecutable();
         _output.WriteLine($"Launching: {dotnetExe} {scriptRunnerPath} {dllPath}");
 
         var launchResult = engine.LaunchProcess(dotnetExe, $"\"{scriptRunnerPath}\" \"{dllPath}\"");
@@ -552,7 +546,9 @@ public class DebuggerCoreTests
             // try to enumerate CLRs to verify the process had the CLR
             try
             {
-                // Give the process a moment to fully initialize or exit
+                // Wait briefly for the process to initialize - this is a reasonable delay
+                // since we need the CLR to be loaded in the target process before we can enumerate
+                // We already waited for clrReadyEvent above, but give a bit more time for stability
                 Thread.Sleep(500);
 
                 var clrs = engine.EnumerateCLRs(launchResult.ProcessId);
@@ -669,7 +665,7 @@ public class DebuggerCoreTests
         // Start the process normally (not suspended)
         var processStartInfo = new ProcessStartInfo
         {
-            FileName = "/usr/share/dotnet/dotnet",
+            FileName = FindDotNetExecutable(),
             Arguments = $"\"{scriptRunnerPath}\" \"{dllPath}\"",
             UseShellExecute = false,
             RedirectStandardOutput = true,
@@ -683,10 +679,10 @@ public class DebuggerCoreTests
 
         try
         {
-            // Give CLR time to load
-            Thread.Sleep(200);
+            // Wait for CLR to load or process to exit
+            var processExited = process.WaitForExit(200);
 
-            if (process.HasExited)
+            if (processExited || process.HasExited)
             {
                 _output.WriteLine($"Process exited quickly with code: {process.ExitCode}");
                 var stdout = process.StandardOutput.ReadToEnd();
@@ -726,6 +722,58 @@ public class DebuggerCoreTests
                 process.Kill();
             }
         }
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    /// <summary>
+    /// Finds the dotnet executable in a cross-platform way.
+    /// </summary>
+    private static string FindDotNetExecutable()
+    {
+        var execName = OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
+
+        // Check PATH first
+        var pathEnv = Environment.GetEnvironmentVariable("PATH");
+        if (!string.IsNullOrEmpty(pathEnv))
+        {
+            var separator = OperatingSystem.IsWindows() ? ';' : ':';
+            foreach (var dir in pathEnv.Split(separator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var fullPath = Path.Combine(dir, execName);
+                if (File.Exists(fullPath))
+                {
+                    return fullPath;
+                }
+            }
+        }
+
+        // Check standard installation paths
+        var standardPaths = OperatingSystem.IsWindows()
+            ? new[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet", execName),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "dotnet", execName)
+            }
+            : new[]
+            {
+                "/usr/share/dotnet/dotnet",
+                "/usr/lib/dotnet/dotnet",
+                "/opt/dotnet/dotnet"
+            };
+
+        foreach (var path in standardPaths)
+        {
+            if (File.Exists(path))
+            {
+                return path;
+            }
+        }
+
+        // Fall back to just "dotnet" and hope it's in PATH
+        return "dotnet";
     }
 
     #endregion
