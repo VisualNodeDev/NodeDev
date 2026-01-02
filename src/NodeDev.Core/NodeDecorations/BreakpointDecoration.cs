@@ -14,7 +14,7 @@ public class BreakpointDecoration : INodeDecoration
 
 	public string Serialize() => "breakpoint";
 
-	public static new INodeDecoration Deserialize(TypeFactory typeFactory, string serialized)
+	public static INodeDecoration Deserialize(TypeFactory typeFactory, string serialized)
 	{
 		return Instance;
 	}
