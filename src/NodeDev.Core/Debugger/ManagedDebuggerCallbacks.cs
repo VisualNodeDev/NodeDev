@@ -1,6 +1,6 @@
 using ClrDebug;
 
-namespace NodeDev.DebuggerCore;
+namespace NodeDev.Core.Debugger;
 
 /// <summary>
 /// Implements the ICorDebugManagedCallback interface to receive debugging events.

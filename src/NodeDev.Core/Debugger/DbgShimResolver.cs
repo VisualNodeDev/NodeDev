@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace NodeDev.DebuggerCore;
+namespace NodeDev.Core.Debugger;
 
 /// <summary>
 /// Resolves the path to the dbgshim library (dbgshim.dll on Windows, libdbgshim.so on Linux).

@@ -231,6 +231,16 @@ public class Project
 		throw new FileNotFoundException("ScriptRunner executable not found. Please ensure NodeDev.ScriptRunner is built and available.");
 	}
 
+	/// <summary>
+	/// Gets the path to the ScriptRunner executable.
+	/// This is useful for debugging infrastructure that needs to locate the runner.
+	/// </summary>
+	/// <returns>The full path to NodeDev.ScriptRunner.dll</returns>
+	public string GetScriptRunnerPath()
+	{
+		return FindScriptRunnerExecutable();
+	}
+
 	public object? Run(BuildOptions options, params object?[] inputs)
 	{
 		try

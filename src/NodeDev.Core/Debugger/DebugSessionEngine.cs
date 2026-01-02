@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using ClrDebug;
 
-namespace NodeDev.DebuggerCore;
+namespace NodeDev.Core.Debugger;
 
 /// <summary>
 /// The main debugging engine that manages debug sessions for .NET Core processes.

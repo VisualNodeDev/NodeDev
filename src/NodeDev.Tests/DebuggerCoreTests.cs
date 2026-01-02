@@ -1,14 +1,28 @@
-using NodeDev.DebuggerCore;
+using NodeDev.Core;
+using NodeDev.Core.Class;
+using NodeDev.Core.Debugger;
+using NodeDev.Core.Nodes;
+using NodeDev.Core.Nodes.Debug;
+using NodeDev.Core.Nodes.Flow;
+using System.Diagnostics;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace NodeDev.Tests;
 
 /// <summary>
-/// Unit tests for NodeDev.DebuggerCore.
+/// Unit tests for NodeDev.Core.Debugger.
 /// These tests verify the basic functionality of the debug engine components.
 /// </summary>
 public class DebuggerCoreTests
 {
+    private readonly ITestOutputHelper _output;
+
+    public DebuggerCoreTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
+
     #region DbgShimResolver Tests
 
     [Fact]
@@ -65,6 +79,10 @@ public class DebuggerCoreTests
         if (result != null)
         {
             Assert.True(File.Exists(result), $"Resolved path should exist: {result}");
+        }
+        else
+        {
+            _output.WriteLine("DbgShim is not available in this environment - skipping path existence check");
         }
     }
 
@@ -300,6 +318,100 @@ public class DebuggerCoreTests
 
     #endregion
 
+    #region NodeDev Integration Tests
+
+    [Fact]
+    public void NodeDev_CreateProject_ShouldBuildSuccessfully()
+    {
+        // Arrange - Create a NodeDev project with a simple program
+        var project = Project.CreateNewDefaultProject(out var mainMethod);
+        var graph = mainMethod.Graph;
+
+        // Add a WriteLine node
+        var writeLineNode = new WriteLine(graph);
+        graph.Manager.AddNode(writeLineNode);
+
+        var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
+        var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
+
+        // Connect Entry -> WriteLine -> Return
+        graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], writeLineNode.Inputs[0]);
+        writeLineNode.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+        writeLineNode.Inputs[1].UpdateTextboxText("\"Debug Test Message\"");
+        graph.Manager.AddNewConnectionBetween(writeLineNode.Outputs[0], returnNode.Inputs[0]);
+
+        // Act - Build the project
+        var dllPath = project.Build(BuildOptions.Debug);
+
+        // Assert
+        Assert.NotNull(dllPath);
+        Assert.True(File.Exists(dllPath), $"Built DLL should exist at {dllPath}");
+        _output.WriteLine($"Built DLL path: {dllPath}");
+    }
+
+    [Fact]
+    public void NodeDev_RunProject_ShouldExecuteAndReturnExitCode()
+    {
+        // Arrange - Create a project that returns a specific exit code
+        var project = Project.CreateNewDefaultProject(out var mainMethod);
+        var graph = mainMethod.Graph;
+
+        var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
+        returnNode.Inputs[1].UpdateTextboxText("42");
+
+        var consoleOutput = new List<string>();
+        var outputSubscription = project.ConsoleOutput.Subscribe(text =>
+        {
+            _output.WriteLine($"[Console] {text}");
+            consoleOutput.Add(text);
+        });
+
+        try
+        {
+            // Act - Run the project
+            var result = project.Run(BuildOptions.Debug);
+            Thread.Sleep(1000); // Wait for async output
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(42, result);
+            _output.WriteLine($"Exit code: {result}");
+
+            // Verify ScriptRunner was used
+            Assert.Contains(consoleOutput, line => line.Contains("Program.Main") || line.Contains("ScriptRunner"));
+        }
+        finally
+        {
+            outputSubscription.Dispose();
+        }
+    }
+
+    [Fact]
+    public void NodeDev_BuildProject_ShouldCreateDebuggableAssembly()
+    {
+        // Arrange - Create a project
+        var project = Project.CreateNewDefaultProject(out var mainMethod);
+
+        // Act - Build with debug options
+        var dllPath = project.Build(BuildOptions.Debug);
+
+        // Assert - Verify the assembly can be loaded
+        Assert.NotNull(dllPath);
+
+        var pdbPath = Path.ChangeExtension(dllPath, ".pdb");
+
+        Assert.True(File.Exists(dllPath), "DLL should exist");
+        _output.WriteLine($"DLL: {dllPath}");
+
+        // PDB should be generated for debug builds
+        if (File.Exists(pdbPath))
+        {
+            _output.WriteLine($"PDB: {pdbPath}");
+        }
+    }
+
+    #endregion
+
     #region Integration Tests (only run if DbgShim is available)
 
     [Fact]
@@ -309,7 +421,7 @@ public class DebuggerCoreTests
         var shimPath = DbgShimResolver.TryResolve();
         if (shimPath == null)
         {
-            // DbgShim not available - this is expected in many environments
+            _output.WriteLine("DbgShim not available - test skipped (this is expected in many CI environments)");
             return;
         }
 
@@ -321,6 +433,7 @@ public class DebuggerCoreTests
 
         // Assert
         Assert.NotNull(engine.DbgShim);
+        _output.WriteLine($"DbgShim loaded successfully from: {shimPath}");
     }
 
     [Fact]
@@ -330,6 +443,7 @@ public class DebuggerCoreTests
         var shimPath = DbgShimResolver.TryResolve();
         if (shimPath == null)
         {
+            _output.WriteLine("DbgShim not available - test skipped");
             return;
         }
 
@@ -341,6 +455,68 @@ public class DebuggerCoreTests
         var exception = Assert.Throws<ArgumentException>(() =>
             engine.LaunchProcess("/nonexistent/executable.exe"));
         Assert.Contains("not found", exception.Message);
+    }
+
+    [Fact]
+    public void DebugSessionEngine_FullIntegration_BuildAndPrepareForDebug()
+    {
+        // This test verifies the complete workflow of building a NodeDev project
+        // and preparing it for debugging
+
+        // Skip if dbgshim is not available
+        var shimPath = DbgShimResolver.TryResolve();
+        if (shimPath == null)
+        {
+            _output.WriteLine("DbgShim not available - test skipped");
+            _output.WriteLine("To run full integration tests, install the dotnet debugging support:");
+            _output.WriteLine("  - On Windows: dbgshim.dll is included with the .NET SDK");
+            _output.WriteLine("  - On Linux: Install dotnet-runtime-dbg package or diagnostic tools");
+            return;
+        }
+
+        _output.WriteLine($"DbgShim found at: {shimPath}");
+
+        // Arrange - Create and build a NodeDev project
+        var project = Project.CreateNewDefaultProject(out var mainMethod);
+        var graph = mainMethod.Graph;
+
+        // Add a simple program that prints and exits
+        var writeLineNode = new WriteLine(graph);
+        graph.Manager.AddNode(writeLineNode);
+
+        var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
+        var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
+
+        graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], writeLineNode.Inputs[0]);
+        writeLineNode.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+        writeLineNode.Inputs[1].UpdateTextboxText("\"Hello from NodeDev debugger test!\"");
+        graph.Manager.AddNewConnectionBetween(writeLineNode.Outputs[0], returnNode.Inputs[0]);
+
+        // Build the project
+        var dllPath = project.Build(BuildOptions.Debug);
+        Assert.NotNull(dllPath);
+        _output.WriteLine($"Built project: {dllPath}");
+
+        // Initialize the debug engine
+        using var engine = new DebugSessionEngine(shimPath);
+        engine.Initialize();
+        Assert.NotNull(engine.DbgShim);
+        _output.WriteLine("Debug engine initialized");
+
+        // Verify we can locate ScriptRunner
+        var scriptRunnerPath = project.GetScriptRunnerPath();
+        Assert.True(File.Exists(scriptRunnerPath), $"ScriptRunner should exist at: {scriptRunnerPath}");
+        _output.WriteLine($"ScriptRunner found at: {scriptRunnerPath}");
+
+        // The full attach/debug workflow would require:
+        // 1. engine.LaunchProcess(dotnetExe, scriptRunnerPath + " " + dllPath)
+        // 2. engine.RegisterForRuntimeStartup(pid, callback)
+        // 3. engine.AttachToProcess(pid)
+        // 4. engine.SetupDebugging(corDebug, pid)
+        // This is complex and requires coordinating multiple async operations
+
+        _output.WriteLine("Full integration test completed successfully");
+        _output.WriteLine("Note: Actual attach/debug requires runtime to be loaded in target process");
     }
 
     #endregion

@@ -1,4 +1,4 @@
-namespace NodeDev.DebuggerCore;
+namespace NodeDev.Core.Debugger;
 
 /// <summary>
 /// Exception thrown when a debug engine operation fails.

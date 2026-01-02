@@ -26,7 +26,6 @@
   <ItemGroup>
     <ProjectReference Include="..\NodeDev.Blazor\NodeDev.Blazor.csproj" />
     <ProjectReference Include="..\NodeDev.Core\NodeDev.Core.csproj" />
-    <ProjectReference Include="..\NodeDev.DebuggerCore\NodeDev.DebuggerCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
