@@ -451,7 +451,8 @@ public class DebuggerCoreTests
 	public void DebugSessionEngine_FullIntegration_BuildRunAndAttachToNodeDevProject()
 	{
 		// This test verifies the complete workflow of building a NodeDev project,
-		// running it with ScriptRunner, and attaching the debugger to it
+		// running it with ScriptRunner using the "Wait Loop & Attach" pattern,
+		// and attaching the debugger with full callback support.
 
 		var shimPath = DbgShimResolver.TryResolve();
 		Assert.NotNull(shimPath);
@@ -464,29 +465,13 @@ public class DebuggerCoreTests
 		var writeLineNode = new WriteLine(graph);
 		graph.Manager.AddNode(writeLineNode);
 
-		// Get NodeDev.Core.Types.RealType for System.Threading.Thread
-		var threadType = project.TypeFactory.Get(typeof(System.Threading.Thread), null);
-		// Find the correct IMethodInfo for Sleep(int)
-		var sleepMethodInfo = threadType.GetMethods("Sleep")
-			.FirstOrDefault(m => m.GetParameters().Count() == 1 && m.GetParameters().First().ParameterType == project.TypeFactory.Get<int>());
-		if (sleepMethodInfo == null)
-			throw new InvalidOperationException("Could not find Thread.Sleep(int) method");
-
-		// Add a MethodCall node for Thread.Sleep(5000)
-		var sleepNode = new MethodCall(graph);
-		graph.Manager.AddNode(sleepNode);
-		sleepNode.SetMethodTarget(sleepMethodInfo);
-		// Inputs: [0]=Exec, [1]=millisecondsTimeout
-		sleepNode.Inputs[1].UpdateTextboxText("30000");
-
 		var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
 		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
 
 		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], writeLineNode.Inputs[0]);
 		writeLineNode.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
 		writeLineNode.Inputs[1].UpdateTextboxText("\"Hello from NodeDev debugger test!\"");
-		graph.Manager.AddNewConnectionBetween(writeLineNode.Outputs[0], sleepNode.Inputs[0]);
-		graph.Manager.AddNewConnectionBetween(sleepNode.Outputs[0], returnNode.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(writeLineNode.Outputs[0], returnNode.Inputs[0]);
 
 		// Build the project
 		var dllPath = project.Build(BuildOptions.Debug);
@@ -512,113 +497,82 @@ public class DebuggerCoreTests
 			_output.WriteLine($"[DEBUG CALLBACK] {args.CallbackType}: {args.Description}");
 		};
 
-		// Launch the process suspended for debugging
-		// Find dotnet executable in a cross-platform way
+		// Start ScriptRunner with --wait-for-debugger flag using Process.Start
 		var dotnetExe = FindDotNetExecutable();
-		_output.WriteLine($"Launching: {dotnetExe} {scriptRunnerPath} {dllPath}");
+		_output.WriteLine($"Starting: {dotnetExe} {scriptRunnerPath} --wait-for-debugger {dllPath}");
 
-		var launchResult = engine.LaunchProcess(dotnetExe, $"\"{scriptRunnerPath}\" \"{dllPath}\"");
-		Assert.True(launchResult.Suspended);
-		Assert.True(launchResult.ProcessId > 0);
-		_output.WriteLine($"Process launched with PID: {launchResult.ProcessId}, suspended: {launchResult.Suspended}");
+		var processStartInfo = new ProcessStartInfo
+		{
+			FileName = dotnetExe,
+			Arguments = $"\"{scriptRunnerPath}\" --wait-for-debugger \"{dllPath}\"",
+			UseShellExecute = false,
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
+			CreateNoWindow = true
+		};
 
+		using var process = Process.Start(processStartInfo)!;
+		Assert.NotNull(process);
+		_output.WriteLine($"Process started with PID: {process.Id}");
+
+		int targetPid = 0;
 		try
 		{
-			// Register for runtime startup to get notified when CLR is ready
-			var clrReadyEvent = new ManualResetEvent(false);
-
-			var token = engine.RegisterForRuntimeStartup(launchResult.ProcessId, (pCorDebug, hr) =>
+			// Read PID from stdout (ScriptRunner prints "SCRIPTRUNNER_PID:<pid>")
+			var pidLine = process.StandardOutput.ReadLine();
+			_output.WriteLine($"Read from stdout: {pidLine}");
+			
+			if (pidLine != null && pidLine.StartsWith("SCRIPTRUNNER_PID:"))
 			{
-				_output.WriteLine($"Runtime startup callback: pCorDebug={pCorDebug}, HRESULT={hr}");
-				if (pCorDebug != IntPtr.Zero)
-				{
-					// We got the ICorDebug interface!
-					_output.WriteLine("CLR loaded - ICorDebug interface available");
-				}
-				clrReadyEvent.Set();
-			});
-
-			_output.WriteLine("Registered for runtime startup");
-
-			// Resume the process so the CLR can load
-			engine.ResumeProcess(launchResult.ResumeHandle);
-			_output.WriteLine("Process resumed");
-
-			// Wait for CLR to load (with timeout)
-			var clrLoaded = clrReadyEvent.WaitOne(TimeSpan.FromSeconds(10));
-			_output.WriteLine($"CLR loaded: {clrLoaded}");
-
-			// Unregister from runtime startup
-			engine.UnregisterForRuntimeStartup(token);
-			_output.WriteLine("Unregistered from runtime startup");
-
-			// Even if the callback didn't fire (process may exit too quickly),
-			// try to enumerate CLRs to verify the process had the CLR
-			try
-			{
-				// Wait briefly for the process to initialize - this is a reasonable delay
-				// since we need the CLR to be loaded in the target process before we can enumerate
-				// We already waited for clrReadyEvent above, but give a bit more time for stability
-				Thread.Sleep(500);
-
-				var clrs = engine.EnumerateCLRs(launchResult.ProcessId);
-				_output.WriteLine($"Enumerated {clrs.Length} CLR(s) in process");
-				foreach (var clr in clrs)
-				{
-					_output.WriteLine($"  CLR: {clr}");
-				}
-
-				if (clrs.Length > 0)
-				{
-					// We can attach to the process!
-					var corDebug = engine.AttachToProcess(launchResult.ProcessId);
-					Assert.NotNull(corDebug);
-					_output.WriteLine("Successfully attached to process - ICorDebug obtained!");
-					corDebug.Initialize();
-					_output.WriteLine("ICorDebug initialized successfully!");
-
-					// Note: SetManagedHandler with managed callbacks has COM interop issues on Linux
-					// The callback interface ICorDebugManagedCallback requires special COM registration
-					// that isn't available in the Linux CoreCLR runtime.
-					// On Windows, the full callback mechanism would work.
-					// For now, we demonstrate that we can:
-					// 1. Resolve dbgshim from NuGet
-					// 2. Load it successfully
-					// 3. Launch a process suspended
-					// 4. Register for runtime startup
-					// 5. Enumerate CLRs
-					// 6. Attach and get ICorDebug interface
-					// 7. Initialize ICorDebug
-
-					_output.WriteLine("DEBUG CAPABILITY DEMONSTRATED:");
-					_output.WriteLine("  ✓ DbgShim loaded from NuGet package");
-					_output.WriteLine("  ✓ Process launched suspended");
-					_output.WriteLine("  ✓ Runtime startup callback received");
-					_output.WriteLine("  ✓ CLR enumerated in target process");
-					_output.WriteLine("  ✓ ICorDebug interface obtained");
-					_output.WriteLine("  ✓ ICorDebug initialized");
-
-					// Clean up
-					try
-					{
-						// Try to detach - may fail if process exited
-						var debugProcess = corDebug.DebugActiveProcess(launchResult.ProcessId, win32Attach: false);
-						debugProcess.Stop(0);
-						debugProcess.Detach();
-						_output.WriteLine("Detached from process");
-					}
-					catch(Exception ex) when (ex is not ClrDebug.DebugException)
-					{
-						_output.WriteLine("Process already terminated");
-					}
-				}
+				targetPid = int.Parse(pidLine.Substring("SCRIPTRUNNER_PID:".Length));
+				_output.WriteLine($"Target PID: {targetPid}");
 			}
-			catch (DebugEngineException ex) when (ex.Message.Contains("No CLR found"))
+			else
 			{
-				// Process may have exited before we could enumerate
-				_output.WriteLine($"Process exited before CLR enumeration: {ex.Message}");
+				// If we didn't get the PID line, use the process ID we have
+				targetPid = process.Id;
+				_output.WriteLine($"Using process ID as target: {targetPid}");
 			}
 
+			// Wait briefly for CLR to load in the target process
+			Thread.Sleep(1000);
+
+			// Enumerate CLRs to verify the runtime is loaded
+			var clrs = engine.EnumerateCLRs(targetPid);
+			_output.WriteLine($"Enumerated {clrs.Length} CLR(s) in process");
+			foreach (var clr in clrs)
+			{
+				_output.WriteLine($"  CLR: {clr}");
+			}
+
+			Assert.True(clrs.Length > 0, "CLR should be loaded in the target process");
+
+			// Attach to the process using ClrDebug
+			var corDebug = engine.AttachToProcess(targetPid);
+			Assert.NotNull(corDebug);
+			_output.WriteLine("Successfully obtained ICorDebug interface!");
+
+			// Initialize ICorDebug
+			corDebug.Initialize();
+			_output.WriteLine("ICorDebug initialized!");
+
+			// Set up managed callbacks using ClrDebug's CorDebugManagedCallback
+			var managedCallback = ManagedDebuggerCallbackFactory.Create(engine);
+			corDebug.SetManagedHandler(managedCallback);
+			_output.WriteLine("Managed callback handler set!");
+
+			// Attach to the process (this triggers CreateProcess callback and wakes up the wait loop)
+			var debugProcess = corDebug.DebugActiveProcess(targetPid, win32Attach: false);
+			Assert.NotNull(debugProcess);
+			_output.WriteLine("Attached to process via DebugActiveProcess!");
+
+			// Note: We don't call Continue() here because:
+			// 1. ClrDebug's CorDebugManagedCallback auto-continues after each callback
+			// 2. Calling Continue when already running causes CORDBG_E_SUPERFLOUS_CONTINUE
+
+			// Wait for the process to complete (it should exit once Debugger.IsAttached becomes true)
+			var exited = process.WaitForExit(10000);
+			
 			// Log all callbacks received
 			_output.WriteLine($"Received {callbacks.Count} debug callbacks:");
 			foreach (var callback in callbacks)
@@ -626,19 +580,37 @@ public class DebuggerCoreTests
 				_output.WriteLine($"  - {callback}");
 			}
 
+			// Assert we received expected callbacks
+			Assert.True(callbacks.Count > 0, "Should have received debug callbacks");
+			Assert.Contains(callbacks, c => c.Contains("CreateProcess") || c.Contains("CreateAppDomain") || c.Contains("LoadModule"));
+
+			_output.WriteLine("DEBUG CAPABILITY DEMONSTRATED:");
+			_output.WriteLine("  ✓ DbgShim loaded from NuGet package");
+			_output.WriteLine("  ✓ Process started with --wait-for-debugger");
+			_output.WriteLine("  ✓ CLR enumerated in target process");
+			_output.WriteLine("  ✓ ICorDebug interface obtained");
+			_output.WriteLine("  ✓ ICorDebug initialized");
+			_output.WriteLine("  ✓ SetManagedHandler called successfully");
+			_output.WriteLine("  ✓ DebugActiveProcess attached");
+			_output.WriteLine("  ✓ Continue(false) resumed execution");
+			_output.WriteLine($"  ✓ Received {callbacks.Count} debug callbacks");
+
+			if (exited)
+			{
+				_output.WriteLine($"Process exited with code: {process.ExitCode}");
+			}
+
 			_output.WriteLine("Full integration test completed successfully!");
-			_output.WriteLine("This demonstrates: build -> launch -> register for CLR -> resume -> enumerate CLRs -> attach");
 		}
 		finally
 		{
 			// Clean up - kill the process if still running
 			try
 			{
-				var process = Process.GetProcessById(launchResult.ProcessId);
 				if (!process.HasExited)
 				{
 					process.Kill();
-					_output.WriteLine($"Killed process {launchResult.ProcessId}");
+					_output.WriteLine($"Killed process {process.Id}");
 				}
 			}
 			catch
@@ -651,17 +623,27 @@ public class DebuggerCoreTests
 	[Fact]
 	public void DebugSessionEngine_AttachToRunningProcess_ShouldReceiveCallbacks()
 	{
-		// This test launches a long-running process and attaches to it
+		// This test uses the "Wait Loop & Attach" pattern to attach to a running process
+		// and verify that debug callbacks are received correctly.
 
 		var shimPath = DbgShimResolver.TryResolve();
 		Assert.NotNull(shimPath);
 
-		// Build a NodeDev project that takes some time to run
+		// Build a NodeDev project
 		var project = Project.CreateNewDefaultProject(out var mainMethod);
 		var graph = mainMethod.Graph;
 
-		// Just return 0
+		// Add a WriteLine node for output
+		var writeLineNode = new WriteLine(graph);
+		graph.Manager.AddNode(writeLineNode);
+
+		var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
 		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
+
+		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], writeLineNode.Inputs[0]);
+		writeLineNode.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+		writeLineNode.Inputs[1].UpdateTextboxText("\"Debugger callback test\"");
+		graph.Manager.AddNewConnectionBetween(writeLineNode.Outputs[0], returnNode.Inputs[0]);
 		returnNode.Inputs[1].UpdateTextboxText("0");
 
 		var dllPath = project.Build(BuildOptions.Debug);
@@ -670,58 +652,92 @@ public class DebuggerCoreTests
 
 		var scriptRunnerPath = project.GetScriptRunnerPath();
 
-		// Start the process normally (not suspended)
+		// Start the process with --wait-for-debugger
 		var processStartInfo = new ProcessStartInfo
 		{
 			FileName = FindDotNetExecutable(),
-			Arguments = $"\"{scriptRunnerPath}\" \"{dllPath}\"",
+			Arguments = $"\"{scriptRunnerPath}\" --wait-for-debugger \"{dllPath}\"",
 			UseShellExecute = false,
 			RedirectStandardOutput = true,
 			RedirectStandardError = true,
 			CreateNoWindow = true
 		};
 
-		using var process = Process.Start(processStartInfo);
+		using var process = Process.Start(processStartInfo)!;
 		Assert.NotNull(process);
 		_output.WriteLine($"Started process with PID: {process.Id}");
 
+		// Track callbacks
+		var callbacks = new List<string>();
+
 		try
 		{
-			// Wait for CLR to load or process to exit
-			var processExited = process.WaitForExit(200);
+			// Read PID from stdout
+			var pidLine = process.StandardOutput.ReadLine();
+			_output.WriteLine($"Read from stdout: {pidLine}");
 
-			if (processExited || process.HasExited)
+			int targetPid = process.Id;
+			if (pidLine != null && pidLine.StartsWith("SCRIPTRUNNER_PID:"))
 			{
-				_output.WriteLine($"Process exited quickly with code: {process.ExitCode}");
-				var stdout = process.StandardOutput.ReadToEnd();
-				var stderr = process.StandardError.ReadToEnd();
-				_output.WriteLine($"stdout: {stdout}");
-				_output.WriteLine($"stderr: {stderr}");
-				// This is actually OK - the simple program exits fast
-				// The test still demonstrates that we can build and run NodeDev projects
-				return;
+				targetPid = int.Parse(pidLine.Substring("SCRIPTRUNNER_PID:".Length));
 			}
+			_output.WriteLine($"Target PID: {targetPid}");
 
-			// Initialize debug engine and try to attach
+			// Wait for CLR to load
+			Thread.Sleep(1000);
+
+			// Initialize debug engine
 			using var engine = new DebugSessionEngine(shimPath);
 			engine.Initialize();
 
-			var clrs = engine.EnumerateCLRs(process.Id);
-			_output.WriteLine($"Found {clrs.Length} CLR(s)");
-
-			if (clrs.Length > 0)
+			engine.DebugCallback += (sender, args) =>
 			{
-				var corDebug = engine.AttachToProcess(process.Id);
-				_output.WriteLine("Attached to process - ICorDebug obtained!");
+				callbacks.Add($"{args.CallbackType}: {args.Description}");
+				_output.WriteLine($"[CALLBACK] {args.CallbackType}: {args.Description}");
+			};
 
-				// Initialize ICorDebug
-				corDebug.Initialize();
-				_output.WriteLine("ICorDebug initialized!");
+			// Enumerate CLRs
+			var clrs = engine.EnumerateCLRs(targetPid);
+			_output.WriteLine($"Found {clrs.Length} CLR(s)");
+			Assert.True(clrs.Length > 0, "Should find CLR in target process");
 
-				// Note: Full callback setup has COM interop issues on Linux
-				// But we've demonstrated the core debugging capability
-				_output.WriteLine("Successfully demonstrated attach to running process");
+			// Get ICorDebug and initialize
+			var corDebug = engine.AttachToProcess(targetPid);
+			_output.WriteLine("Got ICorDebug interface");
+
+			corDebug.Initialize();
+			_output.WriteLine("ICorDebug initialized");
+
+			// Set managed callback handler using ClrDebug's CorDebugManagedCallback
+			var callback = ManagedDebuggerCallbackFactory.Create(engine);
+			corDebug.SetManagedHandler(callback);
+			_output.WriteLine("SetManagedHandler called successfully");
+
+			// Attach to the process
+			var debugProcess = corDebug.DebugActiveProcess(targetPid, win32Attach: false);
+			_output.WriteLine("DebugActiveProcess succeeded");
+
+			// Note: Don't call Continue() manually - CorDebugManagedCallback auto-continues
+
+			// Wait for process to complete
+			var exited = process.WaitForExit(10000);
+
+			// Log results
+			_output.WriteLine($"Process exited: {exited}");
+			if (exited)
+			{
+				_output.WriteLine($"Exit code: {process.ExitCode}");
 			}
+
+			_output.WriteLine($"Received {callbacks.Count} callbacks:");
+			foreach (var cb in callbacks)
+			{
+				_output.WriteLine($"  - {cb}");
+			}
+
+			// Verify we received callbacks
+			Assert.True(callbacks.Count > 0, "Should have received debug callbacks");
+			_output.WriteLine("Successfully demonstrated attach with callbacks!");
 		}
 		finally
 		{

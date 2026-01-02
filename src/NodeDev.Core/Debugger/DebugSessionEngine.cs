@@ -275,8 +275,8 @@ public class DebugSessionEngine : IDisposable
 			// Initialize the debugging interface
 			corDebug.Initialize();
 
-			// Set managed callbacks
-			var managedCallback = new ManagedDebuggerCallbacks(this);
+			// Set managed callbacks using ClrDebug's CorDebugManagedCallback
+			var managedCallback = ManagedDebuggerCallbackFactory.Create(this);
 			corDebug.SetManagedHandler(managedCallback);
 
 			// Attach to the process

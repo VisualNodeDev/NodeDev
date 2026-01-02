@@ -3,302 +3,84 @@ using ClrDebug;
 namespace NodeDev.Core.Debugger;
 
 /// <summary>
-/// Implements the ICorDebugManagedCallback interface to receive debugging events.
+/// Factory class that creates and configures a CorDebugManagedCallback 
+/// with proper event handling for the debug session engine.
+/// Uses ClrDebug's built-in CorDebugManagedCallback which handles COM interop correctly.
 /// </summary>
-internal class ManagedDebuggerCallbacks : ICorDebugManagedCallback, ICorDebugManagedCallback2
+public static class ManagedDebuggerCallbackFactory
 {
-	private readonly DebugSessionEngine _engine;
-
-	public ManagedDebuggerCallbacks(DebugSessionEngine engine)
+	/// <summary>
+	/// Creates a new CorDebugManagedCallback configured to forward events to the debug session engine.
+	/// </summary>
+	/// <param name="engine">The debug session engine to receive callback events.</param>
+	/// <returns>A configured CorDebugManagedCallback instance.</returns>
+	public static CorDebugManagedCallback Create(DebugSessionEngine engine)
 	{
-		_engine = engine;
-	}
+		var callback = new CorDebugManagedCallback();
 
-	// ICorDebugManagedCallback methods
-
-	public HRESULT Breakpoint(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, ICorDebugBreakpoint pBreakpoint)
-	{
-		RaiseCallback("Breakpoint", "Breakpoint hit");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT StepComplete(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, ICorDebugStepper pStepper, CorDebugStepReason reason)
-	{
-		RaiseCallback("StepComplete", $"Step completed: {reason}");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT Break(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread)
-	{
-		RaiseCallback("Break", "Break occurred");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT Exception(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, int unhandled)
-	{
-		RaiseCallback("Exception", $"Exception occurred (unhandled: {unhandled})");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT EvalComplete(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, ICorDebugEval pEval)
-	{
-		RaiseCallback("EvalComplete", "Evaluation completed");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT EvalException(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, ICorDebugEval pEval)
-	{
-		RaiseCallback("EvalException", "Evaluation threw exception");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT CreateProcess(ICorDebugProcess pProcess)
-	{
-		RaiseCallback("CreateProcess", "Process created");
-		Continue(pProcess);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT ExitProcess(ICorDebugProcess pProcess)
-	{
-		RaiseCallback("ExitProcess", "Process exited");
-		// Do not continue after exit
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT CreateThread(ICorDebugAppDomain pAppDomain, ICorDebugThread thread)
-	{
-		RaiseCallback("CreateThread", "Thread created");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT ExitThread(ICorDebugAppDomain pAppDomain, ICorDebugThread thread)
-	{
-		RaiseCallback("ExitThread", "Thread exited");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT LoadModule(ICorDebugAppDomain pAppDomain, ICorDebugModule pModule)
-	{
-		RaiseCallback("LoadModule", "Module loaded");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT UnloadModule(ICorDebugAppDomain pAppDomain, ICorDebugModule pModule)
-	{
-		RaiseCallback("UnloadModule", "Module unloaded");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT LoadClass(ICorDebugAppDomain pAppDomain, ICorDebugClass c)
-	{
-		RaiseCallback("LoadClass", "Class loaded");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT UnloadClass(ICorDebugAppDomain pAppDomain, ICorDebugClass c)
-	{
-		RaiseCallback("UnloadClass", "Class unloaded");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT DebuggerError(ICorDebugProcess pProcess, HRESULT errorHR, int errorCode)
-	{
-		RaiseCallback("DebuggerError", $"Debugger error: HR={errorHR}, Code={errorCode}");
-		// Continue execution on error
-		try { Continue(pProcess); }
-		catch { /* Ignore */ }
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT LogMessage(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, LoggingLevelEnum lLevel, string pLogSwitchName, string pMessage)
-	{
-		RaiseCallback("LogMessage", $"Log [{lLevel}] {pLogSwitchName}: {pMessage}");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT LogSwitch(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, int lLevel, LogSwitchCallReason ulReason, string pLogSwitchName, string pParentName)
-	{
-		RaiseCallback("LogSwitch", $"Log switch changed: {pLogSwitchName}");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT CreateAppDomain(ICorDebugProcess pProcess, ICorDebugAppDomain pAppDomain)
-	{
-		RaiseCallback("CreateAppDomain", "AppDomain created");
-		pAppDomain.Attach();
-		Continue(pProcess);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT ExitAppDomain(ICorDebugProcess pProcess, ICorDebugAppDomain pAppDomain)
-	{
-		RaiseCallback("ExitAppDomain", "AppDomain exited");
-		Continue(pProcess);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT LoadAssembly(ICorDebugAppDomain pAppDomain, ICorDebugAssembly pAssembly)
-	{
-		RaiseCallback("LoadAssembly", "Assembly loaded");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT UnloadAssembly(ICorDebugAppDomain pAppDomain, ICorDebugAssembly pAssembly)
-	{
-		RaiseCallback("UnloadAssembly", "Assembly unloaded");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT ControlCTrap(ICorDebugProcess pProcess)
-	{
-		RaiseCallback("ControlCTrap", "Ctrl+C trapped");
-		Continue(pProcess);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT NameChange(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread)
-	{
-		RaiseCallback("NameChange", "Name changed");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT UpdateModuleSymbols(ICorDebugAppDomain pAppDomain, ICorDebugModule pModule, IStream pSymbolStream)
-	{
-		RaiseCallback("UpdateModuleSymbols", "Module symbols updated");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT EditAndContinueRemap(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, ICorDebugFunction pFunction, bool fAccurate)
-	{
-		RaiseCallback("EditAndContinueRemap", "Edit and Continue remap");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT BreakpointSetError(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, ICorDebugBreakpoint pBreakpoint, int dwError)
-	{
-		RaiseCallback("BreakpointSetError", $"Failed to set breakpoint: error {dwError}");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	// ICorDebugManagedCallback2 methods
-
-	public HRESULT FunctionRemapOpportunity(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, ICorDebugFunction pOldFunction, ICorDebugFunction pNewFunction, int oldILOffset)
-	{
-		RaiseCallback("FunctionRemapOpportunity", "Function remap opportunity");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT CreateConnection(ICorDebugProcess pProcess, int dwConnectionId, string pConnName)
-	{
-		RaiseCallback("CreateConnection", $"Connection created: {pConnName}");
-		Continue(pProcess);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT ChangeConnection(ICorDebugProcess pProcess, int dwConnectionId)
-	{
-		RaiseCallback("ChangeConnection", "Connection changed");
-		Continue(pProcess);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT DestroyConnection(ICorDebugProcess pProcess, int dwConnectionId)
-	{
-		RaiseCallback("DestroyConnection", "Connection destroyed");
-		Continue(pProcess);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT Exception(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, ICorDebugFrame pFrame, int nOffset, CorDebugExceptionCallbackType dwEventType, CorDebugExceptionFlags dwFlags)
-	{
-		RaiseCallback("Exception2", $"Exception event: {dwEventType}");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT ExceptionUnwind(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, CorDebugExceptionUnwindCallbackType dwEventType, CorDebugExceptionFlags dwFlags)
-	{
-		RaiseCallback("ExceptionUnwind", $"Exception unwind: {dwEventType}");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT FunctionRemapComplete(ICorDebugAppDomain pAppDomain, ICorDebugThread pThread, ICorDebugFunction pFunction)
-	{
-		RaiseCallback("FunctionRemapComplete", "Function remap complete");
-		Continue(pAppDomain);
-		return HRESULT.S_OK;
-	}
-
-	public HRESULT MDANotification(ICorDebugController pController, ICorDebugThread pThread, ICorDebugMDA pMDA)
-	{
-		RaiseCallback("MDANotification", "MDA notification");
-		Continue(pController);
-		return HRESULT.S_OK;
-	}
-
-	// Helper methods
-
-	private void RaiseCallback(string callbackType, string description)
-	{
-		_engine.OnDebugCallback(new DebugCallbackEventArgs(callbackType, description));
-	}
-
-	private static void Continue(ICorDebugController controller)
-	{
-		try
+		// Subscribe to all events via OnAnyEvent
+		callback.OnAnyEvent += (sender, e) =>
 		{
-			controller.Continue(false);
-		}
-		catch
-		{
-			// Ignore continue errors
-		}
+			var eventKind = e.Kind.ToString();
+			var description = GetEventDescription(e);
+
+			// Log breakpoint hits to console as required
+			if (e.Kind == CorDebugManagedCallbackKind.Breakpoint)
+			{
+				Console.WriteLine("Breakpoint Hit");
+			}
+
+			engine.OnDebugCallback(new DebugCallbackEventArgs(eventKind, description));
+
+			// Always continue execution (callbacks auto-continue by default in ClrDebug)
+			// e.Controller.Continue(false) is called automatically unless explicitly prevented
+		};
+
+		return callback;
 	}
 
-	private static void Continue(ICorDebugAppDomain appDomain)
+	/// <summary>
+	/// Gets a human-readable description for a debug callback event.
+	/// </summary>
+	private static string GetEventDescription(CorDebugManagedCallbackEventArgs e)
 	{
-		try
+		return e.Kind switch
 		{
-			appDomain.Continue(false);
-		}
-		catch
-		{
-			// Ignore continue errors
-		}
-	}
-
-	private static void Continue(ICorDebugProcess process)
-	{
-		try
-		{
-			process.Continue(false);
-		}
-		catch
-		{
-			// Ignore continue errors
-		}
+			CorDebugManagedCallbackKind.Breakpoint => "Breakpoint hit",
+			CorDebugManagedCallbackKind.StepComplete => "Step completed",
+			CorDebugManagedCallbackKind.Break => "Break occurred",
+			CorDebugManagedCallbackKind.Exception => "Exception occurred",
+			CorDebugManagedCallbackKind.EvalComplete => "Evaluation completed",
+			CorDebugManagedCallbackKind.EvalException => "Evaluation threw exception",
+			CorDebugManagedCallbackKind.CreateProcess => "Process created",
+			CorDebugManagedCallbackKind.ExitProcess => "Process exited",
+			CorDebugManagedCallbackKind.CreateThread => "Thread created",
+			CorDebugManagedCallbackKind.ExitThread => "Thread exited",
+			CorDebugManagedCallbackKind.LoadModule => "Module loaded",
+			CorDebugManagedCallbackKind.UnloadModule => "Module unloaded",
+			CorDebugManagedCallbackKind.LoadClass => "Class loaded",
+			CorDebugManagedCallbackKind.UnloadClass => "Class unloaded",
+			CorDebugManagedCallbackKind.DebuggerError => "Debugger error",
+			CorDebugManagedCallbackKind.LogMessage => "Log message",
+			CorDebugManagedCallbackKind.LogSwitch => "Log switch changed",
+			CorDebugManagedCallbackKind.CreateAppDomain => "AppDomain created",
+			CorDebugManagedCallbackKind.ExitAppDomain => "AppDomain exited",
+			CorDebugManagedCallbackKind.LoadAssembly => "Assembly loaded",
+			CorDebugManagedCallbackKind.UnloadAssembly => "Assembly unloaded",
+			CorDebugManagedCallbackKind.ControlCTrap => "Ctrl+C trapped",
+			CorDebugManagedCallbackKind.NameChange => "Name changed",
+			CorDebugManagedCallbackKind.UpdateModuleSymbols => "Module symbols updated",
+			CorDebugManagedCallbackKind.EditAndContinueRemap => "Edit and Continue remap",
+			CorDebugManagedCallbackKind.BreakpointSetError => "Failed to set breakpoint",
+			CorDebugManagedCallbackKind.FunctionRemapOpportunity => "Function remap opportunity",
+			CorDebugManagedCallbackKind.CreateConnection => "Connection created",
+			CorDebugManagedCallbackKind.ChangeConnection => "Connection changed",
+			CorDebugManagedCallbackKind.DestroyConnection => "Connection destroyed",
+			CorDebugManagedCallbackKind.Exception2 => "Exception event",
+			CorDebugManagedCallbackKind.ExceptionUnwind => "Exception unwind",
+			CorDebugManagedCallbackKind.FunctionRemapComplete => "Function remap complete",
+			CorDebugManagedCallbackKind.MDANotification => "MDA notification",
+			_ => $"Debug event: {e.Kind}"
+		};
 	}
 }

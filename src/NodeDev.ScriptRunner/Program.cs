@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 
 namespace NodeDev.ScriptRunner;
@@ -10,17 +11,37 @@ class Program
 {
 	static int Main(string[] args)
 	{
-		// Validate arguments
-		if (args.Length == 0)
+		// Check for --wait-for-debugger flag
+		bool waitForDebugger = args.Length > 0 && args[0] == "--wait-for-debugger";
+		string[] effectiveArgs = waitForDebugger && args.Length > 1 ? args[1..] : args;
+
+		if (waitForDebugger)
 		{
-			Console.Error.WriteLine("Usage: NodeDev.ScriptRunner <path-to-dll> [args...]");
+			// Print PID and flush stdout for the debugger to read
+			Console.WriteLine($"SCRIPTRUNNER_PID:{Environment.ProcessId}");
+			Console.Out.Flush();
+
+			// Wait for debugger to attach
+			Console.Error.WriteLine($"[ScriptRunner] Waiting for debugger to attach (PID: {Environment.ProcessId})...");
+			while (!Debugger.IsAttached)
+			{
+				Thread.Sleep(100);
+			}
+			Console.Error.WriteLine("[ScriptRunner] Debugger attached!");
+		}
+
+		// Validate arguments
+		if (effectiveArgs.Length == 0)
+		{
+			Console.Error.WriteLine("Usage: NodeDev.ScriptRunner [--wait-for-debugger] <path-to-dll> [args...]");
+			Console.Error.WriteLine("  --wait-for-debugger: Wait for debugger to attach before executing");
 			Console.Error.WriteLine("  <path-to-dll>: Path to the compiled DLL to execute");
 			Console.Error.WriteLine("  [args...]: Optional arguments to pass to the entry point");
 			return 1;
 		}
 
-		string dllPath = args[0];
-		string[] userArgs = args.Length > 1 ? args[1..] : Array.Empty<string>();
+		string dllPath = effectiveArgs[0];
+		string[] userArgs = effectiveArgs.Length > 1 ? effectiveArgs[1..] : Array.Empty<string>();
 
 		// Validate DLL exists
 		if (!File.Exists(dllPath))
