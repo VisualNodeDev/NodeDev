@@ -1,4 +1,3 @@
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.Types;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
@@ -17,7 +16,7 @@ internal static class RoslynHelpers
 	internal static TypeSyntax GetTypeSyntax(TypeBase type)
 	{
 		var typeName = type.FriendlyName;
-		
+
 		// Handle array types
 		if (type is NodeClassArrayType arrayType)
 		{

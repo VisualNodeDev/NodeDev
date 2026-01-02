@@ -78,7 +78,7 @@ public class HomePage
 
 		await locator.WaitForVisible();
 		await locator.ClickAsync();
-		
+
 		await Task.Delay(200); // Wait for method to open
 	}
 
@@ -180,18 +180,18 @@ public class HomePage
 		// 1. Move mouse to starting position
 		await _user.Mouse.MoveAsync(sourceX, sourceY);
 		await Task.Delay(50);
-		
+
 		// 2. Press mouse button down (pointerdown event)
 		await _user.Mouse.DownAsync();
 		await Task.Delay(50);
-		
+
 		// 3. Move mouse to target position with multiple steps (pointermove events)
 		await _user.Mouse.MoveAsync(targetX, targetY, new() { Steps = 30 });
 		await Task.Delay(50);
-		
+
 		// 4. Release mouse button (pointerup event)
 		await _user.Mouse.UpAsync();
-		
+
 		// Wait for the UI to update after drag
 		await Task.Delay(300);
 	}
@@ -219,7 +219,7 @@ public class HomePage
 	public async Task ConnectPorts(string sourceNodeName, string sourcePortName, string targetNodeName, string targetPortName)
 	{
 		Console.WriteLine($"Connecting ports: {sourceNodeName}.{sourcePortName} -> {targetNodeName}.{targetPortName}");
-		
+
 		// Get source port (output)
 		var sourcePort = GetGraphPort(sourceNodeName, sourcePortName, isInput: false);
 		await sourcePort.WaitForVisible();
@@ -257,33 +257,33 @@ public class HomePage
 	public async Task DeleteConnection(string sourceNodeName, string sourcePortName, string targetNodeName, string targetPortName)
 	{
 		Console.WriteLine($"Deleting connection: {sourceNodeName}.{sourcePortName} -> {targetNodeName}.{targetPortName}");
-		
+
 		// In Blazor.Diagrams, connections are rendered as SVG paths
 		// We need to click on the connection to select it, then press Delete
-		
+
 		// Get source and target port positions
 		var sourcePort = GetGraphPort(sourceNodeName, sourcePortName, isInput: false);
 		await sourcePort.WaitForVisible();
-		
+
 		var targetPort = GetGraphPort(targetNodeName, targetPortName, isInput: true);
 		await targetPort.WaitForVisible();
-		
+
 		var sourceBox = await sourcePort.BoundingBoxAsync();
 		var targetBox = await targetPort.BoundingBoxAsync();
-		
+
 		if (sourceBox == null || targetBox == null)
 			throw new Exception("Could not get bounding boxes for ports");
-		
+
 		// Calculate midpoint between source and target
 		var midX = (float)(sourceBox.X + sourceBox.Width / 2 + targetBox.X + targetBox.Width / 2) / 2;
 		var midY = (float)(sourceBox.Y + sourceBox.Height / 2 + targetBox.Y + targetBox.Height / 2) / 2;
-		
+
 		Console.WriteLine($"Clicking on connection midpoint: ({midX}, {midY})");
-		
+
 		// Click on the connection to select it
 		await _user.Mouse.ClickAsync(midX, midY);
 		await Task.Delay(100);
-		
+
 		// Press Delete key to remove the connection
 		await _user.Keyboard.PressAsync("Delete");
 		await Task.Delay(100);
@@ -320,7 +320,7 @@ public class HomePage
 	{
 		// Wait for search results to appear
 		var nodeResult = _user.Locator($"[data-test-id='node-search-result'][data-node-type='{nodeType}']");
-		
+
 		try
 		{
 			await nodeResult.First.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
@@ -339,12 +339,12 @@ public class HomePage
 		// In Blazor.Diagrams, deleting connections requires:
 		// 1. Click on a connection link
 		// 2. Press Delete or use context menu
-		
+
 		// Since connections don't have reliable test-ids, we'll use a workaround:
 		// Find all connection paths/lines in the diagram
 		var connections = _user.Locator("svg path.diagram-link");
 		var count = await connections.CountAsync();
-		
+
 		if (count > 0)
 		{
 			// Try to click and delete each connection
@@ -363,7 +363,7 @@ public class HomePage
 				}
 			}
 		}
-		
+
 		Console.WriteLine($"Attempted to delete connections from '{nodeName}'");
 	}
 
@@ -386,7 +386,7 @@ public class HomePage
 			Console.WriteLine("Node properties panel displayed (simulated)");
 			return; // This is just a verification, not critical
 		}
-		
+
 		await propertiesPanel.WaitForAsync(new() { State = WaitForSelectorState.Visible });
 	}
 
@@ -416,7 +416,7 @@ public class HomePage
 		{
 			var startX = (float)(box.X + box.Width / 2);
 			var startY = (float)(box.Y + box.Height / 2);
-			
+
 			await _user.Mouse.MoveAsync(startX, startY);
 			await _user.Mouse.DownAsync(new() { Button = MouseButton.Middle });
 			await _user.Mouse.MoveAsync(startX + deltaX, startY + deltaY, new() { Steps = 10 });
@@ -452,7 +452,7 @@ public class HomePage
 		{
 			throw new NotImplementedException($"Create class UI element not found - [data-test-id='create-class']. This feature may not be implemented yet.");
 		}
-		
+
 		await createClassButton.ClickAsync();
 		var nameInput = _user.Locator("[data-test-id='class-name-input']");
 		await nameInput.FillAsync(className);
@@ -465,18 +465,18 @@ public class HomePage
 	{
 		await OpenProjectExplorerProjectTab(); // Make sure we're on Project tab
 		await ClickClass(oldName);
-		
+
 		// Wait for rename button to appear after class selection
 		var renameButton = _user.Locator("[data-test-id='rename-class']");
 		await renameButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
-		
+
 		await renameButton.ClickAsync();
-		
+
 		// Wait for and fill the name input dialog
 		var nameInput = _user.Locator("[data-test-id='class-name-input']");
 		await nameInput.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
 		await nameInput.FillAsync(newName);
-		
+
 		var confirmButton = _user.Locator("[data-test-id='confirm-rename']");
 		await confirmButton.ClickAsync();
 		await Task.Delay(500); // Wait for rename to complete
@@ -502,7 +502,7 @@ public class HomePage
 		{
 			throw new NotImplementedException($"Create method UI element not found - [data-test-id='create-method']. This feature may not be implemented yet.");
 		}
-		
+
 		await createMethodButton.ClickAsync();
 		var nameInput = _user.Locator("[data-test-id='method-name-input']");
 		await nameInput.FillAsync(methodName);
@@ -514,18 +514,18 @@ public class HomePage
 	public async Task RenameMethod(string oldName, string newName)
 	{
 		await OpenMethod(oldName);
-		
+
 		// Wait for rename button to appear after method selection
 		var renameButton = _user.Locator("[data-test-id='rename-method']");
 		await renameButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
-		
+
 		await renameButton.ClickAsync();
-		
+
 		// Wait for and fill the name input dialog
 		var nameInput = _user.Locator("[data-test-id='method-name-input']");
 		await nameInput.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
 		await nameInput.FillAsync(newName);
-		
+
 		var confirmButton = _user.Locator("[data-test-id='confirm-rename']");
 		await confirmButton.ClickAsync();
 		await Task.Delay(500); // Wait for rename to complete
@@ -535,13 +535,13 @@ public class HomePage
 	{
 		var method = await FindMethodByName(methodName);
 		await method.ClickAsync();
-		
+
 		// Wait for delete button to appear after method selection
 		var deleteButton = _user.Locator("[data-test-id='delete-method']");
 		await deleteButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
-		
+
 		await deleteButton.ClickAsync();
-		
+
 		// Wait for confirmation dialog if it appears
 		var confirmButton = _user.Locator("[data-test-id='confirm-delete']");
 		try
@@ -553,7 +553,7 @@ public class HomePage
 		{
 			// No confirmation dialog appeared, continue
 		}
-		
+
 		await Task.Delay(500); // Wait for deletion to complete
 	}
 
@@ -589,7 +589,7 @@ public class HomePage
 				throw new NotImplementedException($"Cannot find edit button to access parameter menu. This feature may not be implemented yet.");
 			}
 		}
-		
+
 		// Now try to find the add parameter button
 		if (await addParamButton.CountAsync() > 0)
 		{
@@ -613,7 +613,7 @@ public class HomePage
 		{
 			throw new NotImplementedException($"Export project UI element not found - [data-test-id='export-project']. This feature may not be implemented yet.");
 		}
-		
+
 		await exportButton.ClickAsync();
 		var confirmButton = _user.Locator("[data-test-id='confirm-export']");
 		if (await confirmButton.CountAsync() > 0)
@@ -630,7 +630,7 @@ public class HomePage
 		{
 			throw new NotImplementedException($"Build project UI element not found - [data-test-id='build-project']. This feature may not be implemented yet.");
 		}
-		
+
 		await buildButton.ClickAsync();
 		await Task.Delay(1000);
 	}
@@ -642,7 +642,7 @@ public class HomePage
 		{
 			throw new NotImplementedException($"Run project UI element not found - [data-test-id='run-project']. This feature may not be implemented yet.");
 		}
-		
+
 		await runButton.ClickAsync();
 		await Task.Delay(500);
 	}
@@ -721,7 +721,7 @@ public class HomePage
 	}
 
 	// Console Output Testing
-	
+
 	public async Task<bool> IsConsolePanelVisible()
 	{
 		var consolePanel = _user.Locator("[data-test-id='consolePanel']");
@@ -734,7 +734,7 @@ public class HomePage
 		// Wait for the console panel to appear and stabilize
 		var consolePanel = _user.Locator("[data-test-id='consolePanel']");
 		await consolePanel.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeoutMs });
-		
+
 		// Wait a bit for the process to complete
 		await Task.Delay(2000);
 		Console.WriteLine("✓ Project execution completed");

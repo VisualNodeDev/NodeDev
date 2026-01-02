@@ -18,6 +18,6 @@ public interface IGraphCanvas
 	void AddNode(Node node);
 
 	void Refresh(Node node);
-	
+
 	void RefreshAll() => Graph.RaiseGraphChanged(true);
 }

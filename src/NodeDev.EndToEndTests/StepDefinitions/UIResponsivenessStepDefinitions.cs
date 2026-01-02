@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using Microsoft.Playwright;
 using NodeDev.EndToEndTests.Pages;
 
@@ -36,7 +34,7 @@ public sealed class UIResponsivenessStepDefinitions
 		{
 			throw new Exception("Error detected during rapid node addition");
 		}
-		
+
 		// Verify nodes were added to canvas
 		var canvas = HomePage.GetGraphCanvas();
 		var isVisible = await canvas.IsVisibleAsync();
@@ -77,7 +75,7 @@ public sealed class UIResponsivenessStepDefinitions
 		// Check if Entry and Return nodes are visible
 		var entryVisible = await HomePage.HasGraphNode("Entry");
 		var returnVisible = await HomePage.HasGraphNode("Return");
-		
+
 		if (!entryVisible || !returnVisible)
 		{
 			throw new Exception("Not all nodes are visible");
@@ -97,14 +95,14 @@ public sealed class UIResponsivenessStepDefinitions
 	{
 		// Verify connection was not created or error was shown
 		await Task.Delay(300);
-		
+
 		// Check if error message appeared
 		var hasError = await HomePage.HasErrorMessage();
-		
+
 		// Or check if connection count remained unchanged (no new connection)
 		var connections = User.Locator("[data-test-id='graph-connection']");
 		var count = await connections.CountAsync();
-		
+
 		Console.WriteLine($"✓ Connection rejected (error shown: {hasError}, connections: {count})");
 	}
 
@@ -211,7 +209,7 @@ public sealed class UIResponsivenessStepDefinitions
 		{
 			throw new Exception("No methods found in class explorer");
 		}
-		
+
 		// Verify at least one method item is visible
 		var firstMethod = methodItems.First;
 		await firstMethod.WaitForAsync(new() { State = WaitForSelectorState.Visible });
@@ -223,15 +221,15 @@ public sealed class UIResponsivenessStepDefinitions
 	{
 		// Check if class creation was rejected or name was sanitized
 		await Task.Delay(300);
-		
+
 		// Check for error message
 		var hasError = await HomePage.HasErrorMessage();
-		
+
 		// Or check if class was created with sanitized name
 		await HomePage.OpenProjectExplorerProjectTab();
 		var classes = User.Locator("[data-test-id='projectExplorerClass']");
 		var count = await classes.CountAsync();
-		
+
 		Console.WriteLine($"✓ Invalid characters handled (error shown: {hasError}, class count: {count})");
 	}
 
@@ -257,7 +255,7 @@ public sealed class UIResponsivenessStepDefinitions
 		{
 			throw new Exception("Canvas not visible after rapid operations");
 		}
-		
+
 		// Check for no errors
 		var hasError = await HomePage.HasErrorMessage();
 		if (hasError)
@@ -272,15 +270,15 @@ public sealed class UIResponsivenessStepDefinitions
 	{
 		// Verify system is stable - no errors, UI still functional
 		await Task.Delay(300);
-		
+
 		var canvas = HomePage.GetGraphCanvas();
 		var canvasVisible = await canvas.IsVisibleAsync();
-		
+
 		// When canvas is visible, either project explorer or class explorer should be visible
 		var projectExplorer = User.Locator("[data-test-id='projectExplorer']");
 		var classExplorer = User.Locator("[data-test-id='classExplorer']");
 		var explorerVisible = await projectExplorer.IsVisibleAsync() || await classExplorer.IsVisibleAsync();
-		
+
 		if (!canvasVisible || !explorerVisible)
 		{
 			throw new Exception("UI components not visible - possible race condition");

@@ -34,37 +34,37 @@ public sealed class NodeManipulationStepDefinitions
 		// Take screenshot before
 		var beforeGuid = Guid.NewGuid();
 		await HomePage.TakeScreenshot($"/tmp/before-drag-{nodeName}-{beforeGuid}.png");
-		
+
 		// Get current position (before this drag operation)
 		var currentPos = await HomePage.GetNodePosition(nodeName);
-		
+
 		// Store the very first position as original (for validation at the end)
 		if (!_originalNodePositions.ContainsKey(nodeName))
 		{
 			_originalNodePositions[nodeName] = currentPos;
 		}
-		
+
 		Console.WriteLine($"Current position of {nodeName}: ({currentPos.X}, {currentPos.Y})");
 		Console.WriteLine($"First/Original position of {nodeName}: ({_originalNodePositions[nodeName].X}, {_originalNodePositions[nodeName].Y})");
-		
+
 		// Calculate new absolute position (current position + delta)
 		// We need to drag to the center of where the node should end up
 		var currentBox = await HomePage.GetGraphNode(nodeName).BoundingBoxAsync();
 		if (currentBox == null)
 			throw new Exception($"Could not get bounding box for {nodeName}");
-			
+
 		var targetX = currentBox.X + currentBox.Width / 2 + deltaX;
 		var targetY = currentBox.Y + currentBox.Height / 2 + deltaY;
-		
+
 		Console.WriteLine($"Target position (page coords): ({targetX}, {targetY})");
-		
+
 		// Drag the node to the target position
 		await HomePage.DragNodeTo(nodeName, (float)targetX, (float)targetY);
-		
+
 		// Take screenshot after for validation
 		var afterGuid = Guid.NewGuid();
 		await HomePage.TakeScreenshot($"/tmp/after-drag-{nodeName}-{afterGuid}.png");
-		
+
 		// Check position immediately after drag
 		var posAfterDrag = await HomePage.GetNodePosition(nodeName);
 		Console.WriteLine($"Position after drag: ({posAfterDrag.X}, {posAfterDrag.Y})");
@@ -79,11 +79,11 @@ public sealed class NodeManipulationStepDefinitions
 
 		// Get new position
 		var newPosition = await HomePage.GetNodePosition(nodeName);
-		
+
 		// Verify position changed (allowing for some tolerance due to grid snapping)
 		var deltaX = Math.Abs(newPosition.X - _originalNodePositions[nodeName].X);
 		var deltaY = Math.Abs(newPosition.Y - _originalNodePositions[nodeName].Y);
-		
+
 		if (deltaX < 50 && deltaY < 50)
 		{
 			throw new Exception($"Node '{nodeName}' did not move enough. Original: ({_originalNodePositions[nodeName].X}, {_originalNodePositions[nodeName].Y}), New: ({newPosition.X}, {newPosition.Y})");
@@ -94,16 +94,16 @@ public sealed class NodeManipulationStepDefinitions
 	public async Task WhenIConnectTheOutputToTheInput(string sourceNode, string sourcePort, string targetNode, string targetPort)
 	{
 		Console.WriteLine($"Connecting {sourceNode}.{sourcePort} (output) -> {targetNode}.{targetPort} (input)");
-		
+
 		// Take screenshot before
 		await HomePage.TakeScreenshot($"/tmp/before-connect-{Guid.NewGuid()}.png");
-		
+
 		// Connect the ports
 		await HomePage.ConnectPorts(sourceNode, sourcePort, targetNode, targetPort);
-		
+
 		// Take screenshot after
 		await HomePage.TakeScreenshot($"/tmp/after-connect-{Guid.NewGuid()}.png");
-		
+
 		// Wait for connection to be established
 		await Task.Delay(200);
 	}
@@ -126,7 +126,7 @@ public sealed class NodeManipulationStepDefinitions
 	public async Task WhenIDisconnectTheOutputFromTheInput(string sourceNode, string sourcePort, string targetNode, string targetPort)
 	{
 		Console.WriteLine($"Disconnecting {sourceNode}.{sourcePort} (output) from {targetNode}.{targetPort} (input)");
-		
+
 		// To disconnect, we need to click on the connection line or use a different approach
 		// For now, we'll use the API through the browser console
 		await User.EvaluateAsync(@"
@@ -134,7 +134,7 @@ public sealed class NodeManipulationStepDefinitions
 			// This is a placeholder - actual implementation would need to find and remove the connection
 			console.log('Disconnect operation');
 		");
-		
+
 		await Task.Delay(200);
 	}
 
@@ -153,15 +153,15 @@ public sealed class NodeManipulationStepDefinitions
 		// Clear previous errors
 		_consoleErrors.Clear();
 		_consoleWarnings.Clear();
-		
+
 		// Set up console monitoring
 		User.Console += (_, msg) =>
 		{
 			var msgType = msg.Type;
 			var text = msg.Text;
-			
+
 			Console.WriteLine($"[BROWSER {msgType.ToUpper()}] {text}");
-			
+
 			if (msgType == "error")
 			{
 				_consoleErrors.Add(text);
@@ -171,7 +171,7 @@ public sealed class NodeManipulationStepDefinitions
 				_consoleWarnings.Add(text);
 			}
 		};
-		
+
 		User.PageError += (_, error) =>
 		{
 			Console.WriteLine($"[PAGE ERROR] {error}");
@@ -187,7 +187,7 @@ public sealed class NodeManipulationStepDefinitions
 			var errorList = string.Join("\n  - ", _consoleErrors);
 			throw new Exception($"Found {_consoleErrors.Count} console error(s):\n  - {errorList}");
 		}
-		
+
 		Console.WriteLine("✓ No console errors detected");
 	}
 
@@ -196,13 +196,13 @@ public sealed class NodeManipulationStepDefinitions
 	{
 		var canvas = HomePage.GetGraphCanvas();
 		var isVisible = await canvas.IsVisibleAsync();
-		
+
 		if (!isVisible)
 		{
 			await HomePage.TakeScreenshot("/tmp/graph-canvas-not-visible.png");
 			throw new Exception("Graph canvas is not visible");
 		}
-		
+
 		Console.WriteLine("✓ Graph canvas is visible");
 	}
 
@@ -210,16 +210,16 @@ public sealed class NodeManipulationStepDefinitions
 	public async Task WhenIDeleteTheConnectionBetweenOutputAndInput(string sourceNode, string sourcePort, string targetNode, string targetPort)
 	{
 		Console.WriteLine($"Deleting connection: {sourceNode}.{sourcePort} (output) -> {targetNode}.{targetPort} (input)");
-		
+
 		// Take screenshot before
 		await HomePage.TakeScreenshot($"/tmp/before-delete-connection-{Guid.NewGuid()}.png");
-		
+
 		// Delete the connection
 		await HomePage.DeleteConnection(sourceNode, sourcePort, targetNode, targetPort);
-		
+
 		// Take screenshot after
 		await HomePage.TakeScreenshot($"/tmp/after-delete-connection-{Guid.NewGuid()}.png");
-		
+
 		// Wait for UI to update
 		await Task.Delay(200);
 	}

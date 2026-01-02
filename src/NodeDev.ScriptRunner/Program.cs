@@ -69,13 +69,13 @@ class Program
 			if (mainMethod != null)
 			{
 				Console.WriteLine($"Invoking {programType.FullName}.Main from {assembly.GetName().Name}");
-				
+
 				object? result = null;
 				try
 				{
 					// Check method signature and invoke appropriately
 					ParameterInfo[] parameters = mainMethod.GetParameters();
-					
+
 					if (parameters.Length == 0)
 					{
 						result = mainMethod.Invoke(null, null);
@@ -116,7 +116,7 @@ class Program
 			if (runnableType != null)
 			{
 				Console.WriteLine($"Found IRunnable implementation: {runnableType.Name}");
-				
+
 				object? instance = Activator.CreateInstance(runnableType);
 				if (instance != null)
 				{

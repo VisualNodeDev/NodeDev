@@ -434,7 +434,7 @@ public class Graph(NodeClassMethod selfMethod)
 		foreach (var serializedNode in serializedGraphObj.Nodes)
 		{
 			var node = Node.Deserialize(graph, serializedNode);
-			
+
 			var noUi = new GraphCanvasNoUI(graph);
 			var manager = new GraphManagerService(noUi);
 			manager.AddNode(node);

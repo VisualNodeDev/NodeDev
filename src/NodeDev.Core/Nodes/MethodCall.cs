@@ -1,13 +1,13 @@
-﻿using NodeDev.Core.Class;
+﻿using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NodeDev.Core.Class;
+using NodeDev.Core.CodeGeneration;
 using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
-using NodeDev.Core.CodeGeneration;
 using System.Buffers;
 using System.Linq.Expressions;
 using System.Text.Json;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
@@ -202,7 +202,7 @@ public class MethodCall : NormalFlowNode
 
 		// Build the method call expression
 		ExpressionSyntax methodCallExpr;
-		
+
 		if (TargetMethod.IsStatic)
 		{
 			// Static method: ClassName.MethodName(args)
@@ -211,12 +211,12 @@ public class MethodCall : NormalFlowNode
 				SyntaxKind.SimpleMemberAccessExpression,
 				typeSyntax,
 				SF.IdentifierName(TargetMethod.Name));
-			
+
 			var args = TargetMethod.GetParameters()
 				.Where(p => !p.IsOut)
 				.Select(p => SF.Argument(SF.IdentifierName(context.GetVariableName(Inputs.First(i => i.Name == p.Name))!)))
 				.ToList();
-			
+
 			methodCallExpr = SF.InvocationExpression(memberAccess)
 				.WithArgumentList(SF.ArgumentList(SF.SeparatedList(args)));
 		}
@@ -228,12 +228,12 @@ public class MethodCall : NormalFlowNode
 				SyntaxKind.SimpleMemberAccessExpression,
 				targetVar,
 				SF.IdentifierName(TargetMethod.Name));
-			
+
 			var args = TargetMethod.GetParameters()
 				.Where(p => !p.IsOut)
 				.Select(p => SF.Argument(SF.IdentifierName(context.GetVariableName(Inputs.First(i => i.Name == p.Name))!)))
 				.ToList();
-			
+
 			methodCallExpr = SF.InvocationExpression(memberAccess)
 				.WithArgumentList(SF.ArgumentList(SF.SeparatedList(args)));
 		}

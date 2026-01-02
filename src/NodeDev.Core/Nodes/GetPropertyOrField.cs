@@ -1,12 +1,12 @@
-﻿using NodeDev.Core.Connections;
+﻿using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NodeDev.Core.CodeGeneration;
+using NodeDev.Core.Connections;
 using NodeDev.Core.NodeDecorations;
 using NodeDev.Core.Types;
-using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;

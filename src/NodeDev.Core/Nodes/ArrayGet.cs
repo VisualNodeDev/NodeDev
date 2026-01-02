@@ -1,7 +1,7 @@
-﻿using NodeDev.Core.Types;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.CodeGeneration;
+using NodeDev.Core.Types;
 using System.Linq.Expressions;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
@@ -40,7 +40,7 @@ public class ArrayGet : NoFlowNode
 
 		var arrayVar = SF.IdentifierName(context.GetVariableName(Inputs[0])!);
 		var indexVar = SF.IdentifierName(context.GetVariableName(Inputs[1])!);
-		
+
 		// Create array[index] expression
 		return SF.ElementAccessExpression(arrayVar)
 			.WithArgumentList(

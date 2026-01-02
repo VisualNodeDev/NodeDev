@@ -1,7 +1,7 @@
-﻿using System.Linq.Expressions;
-using Microsoft.CodeAnalysis.CSharp;
+﻿using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.CodeGeneration;
+using System.Linq.Expressions;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes.Math;
@@ -24,7 +24,7 @@ public class IsNotNull : BinaryOperationMath
 	{
 		var value = SF.IdentifierName(context.GetVariableName(Inputs[0])!);
 		var nullLiteral = SF.LiteralExpression(SyntaxKind.NullLiteralExpression);
-		
+
 		// Generate value != null
 		return SF.BinaryExpression(SyntaxKind.NotEqualsExpression, value, nullLiteral);
 	}

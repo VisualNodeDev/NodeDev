@@ -1,8 +1,8 @@
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NodeDev.Core.CodeGeneration;
 using NodeDev.Core.Connections;
 using NodeDev.Core.Types;
-using NodeDev.Core.CodeGeneration;
 using System.Linq.Expressions;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes.Flow;
@@ -69,15 +69,15 @@ public class TryCatchNode : FlowNode
 		// Build catch block - register exception variable first
 		var exceptionVarName = context.GetUniqueName("ex");
 		context.RegisterVariableName(Outputs[3], exceptionVarName);
-		
+
 		var catchStatements = builder.BuildStatements(subChunks[Outputs[1]]);
-		
+
 		// Create exception variable for catch clause
 		var exceptionType = RoslynHelpers.GetTypeSyntax(Outputs[3].Type);
-		
+
 		var catchDeclaration = SF.CatchDeclaration(exceptionType)
 			.WithIdentifier(SF.Identifier(exceptionVarName));
-		
+
 		var catchClause = SF.CatchClause()
 			.WithDeclaration(catchDeclaration)
 			.WithBlock(SF.Block(catchStatements));

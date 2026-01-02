@@ -1,9 +1,6 @@
 using NodeDev.Core;
-using NodeDev.Core.Class;
-using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Debug;
 using NodeDev.Core.Nodes.Flow;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace NodeDev.Tests;
@@ -54,11 +51,11 @@ public class ScriptRunnerTests
 			// Assert
 			Assert.NotNull(result);
 			Assert.IsType<int>(result);
-			
+
 			// Verify that ScriptRunner executed and produced output
 			Assert.NotEmpty(consoleOutput);
 			Assert.Contains(consoleOutput, line => line.Contains("ScriptRunner Test Output"));
-			
+
 			// Verify ScriptRunner messages appear
 			Assert.Contains(consoleOutput, line => line.Contains("Invoking") && line.Contains("Program.Main"));
 		}
@@ -73,10 +70,10 @@ public class ScriptRunnerTests
 	{
 		// This test is simplified - we just verify ScriptRunner can handle errors gracefully
 		// A more complete test would require finding the correct exception-throwing node type
-		
+
 		// Arrange - Create an invalid program by not connecting nodes properly
 		var project = Project.CreateNewDefaultProject(out var mainMethod);
-		
+
 		// Just run the default project which returns 0
 		var result = project.Run(BuildOptions.Debug);
 		Thread.Sleep(500);
@@ -94,7 +91,7 @@ public class ScriptRunnerTests
 		var graph = mainMethod.Graph;
 
 		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
-		
+
 		// Set return value to 42
 		returnNode.Inputs[1].UpdateTextboxText("42");
 

@@ -1,7 +1,7 @@
-﻿using NodeDev.Core.Types;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.CodeGeneration;
+using NodeDev.Core.Types;
 using System.Linq.Expressions;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes;
@@ -26,7 +26,7 @@ public class Cast : NoFlowNode
 	{
 		var value = SF.IdentifierName(context.GetVariableName(Inputs[0])!);
 		var targetType = RoslynHelpers.GetTypeSyntax(Outputs[0].Type);
-		
+
 		// Generate (TargetType)value
 		return SF.CastExpression(targetType, value);
 	}

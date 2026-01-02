@@ -3,10 +3,8 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
-using NodeDev.Core.Class;
 using NodeDev.Core.CodeGeneration;
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Text;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
@@ -51,8 +49,8 @@ public class RoslynNodeClassCompiler
 		var references = GetMetadataReferences();
 
 		// Determine output kind - if there's a Program.Main method, create an executable
-		var outputKind = _project.HasMainMethod() 
-			? OutputKind.ConsoleApplication 
+		var outputKind = _project.HasMainMethod()
+			? OutputKind.ConsoleApplication
 			: OutputKind.DynamicallyLinkedLibrary;
 
 		// Create compilation
@@ -63,8 +61,8 @@ public class RoslynNodeClassCompiler
 			references: references,
 			options: new CSharpCompilationOptions(
 				outputKind,
-				optimizationLevel: _options.BuildExpressionOptions.RaiseNodeExecutedEvents 
-					? OptimizationLevel.Debug 
+				optimizationLevel: _options.BuildExpressionOptions.RaiseNodeExecutedEvents
+					? OptimizationLevel.Debug
 					: OptimizationLevel.Release,
 				platform: Platform.AnyCpu,
 				allowUnsafe: false));

@@ -1,17 +1,12 @@
 ﻿using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
-using NodeDev.Core.ManagerServices;
 using NodeDev.Core.Migrations;
 using NodeDev.Core.Nodes;
-using NodeDev.Core.Nodes.Flow;
 using NodeDev.Core.Types;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Reflection.Metadata;
-using System.Reflection.Metadata.Ecma335;
-using System.Reflection.PortableExecutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -120,7 +115,7 @@ public class Project
 		// Use unique name based on project ID to avoid conflicts when running tests in parallel
 		// Using "N" format avoids hyphens and is more efficient than Replace
 		var name = $"project_{Id:N}";
-		
+
 		// Use Roslyn compilation
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
 		var result = compiler.Compile();
@@ -256,10 +251,10 @@ public class Project
 
 			// Find the ScriptRunner executable
 			string scriptRunnerPath = FindScriptRunnerExecutable();
-			
+
 			// Convert to absolute path to avoid confusion with working directory
 			string absoluteAssemblyPath = Path.GetFullPath(assemblyPath);
-			
+
 			// Build arguments: ScriptRunner.dll path-to-user-dll [user-args...]
 			var userArgsString = string.Join(" ", inputs.Select(x => '"' + (x?.ToString() ?? "") + '"'));
 			var arguments = $"\"{scriptRunnerPath}\" \"{absoluteAssemblyPath}\"";
@@ -267,7 +262,7 @@ public class Project
 			{
 				arguments += $" {userArgsString}";
 			}
-			
+
 			var processStartInfo = new System.Diagnostics.ProcessStartInfo()
 			{
 				FileName = "dotnet",
@@ -278,7 +273,7 @@ public class Project
 				UseShellExecute = false,
 				CreateNoWindow = true,
 			};
-			
+
 			var process = System.Diagnostics.Process.Start(processStartInfo) ?? throw new Exception("Unable to start process");
 
 			// Use ManualResetEvents to track when async output handlers complete
