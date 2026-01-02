@@ -21,6 +21,11 @@ namespace NodeDev.Core;
 
 public class Project
 {
+	/// <summary>
+	/// Maximum time to wait for process output streams to be fully consumed after process exits.
+	/// </summary>
+	private static readonly TimeSpan OutputStreamTimeout = TimeSpan.FromSeconds(5);
+
 	internal record class SerializedProject(Guid Id, string NodeDevVersion, List<NodeClass.SerializedNodeClass> Classes, ProjectSettings Settings);
 
 	internal readonly Guid Id;
@@ -113,7 +118,8 @@ public class Project
 	public string Build(BuildOptions buildOptions)
 	{
 		// Use unique name based on project ID to avoid conflicts when running tests in parallel
-		var name = $"project_{Id.ToString().Replace("-", "_")}";
+		// Using "N" format avoids hyphens and is more efficient than Replace
+		var name = $"project_{Id:N}";
 		
 		// Use Roslyn compilation
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
@@ -276,8 +282,9 @@ public class Project
 			var process = System.Diagnostics.Process.Start(processStartInfo) ?? throw new Exception("Unable to start process");
 
 			// Use ManualResetEvents to track when async output handlers complete
-			var outputComplete = new System.Threading.ManualResetEvent(false);
-			var errorComplete = new System.Threading.ManualResetEvent(false);
+			// Using 'using' ensures proper disposal of unmanaged resources
+			using var outputComplete = new System.Threading.ManualResetEvent(false);
+			using var errorComplete = new System.Threading.ManualResetEvent(false);
 
 			// Notify that execution has started
 			GraphExecutionChangedSubject.OnNext(true);
@@ -316,8 +323,8 @@ public class Project
 			process.WaitForExit();
 
 			// Wait for output streams to be fully consumed (with timeout)
-			outputComplete.WaitOne(TimeSpan.FromSeconds(5));
-			errorComplete.WaitOne(TimeSpan.FromSeconds(5));
+			outputComplete.WaitOne(OutputStreamTimeout);
+			errorComplete.WaitOne(OutputStreamTimeout);
 
 			// Notify that execution has completed
 			GraphExecutionChangedSubject.OnNext(false);
