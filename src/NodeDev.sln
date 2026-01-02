@@ -17,6 +17,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{848A596C-D848-46EB-BA9B-8A6D313BA602}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		..\.github\agents\basicAgent.agent.md = ..\.github\agents\basicAgent.agent.md
 		..\.github\workflows\dotnet.yml = ..\.github\workflows\dotnet.yml
 		..\.github\workflows\release.yml = ..\.github\workflows\release.yml
 		..\.github\workflows\workflow-build.yml = ..\.github\workflows\workflow-build.yml

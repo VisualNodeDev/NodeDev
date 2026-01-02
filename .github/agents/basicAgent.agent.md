@@ -15,6 +15,7 @@ description: Used for general purpose NodeDev development
 3) Disabling, removing, skipping, deleting, bypassing or converting to warnings ANY tests IS NOT ALLOWED and is not considered the right way of fixing a problematic test. The test must be functional and actually testing what it is intended to test.
 4) Document newly added content or concepts in this `.github/agents/basicAgent.agent.md` file or any related documentation file.
 5) When the user corrects major mistakes done during your development, document them in this file to ensure it is never done again.
+6) You must always install playwright BEFORE trying to run the tests. build the projects and install playwright. If you struggle (take multiple iterations to do it), document the steps you took in this file to make it easier next time.
 
 ## Programming style
 
