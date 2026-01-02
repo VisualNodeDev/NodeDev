@@ -1,51 +1,28 @@
-using System.Diagnostics;
-using Xunit;
+using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace NodeDev.EndToEndTests.Fixtures;
 
 public class AppServerFixture : IAsyncLifetime
 {
-	private Process? _serverProcess;
-	private const int Port = 5166;
+	private BlazorWebAppFactory? _factory;
 
-	public Uri BaseUrl => new Uri($"http://localhost:{Port}");
+	public Uri BaseUrl => _factory?.ClientOptions.BaseAddress ?? throw new InvalidOperationException("BlazorWebAppFactory not initialized");
 
 	public async Task InitializeAsync()
 	{
-		_serverProcess = new Process
-		{
-			StartInfo = new ProcessStartInfo
-			{
-				FileName = "dotnet",
-				Arguments = $"run --no-build --project NodeDev.Blazor.Server.csproj -- --urls http://localhost:{Port}",
-				WorkingDirectory = "../../../../NodeDev.Blazor.Server",
-				UseShellExecute = false,
-				RedirectStandardOutput = false,
-				RedirectStandardError = false
-			}
-		};
+		_factory = new BlazorWebAppFactory();
 
-		_serverProcess.Start();
-
-		// Wait for server to start
-		await Task.Delay(3000);
-
-		// Verify it's running
-		if (_serverProcess.HasExited)
-		{
-			throw new Exception($"Failed to start the server: exit code {_serverProcess.ExitCode}");
-		}
+		_factory.UseKestrel();
+		_factory.StartServer();
 	}
 
 	public async Task DisposeAsync()
 	{
-		if (_serverProcess != null && !_serverProcess.HasExited)
-		{
-			_serverProcess.Kill(true);
-			while (!_serverProcess.HasExited)
-			{
-				await Task.Delay(100);
-			}
-		}
+		if (_factory != null)
+			await _factory.DisposeAsync();
 	}
+}
+
+internal class BlazorWebAppFactory : WebApplicationFactory<Program>
+{
 }
