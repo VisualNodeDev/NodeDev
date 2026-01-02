@@ -10,11 +10,12 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<MudLayout Style="height: 100vh; width: 100%; overflow: hidden">
-    <MudAppBar Elevation="1" data-test-id="appBar">
-        <ProjectToolbar />
-    </MudAppBar>
-    <MudMainContent Style="width: 100%; height: 100%; overflow-y: hidden">
+<CascadingValue Value="this" IsFixed="true">
+    <MudLayout Style="height: 100vh; width: 100%; overflow: hidden">
+        <MudAppBar Elevation="1" data-test-id="appBar">
+            <ProjectToolbar />
+        </MudAppBar>
+        <MudMainContent Style="width: 100%; height: 100%; overflow-y: hidden">
 
         <MudExtensions.MudSplitter EnableSlide="true" Sensitivity="0.01" @bind-Dimension="ProjectExplorerGraphPercentage" Class="wh100 overflow-hidden relative">
             <StartContent>
@@ -77,6 +78,7 @@
         </MudExtensions.MudSplitter>
     </MudMainContent>
 </MudLayout>
+</CascadingValue>
 
 @code {
 
@@ -161,6 +163,16 @@
 
         ActivePanelIndex = OpenedMethods.IndexOf(method);
         StateHasChanged();
+    }
+
+    public void ToggleBreakpointOnSelectedNode()
+    {
+        if (OpenedMethods.Count > 0 && ActivePanelIndex < OpenedMethods.Count)
+        {
+            var method = OpenedMethods[ActivePanelIndex];
+            var graphCanvas = method.Graph.GraphCanvas as GraphCanvas;
+            graphCanvas?.ToggleBreakpointOnSelectedNode();
+        }
     }
 
     public void Dispose()

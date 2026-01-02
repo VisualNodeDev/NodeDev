@@ -755,4 +755,61 @@ public class HomePage
 		}
 		return lines.ToArray();
 	}
+
+	// Breakpoint Operations
+
+	public async Task ClickToggleBreakpointButton()
+	{
+		var toggleButton = _user.Locator("[data-test-id='toggle-breakpoint']");
+		await toggleButton.WaitForVisible();
+		await toggleButton.ClickAsync();
+		Console.WriteLine("Clicked toggle breakpoint button");
+	}
+
+	public async Task VerifyNodeHasBreakpoint(string nodeName)
+	{
+		var node = GetGraphNode(nodeName);
+		var breakpointIndicator = node.Locator(".breakpoint-indicator");
+		
+		try
+		{
+			await breakpointIndicator.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
+			Console.WriteLine($"Verified node '{nodeName}' has breakpoint indicator");
+		}
+		catch (TimeoutException)
+		{
+			throw new Exception($"Node '{nodeName}' does not have a breakpoint indicator");
+		}
+	}
+
+	public async Task VerifyNodeHasNoBreakpoint(string nodeName)
+	{
+		var node = GetGraphNode(nodeName);
+		var breakpointIndicator = node.Locator(".breakpoint-indicator");
+		var count = await breakpointIndicator.CountAsync();
+		
+		if (count > 0)
+		{
+			throw new Exception($"Node '{nodeName}' has a breakpoint indicator when it shouldn't");
+		}
+		
+		Console.WriteLine($"Verified node '{nodeName}' has no breakpoint indicator");
+	}
+
+	public async Task AddNodeToCanvas(string nodeType)
+	{
+		// Click the add node button
+		var addNodeButton = _user.Locator("[data-test-id='node-search']");
+		await addNodeButton.WaitForVisible();
+		await addNodeButton.ClickAsync();
+		await Task.Delay(200);
+		
+		// Find and click the node type in the list
+		var nodeItem = _user.GetByText(nodeType, new() { Exact = true });
+		await nodeItem.WaitForVisible();
+		await nodeItem.ClickAsync();
+		await Task.Delay(300);
+		
+		Console.WriteLine($"Added node '{nodeType}' to canvas");
+	}
 }
