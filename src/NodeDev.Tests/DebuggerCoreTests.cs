@@ -511,8 +511,9 @@ public class DebuggerCoreTests
 			CreateNoWindow = true
 		};
 
-		using var process = Process.Start(processStartInfo)!;
+		var process = Process.Start(processStartInfo);
 		Assert.NotNull(process);
+		using var _ = process; // Dispose at end of method
 		_output.WriteLine($"Process started with PID: {process.Id}");
 
 		int targetPid = 0;
@@ -534,11 +535,27 @@ public class DebuggerCoreTests
 				_output.WriteLine($"Using process ID as target: {targetPid}");
 			}
 
-			// Wait briefly for CLR to load in the target process
-			Thread.Sleep(1000);
+			// Wait for CLR to load with polling (more reliable than fixed sleep)
+			const int maxAttempts = 10;
+			const int pollIntervalMs = 200;
+			string[]? clrs = null;
+			
+			for (int attempt = 0; attempt < maxAttempts; attempt++)
+			{
+				Thread.Sleep(pollIntervalMs);
+				try
+				{
+					clrs = engine.EnumerateCLRs(targetPid);
+					if (clrs.Length > 0) break;
+				}
+				catch (DebugEngineException)
+				{
+					// CLR not ready yet, keep trying
+				}
+			}
 
 			// Enumerate CLRs to verify the runtime is loaded
-			var clrs = engine.EnumerateCLRs(targetPid);
+			Assert.NotNull(clrs);
 			_output.WriteLine($"Enumerated {clrs.Length} CLR(s) in process");
 			foreach (var clr in clrs)
 			{
@@ -663,8 +680,9 @@ public class DebuggerCoreTests
 			CreateNoWindow = true
 		};
 
-		using var process = Process.Start(processStartInfo)!;
+		var process = Process.Start(processStartInfo);
 		Assert.NotNull(process);
+		using var _ = process; // Dispose at end of method
 		_output.WriteLine($"Started process with PID: {process.Id}");
 
 		// Track callbacks
@@ -683,8 +701,10 @@ public class DebuggerCoreTests
 			}
 			_output.WriteLine($"Target PID: {targetPid}");
 
-			// Wait for CLR to load
-			Thread.Sleep(1000);
+			// Wait for CLR to load with polling
+			const int maxAttempts = 10;
+			const int pollIntervalMs = 200;
+			string[]? clrs = null;
 
 			// Initialize debug engine
 			using var engine = new DebugSessionEngine(shimPath);
@@ -696,8 +716,23 @@ public class DebuggerCoreTests
 				_output.WriteLine($"[CALLBACK] {args.CallbackType}: {args.Description}");
 			};
 
+			// Wait for CLR to load with polling
+			for (int attempt = 0; attempt < maxAttempts; attempt++)
+			{
+				Thread.Sleep(pollIntervalMs);
+				try
+				{
+					clrs = engine.EnumerateCLRs(targetPid);
+					if (clrs.Length > 0) break;
+				}
+				catch (DebugEngineException)
+				{
+					// CLR not ready yet, keep trying
+				}
+			}
+
 			// Enumerate CLRs
-			var clrs = engine.EnumerateCLRs(targetPid);
+			Assert.NotNull(clrs);
 			_output.WriteLine($"Found {clrs.Length} CLR(s)");
 			Assert.True(clrs.Length > 0, "Should find CLR in target process");
 
