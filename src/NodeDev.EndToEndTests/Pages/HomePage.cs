@@ -35,12 +35,12 @@ public class HomePage
 
 	public async Task HasClass(string name)
 	{
-		await SearchProjectExplorerClasses.GetByText(name).WaitForVisible();
+		await SearchProjectExplorerClasses.GetByText(name, new() { Exact = true }).WaitForVisible();
 	}
 
 	public async Task ClickClass(string name)
 	{
-		await SearchProjectExplorerClasses.GetByText(name).ClickAsync();
+		await SearchProjectExplorerClasses.GetByText(name, new() { Exact = true }).ClickAsync();
 	}
 
 	public async Task OpenProjectExplorerProjectTab()

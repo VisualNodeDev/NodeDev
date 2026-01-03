@@ -229,7 +229,7 @@
     {
         if (item.Method == null) return;
 
-        var result = await DialogService.Show<RenameDialog>("Rename Method", new()
+        var dialogReference = DialogService.Show<RenameDialog>("Rename Method", new()
         {
             [nameof(RenameDialog.CurrentName)] = item.Method.Name,
             [nameof(RenameDialog.Label)] = "Method Name",
@@ -238,12 +238,15 @@
         {
             MaxWidth = MaxWidth.Small,
             FullWidth = true
-        }).Result;
+        });
+        
+        var result = await dialogReference.Result;
 
         if (result != null && !result.Canceled && result.Data is string newName)
         {
             var oldName = item.Method.Name;
             item.Method.Rename(newName);
+            item.Name = newName; // Update the tree item name for display
             Snackbar.Add($"Method renamed from '{oldName}' to '{newName}'", Severity.Success);
             StateHasChanged();
         }
