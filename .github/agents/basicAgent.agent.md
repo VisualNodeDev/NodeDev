@@ -39,10 +39,11 @@ NodeDev is a visual programming environment built with Blazor and Blazor.Diagram
 
 ### UI Structure
 The main UI consists of:
-- **AppBar**: Top toolbar with project controls (New, Open, Save, Options)
+- **AppBar**: Top toolbar with project controls (New, Open, Save, Options, Run, Run with Debug)
 - **ProjectExplorer**: Left panel showing project structure (classes, methods, properties)
 - **GraphCanvas**: Central canvas where nodes are placed and connected
 - **ClassExplorer**: Shows details of the currently selected class
+- **DebuggerConsolePanel**: Bottom panel with tabs for Console Output and Debug Callbacks
 
 ### Graph System
 - Uses Blazor.Diagrams library for visual node editing
@@ -128,12 +129,55 @@ Detailed topic-specific documentation is maintained in the `docs/` folder:
 
 ## Debugging Infrastructure
 
+### Hard Debugging (ICorDebug)
+NodeDev now supports "Hard Debugging" via the ICorDebug API (.NET's unmanaged debugging interface). This provides low-level debugging capabilities including:
+- Process attachment and management
+- Debug event callbacks (process creation, module loading, thread creation, etc.)
+- Future support for breakpoints and step-through execution
+
+**Running with Debug:**
+The UI provides two run modes:
+1. **Run** - Normal execution without debugger attachment
+2. **Run with Debug** - Executes with ICorDebug debugger attached
+
+**Debug State Management:**
+- `Project.IsHardDebugging` - Boolean property indicating active debug session
+- `Project.DebuggedProcessId` - Process ID of debugged process (null when not debugging)
+- `Project.HardDebugStateChanged` - Observable stream for debug state changes (true when attached, false when detached)
+- `Project.DebugCallbacks` - Observable stream of `DebugCallbackEventArgs` for all debug events
+
+**UI Visual Feedback:**
+- "Run with Debug" button changes color (warning) and shows PID when debugging
+- Button is disabled during active debug session
+- DebuggerConsolePanel shows two tabs:
+  - "Console Output" - Standard output from the program
+  - "Debug Callbacks" - Real-time debug events with timestamps
+
+**Implementation Pattern:**
+```csharp
+// Running with debug in Project.cs
+var result = project.RunWithDebug(BuildOptions.Debug);
+
+// Subscribing to debug callbacks
+project.DebugCallbacks.Subscribe(callback => {
+    Console.WriteLine($"{callback.CallbackType}: {callback.Description}");
+});
+
+// Subscribing to debug state changes
+project.HardDebugStateChanged.Subscribe(isDebugging => {
+    if (isDebugging)
+        Console.WriteLine("Debugging started");
+    else
+        Console.WriteLine("Debugging stopped");
+});
+```
+
 ### Debugger Module (NodeDev.Core.Debugger)
 The debugging infrastructure is located in `src/NodeDev.Core/Debugger/` and provides ICorDebug API access via the ClrDebug NuGet package:
 
 - **DbgShimResolver**: Cross-platform resolution for the dbgshim library from NuGet packages or system paths
 - **DebugSessionEngine**: Main debugging engine with process launch, attach, and callback handling
-- **ManagedDebuggerCallbacks**: Implementation of ICorDebugManagedCallback interfaces
+- **ManagedDebuggerCallbacks**: Implementation of ICorDebugManagedCallback interfaces via ClrDebug
 - **DebugEngineException**: Custom exception type for debugging errors
 
 **Dependencies:**
@@ -141,7 +185,7 @@ The debugging infrastructure is located in `src/NodeDev.Core/Debugger/` and prov
 - `Microsoft.Diagnostics.DbgShim` (v9.0.652701): Native dbgshim library for all platforms
 
 ### ScriptRunner
-NodeDev includes a separate console application called **ScriptRunner** that serves as the target process for debugging. This architecture is being developed to support "Hard Debugging" via the ICorDebug API (.NET's unmanaged debugging interface).
+NodeDev includes a separate console application called **ScriptRunner** that serves as the target process for debugging. This architecture supports "Hard Debugging" via the ICorDebug API.
 
 **Architecture:**
 - **Host Process**: The Visual IDE (NodeDev.Blazor.Server or NodeDev.Blazor.MAUI)
@@ -149,6 +193,7 @@ NodeDev includes a separate console application called **ScriptRunner** that ser
 
 **ScriptRunner Features:**
 - Accepts a DLL path as command-line argument
+- Optional `--wait-for-debugger` flag to pause execution until debugger attaches
 - Loads assemblies using `Assembly.LoadFrom()`
 - Finds and invokes entry points:
   - Static `Program.Main` method (in any namespace)
@@ -160,12 +205,5 @@ NodeDev includes a separate console application called **ScriptRunner** that ser
 - ScriptRunner is automatically built with NodeDev.Core
 - MSBuild targets copy ScriptRunner to the output directory of dependent projects
 - The `Project.Run()` method automatically locates and launches ScriptRunner
+- The `Project.RunWithDebug()` method launches ScriptRunner and attaches debugger
 - The `Project.GetScriptRunnerPath()` method returns the ScriptRunner location for debugging infrastructure
-
-**Future: ICorDebug Integration**
-This infrastructure prepares NodeDev for implementing advanced debugging features:
-- Breakpoints in visual graphs
-- Step-through execution
-- Variable inspection at runtime
-- Exception handling and catching
-- Live debugging across process boundaries
