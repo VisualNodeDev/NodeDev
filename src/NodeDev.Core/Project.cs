@@ -456,13 +456,8 @@ public class Project
 				DebugCallbackSubject.OnNext(args);
 			};
 
-			// Wait for the process to print its PID
+			// Use the process ID directly
 			int targetPid = process.Id;
-			var pidLine = process.StandardOutput.ReadLine();
-			if (pidLine != null && pidLine.StartsWith("SCRIPTRUNNER_PID:"))
-			{
-				targetPid = int.Parse(pidLine.Substring("SCRIPTRUNNER_PID:".Length));
-			}
 
 			// Wait for CLR to load with polling
 			const int maxAttempts = 20;
@@ -481,11 +476,23 @@ public class Project
 				{
 					// CLR not ready yet, keep trying
 				}
+				catch (Exception)
+				{
+					// Process may have exited
+					if (process.HasExited)
+						break;
+				}
 			}
 
 			if (clrs == null || clrs.Length == 0)
 			{
-				ConsoleOutputSubject.OnNext("Warning: Could not enumerate CLRs. Debugging may not work." + Environment.NewLine);
+				ConsoleOutputSubject.OnNext("Warning: Could not enumerate CLRs. Continuing without debugging." + Environment.NewLine);
+				// Continue without debugging
+				process.WaitForExit();
+				outputComplete.WaitOne(OutputStreamTimeout);
+				errorComplete.WaitOne(OutputStreamTimeout);
+				GraphExecutionChangedSubject.OnNext(false);
+				return process.ExitCode;
 			}
 			else
 			{
