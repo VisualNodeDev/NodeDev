@@ -438,17 +438,25 @@ public class Project
 			var shimPath = DbgShimResolver.TryResolve();
 			if (shimPath == null)
 			{
-				ConsoleOutputSubject.OnNext("Warning: DbgShim not found. Debugging features will not be available." + Environment.NewLine);
-				// Fall back to normal execution
-				process.WaitForExit();
-				outputComplete.WaitOne(OutputStreamTimeout);
-				errorComplete.WaitOne(OutputStreamTimeout);
-				GraphExecutionChangedSubject.OnNext(false);
-				return process.ExitCode;
+				// Kill the process since we can't attach debugger
+				try { process.Kill(); } catch { }
+				throw new InvalidOperationException(
+					"DbgShim library not found. Debugging features are not available on this system.\n\n" +
+					"The DbgShim library is required for debugging and should be installed automatically via the Microsoft.Diagnostics.DbgShim NuGet package.\n" +
+					"Please ensure NuGet packages are properly restored.");
 			}
 
 			_debugEngine = new DebugSessionEngine(shimPath);
-			_debugEngine.Initialize();
+			try
+			{
+				_debugEngine.Initialize();
+			}
+			catch (Exception ex)
+			{
+				// Kill the process since we can't attach debugger
+				try { process.Kill(); } catch { }
+				throw new InvalidOperationException($"Failed to initialize debug engine: {ex.Message}", ex);
+			}
 
 			// Subscribe to debug callbacks
 			_debugEngine.DebugCallback += (sender, args) =>
@@ -486,17 +494,21 @@ public class Project
 
 			if (clrs == null || clrs.Length == 0)
 			{
-				ConsoleOutputSubject.OnNext("Warning: Could not enumerate CLRs. Continuing without debugging." + Environment.NewLine);
-				// Continue without debugging
-				process.WaitForExit();
-				outputComplete.WaitOne(OutputStreamTimeout);
-				errorComplete.WaitOne(OutputStreamTimeout);
-				GraphExecutionChangedSubject.OnNext(false);
-				return process.ExitCode;
+				// Kill the process since we can't attach debugger
+				try { process.Kill(); } catch { }
+				
+				string errorMsg = process.HasExited 
+					? $"Target process exited unexpectedly (exit code: {process.ExitCode}) before CLR could be enumerated.\n\n" +
+					  "The process may have crashed or completed too quickly for the debugger to attach."
+					: "Could not enumerate CLRs in the target process after multiple attempts.\n\n" +
+					  "The CLR runtime may not have loaded, or the process may not be a valid .NET application.";
+				
+				throw new InvalidOperationException(errorMsg);
 			}
-			else
+
+			// Attach debugger
+			try
 			{
-				// Attach debugger
 				var corDebug = _debugEngine.AttachToProcess(targetPid);
 				corDebug.Initialize();
 
@@ -508,6 +520,12 @@ public class Project
 				// Notify that we're now debugging
 				HardDebugStateChangedSubject.OnNext(true);
 				ConsoleOutputSubject.OnNext("Debugger attached successfully." + Environment.NewLine);
+			}
+			catch (Exception ex) when (ex is not InvalidOperationException)
+			{
+				// Kill the process since we can't attach debugger
+				try { process.Kill(); } catch { }
+				throw new InvalidOperationException($"Failed to attach debugger to process: {ex.Message}", ex);
 			}
 
 			// Wait for the process to complete

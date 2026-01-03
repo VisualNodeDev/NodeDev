@@ -116,7 +116,21 @@
     {
         new Thread(() =>
         {
-            Project.RunWithDebug(Core.BuildOptions.Debug);
+            try
+            {
+                Project.RunWithDebug(Core.BuildOptions.Debug);
+            }
+            catch (Exception ex)
+            {
+                // Show error dialog on UI thread
+                InvokeAsync(async () =>
+                {
+                    await DialogService.ShowMessageBox(
+                        "Debug Attachment Failed",
+                        ex.Message,
+                        yesText: "OK");
+                });
+            }
         }).Start();
     }
 
