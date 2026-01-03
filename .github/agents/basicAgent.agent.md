@@ -140,6 +140,8 @@ The UI provides two run modes:
 1. **Run** - Normal execution without debugger attachment
 2. **Run with Debug** - Executes with ICorDebug debugger attached
 
+**Important**: "Run with Debug" requires successful debugger attachment. If attachment fails for any reason (DbgShim not found, CLR enumeration fails, etc.), the operation will fail with an error dialog showing the specific issue. There is no fallback to normal execution.
+
 **Debug State Management:**
 - `Project.IsHardDebugging` - Boolean property indicating active debug session
 - `Project.DebuggedProcessId` - Process ID of debugged process (null when not debugging)
@@ -156,7 +158,16 @@ The UI provides two run modes:
 **Implementation Pattern:**
 ```csharp
 // Running with debug in Project.cs
-var result = project.RunWithDebug(BuildOptions.Debug);
+try 
+{
+    var result = project.RunWithDebug(BuildOptions.Debug);
+}
+catch (InvalidOperationException ex)
+{
+    // Handle debug attachment failure
+    // Show error dialog to user with ex.Message
+    Console.WriteLine($"Debug failed: {ex.Message}");
+}
 
 // Subscribing to debug callbacks
 project.DebugCallbacks.Subscribe(callback => {
