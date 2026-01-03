@@ -202,14 +202,16 @@
 
     private async Task ShowCreateMethodDialog()
     {
-        var result = await DialogService.Show<CreateMethodDialog>("Create New Method", new()
+        var dialogReference = await DialogService.ShowAsync<CreateMethodDialog>("Create New Method", new()
         {
             [nameof(CreateMethodDialog.Class)] = Class
         }, new DialogOptions()
         {
             MaxWidth = MaxWidth.Small,
             FullWidth = true
-        }).Result;
+        });
+
+        var result = await dialogReference.Result;
 
         if (result != null && !result.Canceled && result.Data is NodeDev.Core.Class.NodeClassMethod method)
         {
@@ -229,7 +231,7 @@
     {
         if (item.Method == null) return;
 
-        var dialogReference = DialogService.Show<RenameDialog>("Rename Method", new()
+        var dialogReference = await DialogService.ShowAsync<RenameDialog>("Rename Method", new()
         {
             [nameof(RenameDialog.CurrentName)] = item.Method.Name,
             [nameof(RenameDialog.Label)] = "Method Name",
