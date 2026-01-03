@@ -533,6 +533,16 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 				node.Refresh();
 			}
 		}
+		// Detect F9 key to toggle breakpoint on the selected node
+		else if (obj.Key == "F9")
+		{
+			var node = Diagram.Nodes.Where(x => x.Selected).OfType<GraphNodeModel>().FirstOrDefault();
+			if (node != null && !node.Node.CanBeInlined)
+			{
+				node.Node.ToggleBreakpoint();
+				node.Refresh();
+			}
+		}
 	}
 
 	#endregion
@@ -563,6 +573,20 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		IsShowingGenericTypeSelection = IsShowingNodeSelection = IsShowingOverloadSelection = false;
 		PopupNode = null;
 		PopupNodeConnection = null;
+	}
+
+	#endregion
+
+	#region ToggleBreakpoint
+
+	public void ToggleBreakpointOnSelectedNode()
+	{
+		var node = Diagram.Nodes.Where(x => x.Selected).OfType<GraphNodeModel>().FirstOrDefault();
+		if (node != null && !node.Node.CanBeInlined)
+		{
+			node.Node.ToggleBreakpoint();
+			node.Refresh();
+		}
 	}
 
 	#endregion

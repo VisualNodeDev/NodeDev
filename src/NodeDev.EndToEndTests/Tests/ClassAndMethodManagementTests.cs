@@ -38,15 +38,39 @@ public class ClassAndMethodManagementTests : E2ETestBase
 		await HomePage.CreateNewProject();
 		await HomePage.OpenProjectExplorerProjectTab();
 		
+		// Verify original class exists
+		var originalExists = await HomePage.ClassExists("Program");
+		Assert.True(originalExists, "Original 'Program' class should exist before rename");
+		
 		try
 		{
 			await HomePage.RenameClass("Program", "RenamedProgram");
 			
-			// Wait for UI to update
-			await Task.Delay(2000);
+			// Wait for UI to update with retry logic
+			await Task.Delay(1000);
 			
-			var exists = await HomePage.ClassExists("RenamedProgram");
-			Assert.True(exists, "Class 'RenamedProgram' not found in project explorer");
+			// Try multiple times to find the renamed class
+			var renamedExists = false;
+			var originalStillExists = false;
+			for (int i = 0; i < 10; i++)
+			{
+				renamedExists = await HomePage.ClassExists("RenamedProgram");
+				originalStillExists = await HomePage.ClassExists("Program");
+				
+				if (renamedExists && !originalStillExists) 
+				{
+					// Success!
+					break;
+				}
+				
+				await Task.Delay(500);
+			}
+			
+			// Log what we found for debugging
+			Console.WriteLine($"After rename: RenamedProgram exists={renamedExists}, Program still exists={originalStillExists}");
+			
+			Assert.True(renamedExists, "Class 'RenamedProgram' not found in project explorer after rename");
+			Assert.False(originalStillExists, "Original class 'Program' should not exist after rename");
 			
 			await HomePage.TakeScreenshot("/tmp/class-renamed.png");
 			Console.WriteLine("✓ Renamed class");
@@ -94,11 +118,19 @@ public class ClassAndMethodManagementTests : E2ETestBase
 		{
 			await HomePage.RenameMethod("Main", "RenamedMain");
 			
-			// Wait for UI to update
-			await Task.Delay(2000);
+			// Wait for UI to update with retry logic
+			await Task.Delay(1000);
 			
-			var exists = await HomePage.MethodExists("RenamedMain");
-			Assert.True(exists, "Method 'RenamedMain' not found");
+			// Try multiple times to find the renamed method
+			var exists = false;
+			for (int i = 0; i < 5; i++)
+			{
+				exists = await HomePage.MethodExists("RenamedMain");
+				if (exists) break;
+				await Task.Delay(1000);
+			}
+			
+			Assert.True(exists, "Method 'RenamedMain' not found after rename");
 			
 			await HomePage.TakeScreenshot("/tmp/method-renamed.png");
 			Console.WriteLine("✓ Renamed method");

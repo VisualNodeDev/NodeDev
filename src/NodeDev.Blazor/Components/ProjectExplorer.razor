@@ -39,8 +39,9 @@
         Class
     }
 
-    private record class TreeItem(string Name, TreeItemType Type, NodeDev.Core.Class.NodeClass? Class)
+    private record class TreeItem(TreeItemType Type, NodeDev.Core.Class.NodeClass? Class)
     {
+        public string Name { get; set; } = "";
         public bool IsExpanded { get; set; } = true;
     }
 
@@ -93,7 +94,7 @@
             {
                 folder = new TreeItemData<TreeItem>()
                     {
-                        Value = new(folders[i], TreeItemType.Folder, null),
+                        Value = new(TreeItemType.Folder, null) { Name = folders[i] },
                         Children = [],
                         Expanded = true
                     };
@@ -106,7 +107,7 @@
 
         folder.Children.Add(new()
             {
-                Value = new(nodeClass.Name, TreeItemType.Class, nodeClass)
+                Value = new(TreeItemType.Class, nodeClass) { Name = nodeClass.Name }
             });
     }
 
@@ -133,7 +134,7 @@
     {
         if (item.Class == null) return;
 
-        var result = await DialogService.Show<RenameDialog>("Rename Class", new()
+        var dialogReference = DialogService.Show<RenameDialog>("Rename Class", new()
         {
             [nameof(RenameDialog.CurrentName)] = item.Class.Name,
             [nameof(RenameDialog.Label)] = "Class Name",
@@ -142,12 +143,15 @@
         {
             MaxWidth = MaxWidth.Small,
             FullWidth = true
-        }).Result;
+        });
+        
+        var result = await dialogReference.Result;
 
         if (result != null && !result.Canceled && result.Data is string newName)
         {
             var oldName = item.Class.Name;
-            item.Class.Name = newName; // Name is a settable property
+            item.Class.Name = newName; // Update the class name
+            item.Name = newName; // Update the tree item name for display
             Snackbar.Add($"Class renamed from '{oldName}' to '{newName}'", Severity.Success);
             StateHasChanged();
         }

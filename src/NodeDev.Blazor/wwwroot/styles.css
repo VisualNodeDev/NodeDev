@@ -137,6 +137,20 @@
         padding: 0px;
     }
 
+    .my-node .breakpoint-indicator {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 12px;
+        height: 12px;
+        background-color: #f44336;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        z-index: 10;
+    }
+
 g.diagram-link path{
     transition: 2s linear stroke;
 }
