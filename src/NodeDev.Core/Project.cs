@@ -1,5 +1,6 @@
 ﻿using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
+using NodeDev.Core.Debugger;
 using NodeDev.Core.Migrations;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Types;
@@ -48,6 +49,8 @@ public class Project
 	internal Subject<(GraphExecutor Executor, Node Node, Connection Exec)> GraphNodeExecutedSubject { get; } = new();
 	internal Subject<bool> GraphExecutionChangedSubject { get; } = new();
 	internal Subject<string> ConsoleOutputSubject { get; } = new();
+	internal Subject<DebugCallbackEventArgs> DebugCallbackSubject { get; } = new();
+	internal Subject<bool> HardDebugStateChangedSubject { get; } = new();
 
 	public IObservable<(Graph Graph, bool RequireUIRefresh)> GraphChanged => GraphChangedSubject.AsObservable();
 
@@ -59,7 +62,24 @@ public class Project
 
 	public IObservable<string> ConsoleOutput => ConsoleOutputSubject.AsObservable();
 
+	public IObservable<DebugCallbackEventArgs> DebugCallbacks => DebugCallbackSubject.AsObservable();
+
+	public IObservable<bool> HardDebugStateChanged => HardDebugStateChangedSubject.AsObservable();
+
 	public bool IsLiveDebuggingEnabled { get; private set; }
+
+	private DebugSessionEngine? _debugEngine;
+	private System.Diagnostics.Process? _debuggedProcess;
+
+	/// <summary>
+	/// Gets whether the project is currently being debugged with hard debugging (ICorDebug).
+	/// </summary>
+	public bool IsHardDebugging => _debugEngine?.IsAttached ?? false;
+
+	/// <summary>
+	/// Gets the process ID of the currently debugged process, or null if not debugging.
+	/// </summary>
+	public int? DebuggedProcessId => _debuggedProcess?.Id;
 
 	public Project(Guid id, string? nodeDevVersion = null)
 	{
@@ -334,6 +354,180 @@ public class Project
 		}
 		finally
 		{
+			NodeClassTypeCreator = null;
+			GC.Collect();
+		}
+	}
+
+	/// <summary>
+	/// Runs the project with hard debugging (ICorDebug) attached.
+	/// </summary>
+	/// <param name="options">Build options to use.</param>
+	/// <param name="inputs">Input parameters for the main method.</param>
+	/// <returns>The exit code of the process, or null if execution failed.</returns>
+	public object? RunWithDebug(BuildOptions options, params object?[] inputs)
+	{
+		try
+		{
+			var assemblyPath = Build(options);
+
+			// Find the ScriptRunner executable
+			string scriptRunnerPath = FindScriptRunnerExecutable();
+
+			// Convert to absolute path to avoid confusion with working directory
+			string absoluteAssemblyPath = Path.GetFullPath(assemblyPath);
+
+			// Build arguments: ScriptRunner.dll --wait-for-debugger path-to-user-dll [user-args...]
+			var userArgsString = string.Join(" ", inputs.Select(x => '"' + (x?.ToString() ?? "") + '"'));
+			var arguments = $"\"{scriptRunnerPath}\" --wait-for-debugger \"{absoluteAssemblyPath}\"";
+			if (!string.IsNullOrEmpty(userArgsString))
+			{
+				arguments += $" {userArgsString}";
+			}
+
+			var processStartInfo = new System.Diagnostics.ProcessStartInfo()
+			{
+				FileName = "dotnet",
+				Arguments = arguments,
+				WorkingDirectory = Path.GetDirectoryName(absoluteAssemblyPath),
+				RedirectStandardOutput = true,
+				RedirectStandardError = true,
+				UseShellExecute = false,
+				CreateNoWindow = true,
+			};
+
+			var process = System.Diagnostics.Process.Start(processStartInfo) ?? throw new Exception("Unable to start process");
+			_debuggedProcess = process;
+
+			// Use ManualResetEvents to track when async output handlers complete
+			using var outputComplete = new System.Threading.ManualResetEvent(false);
+			using var errorComplete = new System.Threading.ManualResetEvent(false);
+
+			// Notify that execution has started
+			GraphExecutionChangedSubject.OnNext(true);
+
+			// Capture output and error streams
+			process.OutputDataReceived += (sender, e) =>
+			{
+				if (e.Data != null)
+				{
+					ConsoleOutputSubject.OnNext(e.Data + Environment.NewLine);
+				}
+				else
+				{
+					outputComplete.Set();
+				}
+			};
+
+			process.ErrorDataReceived += (sender, e) =>
+			{
+				if (e.Data != null)
+				{
+					ConsoleOutputSubject.OnNext(e.Data + Environment.NewLine);
+				}
+				else
+				{
+					errorComplete.Set();
+				}
+			};
+
+			process.BeginOutputReadLine();
+			process.BeginErrorReadLine();
+
+			// Initialize debug engine
+			var shimPath = DbgShimResolver.TryResolve();
+			if (shimPath == null)
+			{
+				ConsoleOutputSubject.OnNext("Warning: DbgShim not found. Debugging features will not be available." + Environment.NewLine);
+				// Fall back to normal execution
+				process.WaitForExit();
+				outputComplete.WaitOne(OutputStreamTimeout);
+				errorComplete.WaitOne(OutputStreamTimeout);
+				GraphExecutionChangedSubject.OnNext(false);
+				return process.ExitCode;
+			}
+
+			_debugEngine = new DebugSessionEngine(shimPath);
+			_debugEngine.Initialize();
+
+			// Subscribe to debug callbacks
+			_debugEngine.DebugCallback += (sender, args) =>
+			{
+				DebugCallbackSubject.OnNext(args);
+			};
+
+			// Wait for the process to print its PID
+			int targetPid = process.Id;
+			var pidLine = process.StandardOutput.ReadLine();
+			if (pidLine != null && pidLine.StartsWith("SCRIPTRUNNER_PID:"))
+			{
+				targetPid = int.Parse(pidLine.Substring("SCRIPTRUNNER_PID:".Length));
+			}
+
+			// Wait for CLR to load with polling
+			const int maxAttempts = 20;
+			const int pollIntervalMs = 200;
+			string[]? clrs = null;
+
+			for (int attempt = 0; attempt < maxAttempts; attempt++)
+			{
+				System.Threading.Thread.Sleep(pollIntervalMs);
+				try
+				{
+					clrs = _debugEngine.EnumerateCLRs(targetPid);
+					if (clrs.Length > 0) break;
+				}
+				catch (DebugEngineException)
+				{
+					// CLR not ready yet, keep trying
+				}
+			}
+
+			if (clrs == null || clrs.Length == 0)
+			{
+				ConsoleOutputSubject.OnNext("Warning: Could not enumerate CLRs. Debugging may not work." + Environment.NewLine);
+			}
+			else
+			{
+				// Attach debugger
+				var corDebug = _debugEngine.AttachToProcess(targetPid);
+				corDebug.Initialize();
+
+				var managedCallback = ManagedDebuggerCallbackFactory.Create(_debugEngine);
+				corDebug.SetManagedHandler(managedCallback);
+
+				var debugProcess = corDebug.DebugActiveProcess(targetPid, win32Attach: false);
+
+				// Notify that we're now debugging
+				HardDebugStateChangedSubject.OnNext(true);
+				ConsoleOutputSubject.OnNext("Debugger attached successfully." + Environment.NewLine);
+			}
+
+			// Wait for the process to complete
+			process.WaitForExit();
+
+			// Wait for output streams to be fully consumed
+			outputComplete.WaitOne(OutputStreamTimeout);
+			errorComplete.WaitOne(OutputStreamTimeout);
+
+			// Notify that debugging has stopped
+			HardDebugStateChangedSubject.OnNext(false);
+			GraphExecutionChangedSubject.OnNext(false);
+
+			return process.ExitCode;
+		}
+		catch (Exception ex)
+		{
+			ConsoleOutputSubject.OnNext($"Error during debug execution: {ex.Message}" + Environment.NewLine);
+			HardDebugStateChangedSubject.OnNext(false);
+			GraphExecutionChangedSubject.OnNext(false);
+			return null;
+		}
+		finally
+		{
+			_debugEngine?.Dispose();
+			_debugEngine = null;
+			_debuggedProcess = null;
 			NodeClassTypeCreator = null;
 			GC.Collect();
 		}

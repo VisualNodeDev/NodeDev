@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using NodeDev.Core;
+using NodeDev.Core.Debugger;
 using System.Reactive.Subjects;
 
 
@@ -12,10 +13,12 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 
 	private IDisposable? GraphExecutionChangedDisposable;
 	private IDisposable? ConsoleOutputDisposable;
+	private IDisposable? DebugCallbackDisposable;
 
 	private TextWriter? PreviousTextWriter;
 
 	private readonly ReverseQueue Lines = new(10_000);
+	private readonly ReverseQueue DebugCallbacks = new(10_000);
 	private string LastLine = ">";
 
 	private bool IsShowing = false;
@@ -31,11 +34,13 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 
 		GraphExecutionChangedDisposable = Project.GraphExecutionChanged.Subscribe(OnGraphExecutionChanged);
 		ConsoleOutputDisposable = Project.ConsoleOutput.Subscribe(OnConsoleOutput);
+		DebugCallbackDisposable = Project.DebugCallbacks.Subscribe(OnDebugCallback);
 	}
 
 	public void Clear()
 	{
 		Lines.Clear();
+		DebugCallbacks.Clear();
 		LastLine = ">";
 	}
 
@@ -58,6 +63,14 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 	private void OnConsoleOutput(string text)
 	{
 		AddText(text);
+	}
+
+	private void OnDebugCallback(DebugCallbackEventArgs args)
+	{
+		var timestamp = DateTime.Now;
+		var callbackInfo = new DebugCallbackInfo(timestamp, args.CallbackType, args.Description);
+		DebugCallbacks.Enqueue(callbackInfo.ToString());
+		RefreshRequiredSubject.OnNext(null);
 	}
 
 	private void AddText(string text)
@@ -90,6 +103,7 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 
 		GraphExecutionChangedDisposable?.Dispose();
 		ConsoleOutputDisposable?.Dispose();
+		DebugCallbackDisposable?.Dispose();
 		RefreshRequiredDisposable?.Dispose();
 
 		if (PreviousTextWriter != null)
@@ -97,6 +111,11 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 			Console.SetOut(PreviousTextWriter);
 			PreviousTextWriter = null;
 		}
+	}
+
+	private record DebugCallbackInfo(DateTime Timestamp, string Type, string Description)
+	{
+		public override string ToString() => $"[{Timestamp:HH:mm:ss.fff}] {Type}: {Description}";
 	}
 
 	private class ControlWriter : TextWriter
