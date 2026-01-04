@@ -13,7 +13,7 @@ jobs:
   build:
     name: Build the entire solution
     uses: ./.github/workflows/workflow-build.yml
-
+    
   tests:
     name: Run Unit Tests
     needs: build
@@ -24,3 +24,12 @@ jobs:
     needs: build
     uses: ./.github/workflows/workflow-e2e-tests.yml 
 
+  tests-windows:
+    name: Run Unit Tests
+    needs: build
+    uses: ./.github/workflows/workflow-tests-windows.yml
+
+  e2e-tests-windows:
+    name: Run End To End Tests
+    needs: build
+    uses: ./.github/workflows/workflow-e2e-tests-windows.yml
