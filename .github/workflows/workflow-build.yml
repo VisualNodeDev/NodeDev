@@ -21,6 +21,10 @@ jobs:
       working-directory: ./src
       run: dotnet restore
 
+    - name: Install workloads
+      working-directory: ./src
+      run: dotnet workload restore
+
     - name: Build
       working-directory: ./src
       run: dotnet build -c Release --no-restore
