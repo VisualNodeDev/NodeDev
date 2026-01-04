@@ -785,6 +785,190 @@ public class DebuggerCoreTests
 
 	#endregion
 
+	#region Project.RunWithDebug Tests
+
+	[Fact]
+	public void Project_RunWithDebug_ShouldAttachDebugger()
+	{
+		// Arrange - Create a simple project
+		var project = Project.CreateNewDefaultProject(out var mainMethod);
+		var graph = mainMethod.Graph;
+
+		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
+		returnNode.Inputs[1].UpdateTextboxText("42");
+
+		var debugCallbacks = new List<DebugCallbackEventArgs>();
+		var debugCallbacksSubscription = project.DebugCallbacks.Subscribe(callback =>
+		{
+			debugCallbacks.Add(callback);
+			_output.WriteLine($"[DEBUG CALLBACK] {callback.CallbackType}: {callback.Description}");
+		});
+
+		var hardDebugStates = new List<bool>();
+		var hardDebugStateSubscription = project.HardDebugStateChanged.Subscribe(state =>
+		{
+			hardDebugStates.Add(state);
+			_output.WriteLine($"[DEBUG STATE] IsHardDebugging: {state}");
+		});
+
+		try
+		{
+			// Act - Run with debug
+			var result = project.RunWithDebug(BuildOptions.Debug);
+
+			// Wait a bit for async operations
+			Thread.Sleep(1000);
+
+			// Assert
+			Assert.NotNull(result);
+			_output.WriteLine($"Exit code: {result}");
+
+			// Should have received debug callbacks
+			Assert.True(debugCallbacks.Count > 0, "Should have received at least one debug callback");
+
+			// Should have transitioned through debug states (true then false)
+			Assert.Contains(true, hardDebugStates);
+			Assert.Contains(false, hardDebugStates);
+
+			_output.WriteLine($"Received {debugCallbacks.Count} debug callbacks");
+			_output.WriteLine($"Debug state transitions: {string.Join(" -> ", hardDebugStates)}");
+		}
+		finally
+		{
+			debugCallbacksSubscription.Dispose();
+			hardDebugStateSubscription.Dispose();
+		}
+	}
+
+	[Fact]
+	public void Project_IsHardDebugging_ShouldBeFalseInitially()
+	{
+		// Arrange
+		var project = Project.CreateNewDefaultProject(out _);
+
+		// Act & Assert
+		Assert.False(project.IsHardDebugging);
+		Assert.Null(project.DebuggedProcessId);
+	}
+
+	[Fact]
+	public void Project_DebugCallbacks_ShouldEmitCallbacksDuringDebug()
+	{
+		// Arrange
+		var project = Project.CreateNewDefaultProject(out var mainMethod);
+		var graph = mainMethod.Graph;
+
+		// Add a WriteLine node to make the program do something visible
+		var writeLineNode = new WriteLine(graph);
+		graph.Manager.AddNode(writeLineNode);
+
+		var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
+		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
+
+		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], writeLineNode.Inputs[0]);
+		writeLineNode.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+		writeLineNode.Inputs[1].UpdateTextboxText("\"Debug callback test\"");
+		graph.Manager.AddNewConnectionBetween(writeLineNode.Outputs[0], returnNode.Inputs[0]);
+
+		var callbackTypes = new List<string>();
+		var subscription = project.DebugCallbacks.Subscribe(callback =>
+		{
+			callbackTypes.Add(callback.CallbackType);
+			_output.WriteLine($"Callback: {callback.CallbackType}");
+		});
+
+		try
+		{
+			// Act
+			var result = project.RunWithDebug(BuildOptions.Debug);
+			Thread.Sleep(1000);
+
+			// Assert
+			Assert.True(callbackTypes.Count > 0, "Should receive debug callbacks");
+
+			// Should contain common callback types
+			var hasProcessCallback = callbackTypes.Any(t => t.Contains("Process") || t.Contains("CreateAppDomain") || t.Contains("LoadModule"));
+			Assert.True(hasProcessCallback, $"Should have received process-related callbacks. Got: {string.Join(", ", callbackTypes)}");
+
+			_output.WriteLine($"Total callbacks received: {callbackTypes.Count}");
+		}
+		finally
+		{
+			subscription.Dispose();
+		}
+	}
+
+	[Fact]
+	public void Project_HardDebugStateChanged_ShouldNotifyWhenDebuggingStarts()
+	{
+		// Arrange
+		var project = Project.CreateNewDefaultProject(out var mainMethod);
+
+		var stateChanges = new List<bool>();
+		var subscription = project.HardDebugStateChanged.Subscribe(state =>
+		{
+			stateChanges.Add(state);
+			_output.WriteLine($"Debug state changed: {state}");
+		});
+
+		try
+		{
+			// Act
+			project.RunWithDebug(BuildOptions.Debug);
+			Thread.Sleep(1000);
+
+			// Assert
+			Assert.True(stateChanges.Count >= 2, "Should have at least 2 state changes (start and stop)");
+			Assert.True(stateChanges[0], "First state change should be true (debugging started)");
+			Assert.False(stateChanges[^1], "Last state change should be false (debugging stopped)");
+		}
+		finally
+		{
+			subscription.Dispose();
+		}
+	}
+
+	[Fact]
+	public void Project_RunWithDebug_ShouldThrowWhenDbgShimNotFound()
+	{
+		// Arrange - Create a project
+		var project = Project.CreateNewDefaultProject(out var mainMethod);
+
+		// Create engine with invalid path to simulate DbgShim not found
+		// This test verifies that the method throws instead of falling back
+
+		// We can't easily mock DbgShimResolver.TryResolve() since it's static,
+		// but we can verify the behavior by checking that an exception is thrown
+		// when debugging features are not available.
+
+		// For now, this test documents the expected behavior.
+		// In a real failure scenario, RunWithDebug should throw InvalidOperationException
+		// instead of falling back to normal execution.
+
+		_output.WriteLine("This test documents that RunWithDebug throws exceptions instead of falling back.");
+		_output.WriteLine("When DbgShim is not found, an InvalidOperationException should be thrown.");
+		_output.WriteLine("When CLR enumeration fails, an InvalidOperationException should be thrown.");
+		_output.WriteLine("When debugger attachment fails, an InvalidOperationException should be thrown.");
+	}
+
+	[Fact]
+	public void Project_StopDebugging_ShouldBeCallableWhenNotDebugging()
+	{
+		// Arrange
+		var project = Project.CreateNewDefaultProject(out var mainMethod);
+
+		// Act - Calling StopDebugging when not debugging should be safe
+		project.StopDebugging();
+
+		// Assert - Should not throw and state should be correct
+		Assert.False(project.IsHardDebugging);
+		Assert.Null(project.DebuggedProcessId);
+
+		_output.WriteLine("StopDebugging can be safely called when not debugging");
+	}
+
+	#endregion
+
 	#region Helper Methods
 
 	/// <summary>

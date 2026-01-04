@@ -112,6 +112,9 @@ public class HomePage
 	{
 		await SearchSaveAsButton.WaitForVisible();
 		await SearchSaveAsButton.ClickAsync();
+		
+		// Wait for the dialog to actually appear
+		await Task.Delay(200);
 	}
 
 	public async Task SetProjectNameAs(string projectName)
@@ -170,6 +173,8 @@ public class HomePage
 		if (box == null)
 			throw new Exception($"Could not get bounding box for node '{nodeName}'");
 
+		await node.ClickAsync();
+
 		// Calculate center of node as the starting point
 		var sourceX = (float)(box.X + box.Width / 2);
 		var sourceY = (float)(box.Y + box.Height / 2);
@@ -186,7 +191,7 @@ public class HomePage
 		await Task.Delay(50);
 
 		// 3. Move mouse to target position with multiple steps (pointermove events)
-		await _user.Mouse.MoveAsync(targetX, targetY, new() { Steps = 30 });
+		await _user.Mouse.MoveAsync(targetX, targetY, new() { Steps = 15 });
 		await Task.Delay(50);
 
 		// 4. Release mouse button (pointerup event)
@@ -194,6 +199,21 @@ public class HomePage
 
 		// Wait for the UI to update after drag
 		await Task.Delay(300);
+	}
+
+	public async Task SetNodeInputValue(string nodeName, string inputName, string value)
+	{
+		var node = GetGraphNode(nodeName);
+		await node.WaitForVisible();
+
+		// Find the input row by input name, then the input field within it
+		var inputRow = node.Locator($".col.input .name span", new() { HasText = inputName }).First;
+		await inputRow.WaitForVisible();
+
+		// Go up to the .col.input, then find the input inside
+		var inputField = inputRow.Locator("xpath=ancestor::div[contains(@class,'col') and contains(@class,'input')]//input").First;
+		await inputField.WaitForVisible();
+		await inputField.FillAsync(value);
 	}
 
 	public async Task<(float X, float Y)> GetNodePosition(string nodeName)
@@ -325,8 +345,6 @@ public class HomePage
 		{
 			await nodeResult.First.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
 			await nodeResult.First.ClickAsync();
-			// Wait for the dialog to close and node to be added
-			await Task.Delay(500);
 		}
 		catch (TimeoutException)
 		{

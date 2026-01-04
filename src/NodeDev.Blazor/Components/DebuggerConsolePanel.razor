@@ -3,10 +3,24 @@
 	<MudPaper Class="w100 pa-1 overflow-y-scroll d-flex flex-column relative" Style="height: 200px" data-test-id="consolePanel">
 		<MudIconButton Icon="@MudBlazor.Icons.Material.Filled.ArrowDropDown" Class="absolute" Style="right: 0px; top: 0px" Size="Size.Small" OnClick="@(() => IsShowing = false)"></MudIconButton>
 
-		@foreach (var line in Lines.Reverse())
-		{
-			<span class="w100" data-test-id="consoleLine">@line</span>
-		}
+		<MudTabs Elevation="0" Rounded="false" Class="w100 h100 consoleTabs">
+			<MudTabPanel Text="Console Output" Class="consoleOutputTab">
+				<div class="w100 h100 overflow-y-scroll d-flex flex-column-reverse">
+					@foreach (var line in Lines.Reverse())
+					{
+						<span class="w100 consoleLine">@line</span>
+					}
+				</div>
+			</MudTabPanel>
+			<MudTabPanel Text="Debug Callbacks" Class="debugCallbacksTab">
+				<div class="w100 h100 overflow-y-scroll d-flex flex-column-reverse">
+					@foreach (var callback in DebugCallbacks.Reverse())
+					{
+						<span class="w100 debugCallbackLine">@callback</span>
+					}
+				</div>
+			</MudTabPanel>
+		</MudTabs>
 	</MudPaper>
 
 }

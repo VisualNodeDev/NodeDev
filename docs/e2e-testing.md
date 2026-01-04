@@ -226,6 +226,29 @@ Components are marked with `data-test-id` attributes for reliable selection:
 - `graph-node`: Individual nodes (with `data-test-node-name` for the node name)
 - Graph ports are located by CSS class and port name
 
+### MudBlazor Component Selectors
+
+**IMPORTANT**: MudBlazor components like `MudTabPanel` do NOT forward custom attributes like `data-test-id` to the rendered HTML. For these components, use CSS classes instead:
+
+```razor
+<!-- WRONG - data-test-id won't work on MudTabPanel -->
+<MudTabPanel Text="Console Output" data-test-id="consoleOutputTab">
+
+<!-- CORRECT - use Class attribute instead -->
+<MudTabPanel Text="Console Output" Class="consoleOutputTab">
+```
+
+In tests, select by CSS class:
+```csharp
+// Use CSS class selector for MudBlazor components that don't forward data-test-id
+var consoleOutputTab = Page.Locator(".consoleOutputTab");
+```
+
+**Always verify your selectors work** by using Playwright tools to inspect the page:
+1. Use `playwright-browser_snapshot` to see the accessibility tree
+2. Use `playwright-browser_take_screenshot` to visually inspect the page
+3. If a selector doesn't find elements, the attribute may not be rendered - check the actual HTML
+
 ## Running Tests
 
 ### Locally
@@ -244,8 +267,25 @@ Tests run automatically in GitHub Actions with headless mode enabled.
 3. **Validate with screenshots**: Capture screenshots during critical operations
 4. **Test incrementally**: Start with simple movements before complex scenarios
 5. **Account for grid snapping**: Node positions may snap to grid, use tolerance in assertions
+6. **ALWAYS read this documentation BEFORE modifying E2E tests**
+7. **NEVER skip, disable, or remove tests** - fix the underlying issue instead
 
 ## Troubleshooting
+
+### ⚠️ IMPORTANT: Always Use Playwright Tools First
+
+**When encountering any E2E test issues (timeout, element not found, assertion failures), ALWAYS use the Playwright MCP tools to diagnose before assuming the test or functionality is broken:**
+
+1. **`playwright-browser_snapshot`** - Get accessibility tree of current page state
+2. **`playwright-browser_take_screenshot`** - Capture visual screenshot to see actual UI state
+3. **`playwright-browser_navigate`** - Manually navigate to test the UI
+4. **`playwright-browser_click`** - Test interactions manually
+
+These tools help you:
+- Verify elements exist and are visible
+- See the actual HTML/CSS classes rendered (important for MudBlazor components)
+- Understand timing issues by inspecting state at specific moments
+- Validate selectors before assuming they're correct
 
 ### Nodes Don't Move
 - Verify the node name matches exactly (case-sensitive)

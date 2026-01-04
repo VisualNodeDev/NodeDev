@@ -11,7 +11,7 @@ public class DebugSessionEngine : IDisposable
 {
 	private readonly string? _dbgShimPath;
 	private DbgShim? _dbgShim;
-	private IntPtr _dbgShimHandle;
+	private static IntPtr _dbgShimHandle; // Now static
 	private bool _disposed;
 
 	/// <summary>
@@ -55,8 +55,11 @@ public class DebugSessionEngine : IDisposable
 		try
 		{
 			var shimPath = _dbgShimPath ?? DbgShimResolver.Resolve();
-			// NativeLibrary.Load throws on failure, so no need to check for IntPtr.Zero
-			_dbgShimHandle = NativeLibrary.Load(shimPath);
+			// Only load the library once globally
+			if (_dbgShimHandle == IntPtr.Zero)
+			{
+				_dbgShimHandle = NativeLibrary.Load(shimPath);
+			}
 			_dbgShim = new DbgShim(_dbgShimHandle);
 		}
 		catch (FileNotFoundException ex)
@@ -356,12 +359,7 @@ public class DebugSessionEngine : IDisposable
 		if (disposing)
 		{
 			Detach();
-		}
-
-		if (_dbgShimHandle != IntPtr.Zero)
-		{
-			NativeLibrary.Free(_dbgShimHandle);
-			_dbgShimHandle = IntPtr.Zero;
+			// Do NOT free _dbgShimHandle here, since it's static/global and shared
 		}
 
 		_dbgShim = null;
