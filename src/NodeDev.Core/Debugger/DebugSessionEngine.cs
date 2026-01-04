@@ -54,7 +54,7 @@ public class DebugSessionEngine : IDisposable
 	public void Initialize()
 	{
 		if (_dbgShim != null)
-			return;
+			return; // Already initialized
 
 		try
 		{
@@ -62,9 +62,9 @@ public class DebugSessionEngine : IDisposable
 			
 			lock (_initLock)
 			{
-				// Try to reuse the globally loaded library first to avoid loading it multiple times
-				// Loading the same native library multiple times can cause issues
-				if (_globalDbgShimHandle != IntPtr.Zero)
+				// If using default path and global handle exists, reuse it
+				// Only reuse if this instance is using the default path (no custom _dbgShimPath)
+				if (_dbgShimPath == null && _globalDbgShimHandle != IntPtr.Zero)
 				{
 					_dbgShimHandle = _globalDbgShimHandle;
 					_dbgShim = new DbgShim(_dbgShimHandle);
@@ -72,12 +72,17 @@ public class DebugSessionEngine : IDisposable
 					return;
 				}
 				
-				// First time loading - load it and save the handle globally
-				// NativeLibrary.Load throws on failure, so no need to check for IntPtr.Zero
+				// Load the library (either first time or custom path)
 				_dbgShimHandle = NativeLibrary.Load(shimPath);
-				_globalDbgShimHandle = _dbgShimHandle;
 				_dbgShim = new DbgShim(_dbgShimHandle);
-				_instanceCount = 1;
+				
+				// If using default path, save as global handle
+				if (_dbgShimPath == null)
+				{
+					_globalDbgShimHandle = _dbgShimHandle;
+					_instanceCount = 1;
+				}
+				// If using custom path, don't update global tracking
 			}
 		}
 		catch (FileNotFoundException ex)
@@ -403,16 +408,32 @@ public class DebugSessionEngine : IDisposable
 			
 			// Only free the native library from managed Dispose, not from finalizer
 			// Freeing native libraries from the finalizer thread can cause crashes on Linux
-			// Also, we only free if this is the last instance using the library
 			lock (_initLock)
 			{
-				_instanceCount--;
-				if (_instanceCount <= 0 && _dbgShimHandle != IntPtr.Zero && _dbgShimHandle == _globalDbgShimHandle)
+				// If this instance is using the global handle, update reference count
+				if (_dbgShimHandle != IntPtr.Zero && _dbgShimHandle == _globalDbgShimHandle)
+				{
+					_instanceCount--;
+					if (_instanceCount <= 0)
+					{
+						try
+						{
+							NativeLibrary.Free(_dbgShimHandle);
+							_globalDbgShimHandle = IntPtr.Zero;
+						}
+						catch (Exception ex)
+						{
+							// Log but don't throw - we're disposing
+							Console.WriteLine($"Warning: Failed to free dbgshim library: {ex.Message}");
+						}
+					}
+				}
+				// If using a custom path (not global handle), free it directly
+				else if (_dbgShimHandle != IntPtr.Zero)
 				{
 					try
 					{
 						NativeLibrary.Free(_dbgShimHandle);
-						_globalDbgShimHandle = IntPtr.Zero;
 					}
 					catch (Exception ex)
 					{
