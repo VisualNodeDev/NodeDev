@@ -105,8 +105,11 @@ public class RoslynGraphBuilder
 		// - variable declarations (N lines)
 		int startingLineNumber = 8 + variableDeclarations.Sum(v => CountStatementLines(v));
 		
+		// Get full class name for breakpoint info
+		string fullClassName = $"{_graph.SelfClass.Namespace}.{_graph.SelfClass.Name}";
+		
 		var bodyStatements = _context.IsDebug && _graph.Nodes.Values.Any(n => n.HasBreakpoint)
-			? BuildStatementsWithBreakpointTracking(chunks, _graph.SelfClass.FullName, method.Name, startingLineNumber)
+			? BuildStatementsWithBreakpointTracking(chunks, fullClassName, method.Name, startingLineNumber)
 			: BuildStatements(chunks);
 
 		// Combine variable declarations with body statements

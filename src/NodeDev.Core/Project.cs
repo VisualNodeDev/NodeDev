@@ -454,6 +454,9 @@ public class Project
 			try
 			{
 				_debugEngine.Initialize();
+				
+				// Set breakpoint mappings from the build
+				_debugEngine.SetBreakpointMappings(_currentBreakpointMappings);
 			}
 			catch (Exception ex)
 			{
@@ -466,6 +469,12 @@ public class Project
 			_debugEngine.DebugCallback += (sender, args) =>
 			{
 				DebugCallbackSubject.OnNext(args);
+			};
+			
+			// Subscribe to breakpoint hits
+			_debugEngine.BreakpointHit += (sender, bpInfo) =>
+			{
+				ConsoleOutputSubject.OnNext($"Breakpoint hit: {bpInfo.NodeName} in {bpInfo.ClassName}.{bpInfo.MethodName}" + Environment.NewLine);
 			};
 
 			// Use the process ID directly

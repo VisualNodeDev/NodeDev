@@ -13,11 +13,20 @@ public class DebugSessionEngine : IDisposable
 	private DbgShim? _dbgShim;
 	private static IntPtr _dbgShimHandle; // Now static
 	private bool _disposed;
+	private readonly Dictionary<string, CorDebugFunctionBreakpoint> _activeBreakpoints = new();
+	private BreakpointMappingInfo? _breakpointMappings;
+	private CorDebug? _corDebug;
 
 	/// <summary>
 	/// Event raised when a debug callback is received.
 	/// </summary>
 	public event EventHandler<DebugCallbackEventArgs>? DebugCallback;
+	
+	/// <summary>
+	/// Event raised when a breakpoint is hit.
+	/// Provides the NodeBreakpointInfo for the node where the breakpoint was hit.
+	/// </summary>
+	public event EventHandler<NodeBreakpointInfo>? BreakpointHit;
 
 	/// <summary>
 	/// Gets the current debug process, if any.
@@ -272,6 +281,9 @@ public class DebugSessionEngine : IDisposable
 	public CorDebugProcess SetupDebugging(CorDebug corDebug, int processId)
 	{
 		ThrowIfDisposed();
+		
+		// Store CorDebug instance for later use
+		_corDebug = corDebug;
 
 		try
 		{
@@ -313,6 +325,114 @@ public class DebugSessionEngine : IDisposable
 			finally
 			{
 				CurrentProcess = null;
+			}
+		}
+	}
+	
+	/// <summary>
+	/// Sets the breakpoint mappings for the current debug session.
+	/// This must be called before attaching to set breakpoints after modules load.
+	/// </summary>
+	/// <param name="mappings">The breakpoint mapping information from compilation.</param>
+	public void SetBreakpointMappings(BreakpointMappingInfo? mappings)
+	{
+		_breakpointMappings = mappings;
+	}
+	
+	/// <summary>
+	/// Sets breakpoints in the debugged process based on the breakpoint mappings.
+	/// This should be called after modules are loaded (typically in LoadModule callback).
+	/// </summary>
+	public void TrySetBreakpointsForLoadedModules()
+	{
+		if (_breakpointMappings == null || _breakpointMappings.Breakpoints.Count == 0)
+			return;
+			
+		if (_corDebug == null || CurrentProcess == null)
+			return;
+		
+		try
+		{
+			// Get all app domains
+			var appDomains = CurrentProcess.AppDomains.ToArray();
+			
+			// For each breakpoint mapping, try to set a breakpoint
+			foreach (var bpInfo in _breakpointMappings.Breakpoints)
+			{
+				try
+				{
+					// Try to set breakpoint in each app domain
+					foreach (var appDomain in appDomains)
+					{
+						// TODO: Implement actual breakpoint setting using metadata
+						// This requires:
+						// 1. Getting the module for the assembly
+						// 2. Finding the type token for the class
+						// 3. Finding the method token 
+						// 4. Getting the ICorDebugFunction
+						// 5. Creating a breakpoint on the function
+						
+						// For now, we'll just log that we would set a breakpoint
+						OnDebugCallback(new DebugCallbackEventArgs("BreakpointInfo", 
+							$"Would set breakpoint for node '{bpInfo.NodeName}' at {bpInfo.ClassName}.{bpInfo.MethodName} line {bpInfo.LineNumber}"));
+					}
+				}
+				catch (Exception ex)
+				{
+					OnDebugCallback(new DebugCallbackEventArgs("BreakpointError", 
+						$"Failed to set breakpoint for node '{bpInfo.NodeName}': {ex.Message}"));
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointError", 
+				$"Failed to set breakpoints: {ex.Message}"));
+		}
+	}
+	
+	/// <summary>
+	/// Attempts to find the metadata token for a method in a module.
+	/// </summary>
+	private uint? FindFunctionToken(CorDebugModule module, string className, string methodName)
+	{
+		try
+		{
+			// This is a simplified approach. A more robust implementation would:
+			// 1. Get the metadata import interface
+			// 2. Find the type definition token for the class
+			// 3. Enumerate methods to find the matching method
+			// 4. Return the method token
+			
+			// For now, we'll use a basic approach that works with ClrDebug
+			// The token finding is complex and may need to be refined
+			
+			return null; // Placeholder - will be implemented with actual metadata querying
+		}
+		catch
+		{
+			return null;
+		}
+	}
+	
+	/// <summary>
+	/// Handles a breakpoint hit event.
+	/// Maps the breakpoint back to the node that triggered it.
+	/// </summary>
+	/// <param name="breakpoint">The breakpoint that was hit.</param>
+	internal void OnBreakpointHit(CorDebugFunctionBreakpoint breakpoint)
+	{
+		// Find which node this breakpoint corresponds to
+		var nodeId = _activeBreakpoints.FirstOrDefault(kvp => kvp.Value == breakpoint).Key;
+		
+		if (nodeId != null && _breakpointMappings != null)
+		{
+			var bpInfo = _breakpointMappings.Breakpoints.FirstOrDefault(b => b.NodeId == nodeId);
+			if (bpInfo != null)
+			{
+				BreakpointHit?.Invoke(this, bpInfo);
+				OnDebugCallback(new DebugCallbackEventArgs("BreakpointHit", 
+					$"Breakpoint hit: Node '{bpInfo.NodeName}' in {bpInfo.ClassName}.{bpInfo.MethodName}"));
 			}
 		}
 	}
