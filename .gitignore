@@ -36,3 +36,4 @@
 /src/NodeDev.ScriptRunner/obj
 
 /src/NodeDev.EndToEndTests/Features/*.feature.cs
+TestResults/

@@ -9,6 +9,10 @@ namespace NodeDev.Core.Debugger;
 /// </summary>
 public class DebugSessionEngine : IDisposable
 {
+	private static readonly object _initLock = new object();
+	private static IntPtr _globalDbgShimHandle = IntPtr.Zero;
+	private static int _instanceCount = 0;
+	
 	private readonly string? _dbgShimPath;
 	private DbgShim? _dbgShim;
 	private IntPtr _dbgShimHandle;
@@ -55,9 +59,26 @@ public class DebugSessionEngine : IDisposable
 		try
 		{
 			var shimPath = _dbgShimPath ?? DbgShimResolver.Resolve();
-			// NativeLibrary.Load throws on failure, so no need to check for IntPtr.Zero
-			_dbgShimHandle = NativeLibrary.Load(shimPath);
-			_dbgShim = new DbgShim(_dbgShimHandle);
+			
+			lock (_initLock)
+			{
+				// Try to reuse the globally loaded library first to avoid loading it multiple times
+				// Loading the same native library multiple times can cause issues
+				if (_globalDbgShimHandle != IntPtr.Zero)
+				{
+					_dbgShimHandle = _globalDbgShimHandle;
+					_dbgShim = new DbgShim(_dbgShimHandle);
+					_instanceCount++;
+					return;
+				}
+				
+				// First time loading - load it and save the handle globally
+				// NativeLibrary.Load throws on failure, so no need to check for IntPtr.Zero
+				_dbgShimHandle = NativeLibrary.Load(shimPath);
+				_globalDbgShimHandle = _dbgShimHandle;
+				_dbgShim = new DbgShim(_dbgShimHandle);
+				_instanceCount = 1;
+			}
 		}
 		catch (FileNotFoundException ex)
 		{
@@ -384,9 +405,23 @@ public class DebugSessionEngine : IDisposable
 			
 			// Only free the native library from managed Dispose, not from finalizer
 			// Freeing native libraries from the finalizer thread can cause crashes on Linux
-			if (_dbgShimHandle != IntPtr.Zero)
+			// Also, we only free if this is the last instance using the library
+			lock (_initLock)
 			{
-				NativeLibrary.Free(_dbgShimHandle);
+				_instanceCount--;
+				if (_instanceCount <= 0 && _dbgShimHandle != IntPtr.Zero && _dbgShimHandle == _globalDbgShimHandle)
+				{
+					try
+					{
+						NativeLibrary.Free(_dbgShimHandle);
+						_globalDbgShimHandle = IntPtr.Zero;
+					}
+					catch (Exception ex)
+					{
+						// Log but don't throw - we're disposing
+						Console.WriteLine($"Warning: Failed to free dbgshim library: {ex.Message}");
+					}
+				}
 				_dbgShimHandle = IntPtr.Zero;
 			}
 		}
