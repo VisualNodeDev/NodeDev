@@ -24,4 +24,4 @@ jobs:
 
     - name: Test
       working-directory: ./src/NodeDev.Tests
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test -c Release --no-build --verbosity normal
