@@ -510,12 +510,7 @@ public class Project
 			try
 			{
 				var corDebug = _debugEngine.AttachToProcess(targetPid);
-				corDebug.Initialize();
-
-				var managedCallback = ManagedDebuggerCallbackFactory.Create(_debugEngine);
-				corDebug.SetManagedHandler(managedCallback);
-
-				var debugProcess = corDebug.DebugActiveProcess(targetPid, win32Attach: false);
+				var debugProcess = _debugEngine.SetupDebugging(corDebug, targetPid);
 
 				// Notify that we're now debugging
 				HardDebugStateChangedSubject.OnNext(true);
