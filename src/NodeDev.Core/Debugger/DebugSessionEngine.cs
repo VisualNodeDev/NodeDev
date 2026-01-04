@@ -334,24 +334,22 @@ public class DebugSessionEngine : IDisposable
 				{
 					processToDetach.Stop(0);
 				}
-				catch (Exception ex)
+				catch
 				{
-					// Process may have exited since the check, or Stop may have failed
-					// Log but don't rethrow - we still want to attempt detach
-					Console.WriteLine($"Warning: Failed to stop process during detach: {ex.Message}");
+					// Silently ignore - process may have exited or be in invalid state
 				}
 			}
 			
-			// Attempt to detach
+			// Attempt to detach - this is optional cleanup
+			// If it fails, we've already cleared CurrentProcess so we're detached logically
 			try
 			{
 				processToDetach.Detach();
 			}
-			catch (Exception ex)
+			catch
 			{
-				// Detach can fail if process is already gone or in invalid state
-				// This is not fatal - just log it
-				Console.WriteLine($"Warning: Failed to detach from process: {ex.Message}");
+				// Silently ignore - process may be gone or in invalid state
+				// This is expected when process has already exited
 			}
 		}
 		finally
