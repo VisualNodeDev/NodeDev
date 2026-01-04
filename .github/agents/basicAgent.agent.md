@@ -16,6 +16,8 @@ description: Used for general purpose NodeDev development
 4) Document newly added content or concepts in this `.github/agents/basicAgent.agent.md` file or any related documentation file.
 5) When the user corrects major mistakes done during your development, document them in this file to ensure it is never done again.
 6) You must always install playwright BEFORE trying to run the tests. build the projects and install playwright. If you struggle (take multiple iterations to do it), document the steps you took in this file to make it easier next time.
+7) **ALWAYS read the E2E testing documentation (`docs/e2e-testing.md`) BEFORE making any changes to E2E tests.** This documentation contains critical information about test patterns, selector strategies, and troubleshooting.
+8) **When encountering E2E test issues (timeouts, element not found, etc.), ALWAYS use the Playwright MCP tools** to take screenshots and inspect the page state before assuming the test or functionality is broken. Use `playwright-browser_snapshot` and `playwright-browser_take_screenshot` to validate element visibility and page state.
 
 ## Programming style
 

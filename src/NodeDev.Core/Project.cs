@@ -530,6 +530,10 @@ public class Project
 			outputComplete.WaitOne(OutputStreamTimeout);
 			errorComplete.WaitOne(OutputStreamTimeout);
 
+			// Detach debugger before notifying UI - this clears CurrentProcess
+			// so that IsHardDebugging returns false when UI re-evaluates state
+			_debugEngine?.Detach();
+
 			// Notify that debugging has stopped
 			HardDebugStateChangedSubject.OnNext(false);
 			GraphExecutionChangedSubject.OnNext(false);
@@ -539,6 +543,9 @@ public class Project
 		catch (Exception ex)
 		{
 			ConsoleOutputSubject.OnNext($"Error during debug execution: {ex.Message}" + Environment.NewLine);
+			// Detach debugger before notifying UI - this clears CurrentProcess
+			// so that IsHardDebugging returns false when UI re-evaluates state
+			_debugEngine?.Detach();
 			HardDebugStateChangedSubject.OnNext(false);
 			GraphExecutionChangedSubject.OnNext(false);
 			return null;

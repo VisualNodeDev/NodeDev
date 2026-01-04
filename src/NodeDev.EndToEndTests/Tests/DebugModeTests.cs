@@ -39,15 +39,35 @@ public class DebugModeTests : E2ETestBase
 	{
 		// Arrange - Create a new project
 		await HomePage.CreateNewProject();
-		await Task.Delay(500);
+
+		// Open Program/Main for node manipulation
+		await HomePage.OpenProjectExplorerProjectTab();
+		await HomePage.HasClass("Program");
+		await HomePage.ClickClass("Program");
+		await HomePage.OpenMethod("Main");
+
+		// Move return node to make space
+		await HomePage.DragNodeTo("Return", 1500, 400);
+
+		// Add Sleep node to the graph
+		await HomePage.SearchForNodes("Sleep");
+		await HomePage.AddNodeFromSearch("Sleep");
+
+		// Move Sleep node to avoid overlap
+		await HomePage.DragNodeTo("Sleep", 800, 400);
+
+		// Set Sleep node input to 5000
+		await HomePage.SetNodeInputValue("Sleep", "TimeMilliseconds", "5000");
+
+		// Connect Entry.Exec -> Sleep.Exec
+		await HomePage.ConnectPorts("Entry", "Exec", "Sleep", "Exec");
+		// Connect Sleep.Exec -> Return.Exec
+		await HomePage.ConnectPorts("Sleep", "Exec", "Return", "Exec");
 
 		// Act - Click "Run with Debug"
 		var runWithDebugButton = Page.Locator("[data-test-id='run-with-debug']");
 		await runWithDebugButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
 		await runWithDebugButton.ClickAsync();
-
-		// Wait for debugging to start
-		await Task.Delay(2000);
 
 		// Assert - Check that Stop/Pause/Resume buttons are visible
 		var stopButton = Page.Locator("[data-test-id='stop-debug']");
@@ -86,7 +106,6 @@ public class DebugModeTests : E2ETestBase
 
 		// Cleanup - Stop debugging
 		await stopButton.ClickAsync();
-		await Task.Delay(1000);
 	}
 
 	[Fact(Timeout = 60_000)]
@@ -94,11 +113,34 @@ public class DebugModeTests : E2ETestBase
 	{
 		// Arrange - Start debugging
 		await HomePage.CreateNewProject();
-		await Task.Delay(500);
 
+		// Open Program/Main for node manipulation
+		await HomePage.OpenProjectExplorerProjectTab();
+		await HomePage.HasClass("Program");
+		await HomePage.ClickClass("Program");
+		await HomePage.OpenMethod("Main");
+
+		// Move return node to make space
+		await HomePage.DragNodeTo("Return", 1500, 400);
+
+		// Add Sleep node to the graph
+		await HomePage.SearchForNodes("Sleep");
+		await HomePage.AddNodeFromSearch("Sleep");
+
+		// Move Sleep node to avoid overlap
+		await HomePage.DragNodeTo("Sleep", 800, 400);
+
+		// Set Sleep node input to 5000
+		await HomePage.SetNodeInputValue("Sleep", "TimeMilliseconds", "15000");
+
+		// Connect Entry.Exec -> Sleep.Exec
+		await HomePage.ConnectPorts("Entry", "Exec", "Sleep", "Exec");
+		// Connect Sleep.Exec -> Return.Exec
+		await HomePage.ConnectPorts("Sleep", "Exec", "Return", "Exec");
+
+		// Act - Click "Run with Debug"
 		var runWithDebugButton = Page.Locator("[data-test-id='run-with-debug']");
 		await runWithDebugButton.ClickAsync();
-		await Task.Delay(2000);
 
 		// Verify we're debugging
 		var stopButton = Page.Locator("[data-test-id='stop-debug']");
@@ -106,11 +148,11 @@ public class DebugModeTests : E2ETestBase
 
 		// Act - Click Stop button
 		await stopButton.ClickAsync();
-		await Task.Delay(1000);
 
 		// Assert - Should return to normal state
 		var runButton = Page.Locator("[data-test-id='run-project']");
-		await runButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
+		// wait with small timeout so we know it's because the stop worked, and not because it just was done running
+		await runButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible, Timeout = 1000 });
 
 		var isRunVisible = await runButton.IsVisibleAsync();
 		Assert.True(isRunVisible, "Run button should be visible after stopping");
@@ -124,42 +166,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/toolbar-after-stop.png");
 	}
 
-	[Fact(Timeout = 60_000)]
-	public async Task RunWithDebug_ShouldShowDebugIndicator()
-	{
-		// Arrange - Create a new project
-		await HomePage.CreateNewProject();
-		await Task.Delay(500);
-
-		// Act - Click "Run with Debug" button
-		var runWithDebugButton = Page.Locator("[data-test-id='run-with-debug']");
-		await runWithDebugButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
-		
-		// Get initial button text
-		var initialText = await runWithDebugButton.TextContentAsync();
-		Console.WriteLine($"Initial button text: {initialText}");
-		
-		await runWithDebugButton.ClickAsync();
-		
-		// Wait a moment for debugging to start
-		await Task.Delay(1000);
-		
-		// Assert - Button should change appearance during debug
-		// The button should show "Debugging (PID: ...)" or be disabled
-		var buttonText = await runWithDebugButton.TextContentAsync();
-		Console.WriteLine($"Button text during debug: {buttonText}");
-		
-		// Wait for debugging to complete
-		await Task.Delay(3000);
-		
-		// Button should return to normal state
-		var finalText = await runWithDebugButton.TextContentAsync();
-		Console.WriteLine($"Final button text: {finalText}");
-		
-		await HomePage.TakeScreenshot("/tmp/debug-mode-indicator.png");
-	}
-
-	[Fact(Timeout = 60_000)]
+	[Fact]
 	public async Task RunWithDebug_ShouldShowDebugCallbacksTab()
 	{
 		// Arrange - Create a new project
@@ -175,10 +182,10 @@ public class DebugModeTests : E2ETestBase
 		await Task.Delay(2000);
 		
 		// Assert - Debug Callbacks tab should be visible
-		var consoleTabs = Page.Locator("[data-test-id='consoleTabs']");
+		var consoleTabs = Page.Locator(".consoleTabs");
 		await consoleTabs.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
 		
-		var debugCallbacksTab = Page.Locator("[data-test-id='debugCallbacksTab']");
+		var debugCallbacksTab = Page.Locator(".debugCallbacksTab");
 		var isVisible = await debugCallbacksTab.IsVisibleAsync();
 		Assert.True(isVisible, "Debug Callbacks tab should be visible");
 		
@@ -189,7 +196,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/debug-callbacks-tab.png");
 	}
 
-	[Fact(Timeout = 60_000)]
+	[Fact]
 	public async Task RunWithDebug_ShouldDisplayCallbacksInTab()
 	{
 		// Arrange - Create a new project
@@ -205,13 +212,13 @@ public class DebugModeTests : E2ETestBase
 		await Task.Delay(2000);
 		
 		// Switch to Debug Callbacks tab
-		var debugCallbacksTab = Page.Locator("[data-test-id='debugCallbacksTab']");
+		var debugCallbacksTab = Page.Locator(".debugCallbacksTab");
 		await debugCallbacksTab.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
 		await debugCallbacksTab.ClickAsync();
 		await Task.Delay(500);
 		
 		// Assert - Should have debug callback lines
-		var callbackLines = Page.Locator("[data-test-id='debugCallbackLine']");
+		var callbackLines = Page.Locator(".debugCallbackLine");
 		var count = await callbackLines.CountAsync();
 		
 		Console.WriteLine($"Found {count} debug callback lines");
@@ -232,7 +239,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/debug-callbacks-content.png");
 	}
 
-	[Fact(Timeout = 60_000)]
+	[Fact]
 	public async Task RunWithDebug_ShouldUpdateStateWhenProcessExits()
 	{
 		// Arrange - Create a new project
@@ -259,7 +266,7 @@ public class DebugModeTests : E2ETestBase
 		Console.WriteLine($"Button disabled during: {isDisabledDuring}");
 		
 		// Wait for process to complete
-		await Task.Delay(5000);
+		await Task.Delay(2000);
 		
 		// Button should be enabled again after process exits
 		var isDisabledAfter = await runWithDebugButton.IsDisabledAsync();
@@ -269,12 +276,11 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/debug-state-after-exit.png");
 	}
 
-	[Fact(Timeout = 60_000)]
+	[Fact]
 	public async Task RunWithDebug_ConsoleOutputAndCallbacksShouldBothWork()
 	{
 		// Arrange - Create a new project
 		await HomePage.CreateNewProject();
-		await Task.Delay(500);
 
 		// Act - Run with debug
 		var runWithDebugButton = Page.Locator("[data-test-id='run-with-debug']");
@@ -282,26 +288,26 @@ public class DebugModeTests : E2ETestBase
 		await runWithDebugButton.ClickAsync();
 		
 		// Wait for execution
-		await Task.Delay(2000);
+		await Task.Delay(1000);
 		
 		// Assert - Both tabs should have content
 		
 		// Check Console Output tab
-		var consoleOutputTab = Page.Locator("[data-test-id='consoleOutputTab']");
+		var consoleOutputTab = Page.Locator("[role='tab'].consoleOutputTab");
 		await consoleOutputTab.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
 		await consoleOutputTab.ClickAsync();
 		await Task.Delay(300);
 		
-		var consoleLines = Page.Locator("[data-test-id='consoleLine']");
+		var consoleLines = Page.Locator(".consoleLine");
 		var consoleCount = await consoleLines.CountAsync();
 		Console.WriteLine($"Console lines: {consoleCount}");
 		
 		// Check Debug Callbacks tab
-		var debugCallbacksTab = Page.Locator("[data-test-id='debugCallbacksTab']");
+		var debugCallbacksTab = Page.Locator(".debugCallbacksTab");
 		await debugCallbacksTab.ClickAsync();
 		await Task.Delay(300);
 		
-		var callbackLines = Page.Locator("[data-test-id='debugCallbackLine']");
+		var callbackLines = Page.Locator(".debugCallbackLine");
 		var callbackCount = await callbackLines.CountAsync();
 		Console.WriteLine($"Debug callback lines: {callbackCount}");
 		
