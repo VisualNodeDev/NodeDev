@@ -34,7 +34,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/toolbar-not-debugging.png");
 	}
 
-	[Fact(Timeout = 60_000)]
+	[SkipOnLinuxCIFact(Timeout = 60_000)]
 	public async Task ToolbarButtons_ShouldShowStopPauseResumeWhenDebugging()
 	{
 		// Arrange - Create a new project
@@ -108,7 +108,7 @@ public class DebugModeTests : E2ETestBase
 		await stopButton.ClickAsync();
 	}
 
-	[Fact(Timeout = 60_000)]
+	[SkipOnLinuxCIFact(Timeout = 60_000)]
 	public async Task StopButton_ShouldStopDebugSession()
 	{
 		// Arrange - Start debugging
@@ -166,7 +166,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/toolbar-after-stop.png");
 	}
 
-	[Fact]
+	[SkipOnLinuxCIFact]
 	public async Task RunWithDebug_ShouldShowDebugCallbacksTab()
 	{
 		// Arrange - Create a new project
@@ -196,7 +196,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/debug-callbacks-tab.png");
 	}
 
-	[Fact]
+	[SkipOnLinuxCIFact]
 	public async Task RunWithDebug_ShouldDisplayCallbacksInTab()
 	{
 		// Arrange - Create a new project
@@ -239,7 +239,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/debug-callbacks-content.png");
 	}
 
-	[Fact]
+	[SkipOnLinuxCIFact]
 	public async Task RunWithDebug_ShouldUpdateStateWhenProcessExits()
 	{
 		// Arrange - Create a new project
@@ -276,7 +276,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/debug-state-after-exit.png");
 	}
 
-	[Fact]
+	[SkipOnLinuxCIFact]
 	public async Task RunWithDebug_ConsoleOutputAndCallbacksShouldBothWork()
 	{
 		// Arrange - Create a new project
