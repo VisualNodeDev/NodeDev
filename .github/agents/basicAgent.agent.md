@@ -192,10 +192,44 @@ The debugging infrastructure is located in `src/NodeDev.Core/Debugger/` and prov
 - **DebugSessionEngine**: Main debugging engine with process launch, attach, and callback handling
 - **ManagedDebuggerCallbacks**: Implementation of ICorDebugManagedCallback interfaces via ClrDebug
 - **DebugEngineException**: Custom exception type for debugging errors
+- **NodeBreakpointInfo**: Maps nodes to their generated source code locations for breakpoint resolution
+- **BreakpointMappingInfo**: Collection of all breakpoint information for a compiled project
 
 **Dependencies:**
 - `ClrDebug` (v0.3.4): C# wrappers for the unmanaged ICorDebug API
 - `Microsoft.Diagnostics.DbgShim` (v9.0.652701): Native dbgshim library for all platforms
+
+### Breakpoint System
+NodeDev supports setting breakpoints on nodes during debugging. The system tracks node-to-source-line mappings during compilation:
+
+**Infrastructure:**
+1. **Node Marking**: Nodes are marked with `BreakpointDecoration` (only non-inlinable nodes support breakpoints)
+2. **Line Tracking**: `RoslynGraphBuilder.BuildStatementsWithBreakpointTracking()` tracks which source line each node generates
+3. **Compilation**: `RoslynNodeClassCompiler` collects all breakpoint mappings into `BreakpointMappingInfo`
+4. **Storage**: Project stores breakpoint mappings after build for use during debugging
+5. **Debug Engine**: `DebugSessionEngine` receives breakpoint mappings and attempts to set breakpoints after modules load
+
+**Current Status:**
+- ✅ Node breakpoint marking and persistence
+- ✅ Line number tracking during code generation
+- ✅ Breakpoint mapping storage in compilation results
+- ✅ Debug engine infrastructure for breakpoint management
+- ✅ Continue() method to resume from breakpoints
+- ⚠️ **Actual ICorDebug breakpoint setting not yet implemented** (requires metadata API usage)
+
+**What Works:**
+- UI allows toggling breakpoints on nodes (F9 or toolbar button)
+- Breakpoints persist across save/load
+- Compilation tracks breakpoint locations
+- Debug engine knows about breakpoints
+- Can resume execution with Continue()
+
+**What's Needed:**
+Actual breakpoint setting requires:
+1. Querying assembly metadata to find type/method tokens
+2. Mapping source line numbers to IL offsets
+3. Using `ICorDebugFunction.CreateBreakpoint()` with IL offsets
+4. Handling breakpoint hit events to identify which node
 
 ### ScriptRunner
 NodeDev includes a separate console application called **ScriptRunner** that serves as the target process for debugging. This architecture supports "Hard Debugging" via the ICorDebug API.
