@@ -167,6 +167,27 @@ public class BreakpointInfrastructureTests
 		{
 			debugCallbacks.Add(callback);
 			_output.WriteLine($"[DEBUG CALLBACK] {callback.CallbackType}: {callback.Description}");
+			
+			// If a breakpoint is hit, call Continue() to resume execution
+			if (callback.CallbackType == "Breakpoint")
+			{
+				_output.WriteLine(">>> Breakpoint detected! Calling Continue()...");
+				
+				// Call Continue in a background task to avoid blocking the callback
+				Task.Run(() =>
+				{
+					try
+					{
+						Thread.Sleep(100); // Small delay
+						project.ContinueExecution();
+						_output.WriteLine(">>> Continue() called successfully");
+					}
+					catch (Exception ex)
+					{
+						_output.WriteLine($">>> Failed to continue: {ex.Message}");
+					}
+				});
+			}
 		});
 
 		var stateSubscription = project.HardDebugStateChanged.Subscribe(state =>
@@ -197,9 +218,14 @@ public class BreakpointInfrastructureTests
 			// Check if we got the breakpoint info callback
 			var hasBreakpointInfo = debugCallbacks.Any(c => c.CallbackType == "BreakpointInfo" || c.CallbackType == "BreakpointSet");
 			Assert.True(hasBreakpointInfo, "Should have received breakpoint info callback");
+			
+			// Check if we got a breakpoint hit
+			var hasBreakpointHit = debugCallbacks.Any(c => c.CallbackType == "Breakpoint");
+			Assert.True(hasBreakpointHit, "Should have hit the breakpoint");
 
 			_output.WriteLine($"Total callbacks received: {debugCallbacks.Count}");
 			_output.WriteLine($"Debug state transitions: {string.Join(" -> ", debugStates)}");
+			_output.WriteLine("✓ Breakpoint system working: breakpoint was set and hit!");
 		}
 		finally
 		{

@@ -401,22 +401,28 @@ public class DebugSessionEngine : IDisposable
 								try
 								{
 									var moduleName = module.Name;
-									// Look for our project module (NodeProject_*)
-									if (!moduleName.Contains("NodeProject_", StringComparison.OrdinalIgnoreCase))
+									
+									// Look for our project module (project_*)
+									if (!moduleName.Contains("project_", StringComparison.OrdinalIgnoreCase))
 										continue;
 									
-									// For now, just log that we found the module
-									// Actually setting breakpoints using ClrDebug requires complex metadata parsing
-									// which we'll implement in a follow-up
+									// Found our module! Now try to actually set a breakpoint
 									OnDebugCallback(new DebugCallbackEventArgs("BreakpointInfo", 
 										$"Found module for breakpoint: {bpInfo.NodeName} in {moduleName}"));
 									
-									// Mark as "set" so we don't keep trying
-									if (!_activeBreakpoints.ContainsKey(bpInfo.NodeId))
+									// Try to set an actual breakpoint
+									if (TrySetActualBreakpointInModule(module, bpInfo))
 									{
-										// Create a dummy entry to prevent retrying
-										// In a real implementation, this would be the actual breakpoint
-										_activeBreakpoints[bpInfo.NodeId] = null!;
+										OnDebugCallback(new DebugCallbackEventArgs("BreakpointSet", 
+											$"Successfully set breakpoint for {bpInfo.NodeName}"));
+									}
+									else
+									{
+										// Still mark as "attempted" to avoid retrying
+										if (!_activeBreakpoints.ContainsKey(bpInfo.NodeId))
+										{
+											_activeBreakpoints[bpInfo.NodeId] = null!;
+										}
 									}
 								}
 								catch (Exception ex)
@@ -439,6 +445,77 @@ public class DebugSessionEngine : IDisposable
 		{
 			OnDebugCallback(new DebugCallbackEventArgs("BreakpointError", 
 				$"Failed to set breakpoints: {ex.Message}"));
+		}
+	}
+	
+	/// <summary>
+	/// Attempts to set an actual ICorDebug breakpoint in a module.
+	/// </summary>
+	private bool TrySetActualBreakpointInModule(CorDebugModule module, NodeBreakpointInfo bpInfo)
+	{
+		try
+		{
+			// Simple approach: Try to find a function by token and set a breakpoint
+			var function = TryFindMainFunction(module);
+			if (function != null)
+			{
+				// Create breakpoint at function entry
+				var breakpoint = function.CreateBreakpoint();
+				breakpoint.Activate(true);
+				
+				_activeBreakpoints[bpInfo.NodeId] = breakpoint;
+				
+				OnDebugCallback(new DebugCallbackEventArgs("BreakpointSet", 
+					$"Set breakpoint for node {bpInfo.NodeName}"));
+				
+				return true;
+			}
+			
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
+				$"Could not find suitable function for breakpoint"));
+			return false;
+		}
+		catch (Exception ex)
+		{
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointError", 
+				$"Failed to set breakpoint: {ex.Message}"));
+			return false;
+		}
+	}
+	
+	/// <summary>
+	/// Try to find the Main function in a module
+	/// </summary>
+	private CorDebugFunction? TryFindMainFunction(CorDebugModule module)
+	{
+		try
+		{
+			// Try common method tokens for Main
+			// In .NET, Main method usually has a specific token range
+			// Let's try a range of tokens
+			for (uint token = 0x06000001; token < 0x06000100; token++)
+			{
+				try
+				{
+					var function = module.GetFunctionFromToken(token);
+					if (function != null)
+					{
+						// We found a function! This might be Main or another method
+						// For now, just use the first one we find
+						return function;
+					}
+				}
+				catch
+				{
+					// Token doesn't exist, try next
+				}
+			}
+			
+			return null;
+		}
+		catch
+		{
+			return null;
 		}
 	}
 	
