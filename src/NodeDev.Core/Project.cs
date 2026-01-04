@@ -558,6 +558,46 @@ public class Project
 		}
 	}
 
+	/// <summary>
+	/// Stops the current debugging session by detaching the debugger and terminating the process.
+	/// </summary>
+	public void StopDebugging()
+	{
+		if (!IsHardDebugging)
+			return;
+
+		try
+		{
+			// Detach debugger first
+			_debugEngine?.Detach();
+
+			// Try to kill the process if it's still running
+			if (_debuggedProcess != null && !_debuggedProcess.HasExited)
+			{
+				try
+				{
+					_debuggedProcess.Kill();
+					_debuggedProcess.WaitForExit(5000); // Wait up to 5 seconds
+				}
+				catch
+				{
+					// Ignore errors if process is already gone
+				}
+			}
+
+			// Notify that debugging has stopped
+			HardDebugStateChangedSubject.OnNext(false);
+			GraphExecutionChangedSubject.OnNext(false);
+			ConsoleOutputSubject.OnNext("Debugging stopped by user." + Environment.NewLine);
+		}
+		finally
+		{
+			_debugEngine?.Dispose();
+			_debugEngine = null;
+			_debuggedProcess = null;
+		}
+	}
+
 	#endregion
 
 	#region GetCreatedClassType / GetNodeClassType

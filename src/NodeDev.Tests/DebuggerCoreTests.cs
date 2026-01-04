@@ -951,6 +951,22 @@ public class DebuggerCoreTests
 		_output.WriteLine("When debugger attachment fails, an InvalidOperationException should be thrown.");
 	}
 
+	[Fact]
+	public void Project_StopDebugging_ShouldBeCallableWhenNotDebugging()
+	{
+		// Arrange
+		var project = Project.CreateNewDefaultProject(out var mainMethod);
+
+		// Act - Calling StopDebugging when not debugging should be safe
+		project.StopDebugging();
+
+		// Assert - Should not throw and state should be correct
+		Assert.False(project.IsHardDebugging);
+		Assert.Null(project.DebuggedProcessId);
+
+		_output.WriteLine("StopDebugging can be safely called when not debugging");
+	}
+
 	#endregion
 
 	#region Helper Methods
