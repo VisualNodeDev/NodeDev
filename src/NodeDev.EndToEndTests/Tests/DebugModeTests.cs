@@ -5,10 +5,6 @@ namespace NodeDev.EndToEndTests.Tests;
 
 public class DebugModeTests : E2ETestBase
 {
-	// Note: Tests that require ICorDebug (clicking "Run with Debug") are skipped in E2E tests
-	// because the native debugging library may crash the test host in certain environments.
-	// The core debugging functionality is thoroughly tested in unit tests (DebuggerCoreTests).
-
 	public DebugModeTests(AppServerFixture app, PlaywrightFixture playwright)
 		: base(app, playwright)
 	{
@@ -38,7 +34,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/toolbar-not-debugging.png");
 	}
 
-	[Fact(Timeout = 60_000, Skip = "ICorDebug tests skipped in E2E - crashes test host. Core functionality tested in unit tests.")]
+	[Fact(Timeout = 60_000)]
 	public async Task ToolbarButtons_ShouldShowStopPauseResumeWhenDebugging()
 	{
 		// Arrange - Create a new project
@@ -93,7 +89,7 @@ public class DebugModeTests : E2ETestBase
 		await Task.Delay(1000);
 	}
 
-	[Fact(Timeout = 60_000, Skip = "ICorDebug tests skipped in E2E - crashes test host. Core functionality tested in unit tests.")]
+	[Fact(Timeout = 60_000)]
 	public async Task StopButton_ShouldStopDebugSession()
 	{
 		// Arrange - Start debugging
@@ -128,7 +124,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/toolbar-after-stop.png");
 	}
 
-	[Fact(Timeout = 60_000, Skip = "ICorDebug tests skipped in E2E - crashes test host. Core functionality tested in unit tests.")]
+	[Fact(Timeout = 60_000)]
 	public async Task RunWithDebug_ShouldShowDebugIndicator()
 	{
 		// Arrange - Create a new project
@@ -163,7 +159,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/debug-mode-indicator.png");
 	}
 
-	[Fact(Timeout = 60_000, Skip = "ICorDebug tests skipped in E2E - crashes test host. Core functionality tested in unit tests.")]
+	[Fact(Timeout = 60_000)]
 	public async Task RunWithDebug_ShouldShowDebugCallbacksTab()
 	{
 		// Arrange - Create a new project
@@ -179,10 +175,10 @@ public class DebugModeTests : E2ETestBase
 		await Task.Delay(2000);
 		
 		// Assert - Debug Callbacks tab should be visible
-		var consoleTabs = Page.Locator("[data-test-id='consoleTabs']");
+		var consoleTabs = Page.Locator(".consoleTabs");
 		await consoleTabs.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
 		
-		var debugCallbacksTab = Page.Locator("[data-test-id='debugCallbacksTab']");
+		var debugCallbacksTab = Page.Locator(".debugCallbacksTab");
 		var isVisible = await debugCallbacksTab.IsVisibleAsync();
 		Assert.True(isVisible, "Debug Callbacks tab should be visible");
 		
@@ -193,7 +189,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/debug-callbacks-tab.png");
 	}
 
-	[Fact(Timeout = 60_000, Skip = "ICorDebug tests skipped in E2E - crashes test host. Core functionality tested in unit tests.")]
+	[Fact(Timeout = 60_000)]
 	public async Task RunWithDebug_ShouldDisplayCallbacksInTab()
 	{
 		// Arrange - Create a new project
@@ -209,13 +205,13 @@ public class DebugModeTests : E2ETestBase
 		await Task.Delay(2000);
 		
 		// Switch to Debug Callbacks tab
-		var debugCallbacksTab = Page.Locator("[data-test-id='debugCallbacksTab']");
+		var debugCallbacksTab = Page.Locator(".debugCallbacksTab");
 		await debugCallbacksTab.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
 		await debugCallbacksTab.ClickAsync();
 		await Task.Delay(500);
 		
 		// Assert - Should have debug callback lines
-		var callbackLines = Page.Locator("[data-test-id='debugCallbackLine']");
+		var callbackLines = Page.Locator(".debugCallbackLine");
 		var count = await callbackLines.CountAsync();
 		
 		Console.WriteLine($"Found {count} debug callback lines");
@@ -236,7 +232,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/debug-callbacks-content.png");
 	}
 
-	[Fact(Timeout = 60_000, Skip = "ICorDebug tests skipped in E2E - crashes test host. Core functionality tested in unit tests.")]
+	[Fact(Timeout = 60_000)]
 	public async Task RunWithDebug_ShouldUpdateStateWhenProcessExits()
 	{
 		// Arrange - Create a new project
@@ -273,7 +269,7 @@ public class DebugModeTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/debug-state-after-exit.png");
 	}
 
-	[Fact(Timeout = 60_000, Skip = "ICorDebug tests skipped in E2E - crashes test host. Core functionality tested in unit tests.")]
+	[Fact(Timeout = 60_000)]
 	public async Task RunWithDebug_ConsoleOutputAndCallbacksShouldBothWork()
 	{
 		// Arrange - Create a new project
@@ -291,21 +287,21 @@ public class DebugModeTests : E2ETestBase
 		// Assert - Both tabs should have content
 		
 		// Check Console Output tab
-		var consoleOutputTab = Page.Locator("[data-test-id='consoleOutputTab']");
+		var consoleOutputTab = Page.Locator(".consoleOutputTab");
 		await consoleOutputTab.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
 		await consoleOutputTab.ClickAsync();
 		await Task.Delay(300);
 		
-		var consoleLines = Page.Locator("[data-test-id='consoleLine']");
+		var consoleLines = Page.Locator(".consoleLine");
 		var consoleCount = await consoleLines.CountAsync();
 		Console.WriteLine($"Console lines: {consoleCount}");
 		
 		// Check Debug Callbacks tab
-		var debugCallbacksTab = Page.Locator("[data-test-id='debugCallbacksTab']");
+		var debugCallbacksTab = Page.Locator(".debugCallbacksTab");
 		await debugCallbacksTab.ClickAsync();
 		await Task.Delay(300);
 		
-		var callbackLines = Page.Locator("[data-test-id='debugCallbackLine']");
+		var callbackLines = Page.Locator(".debugCallbackLine");
 		var callbackCount = await callbackLines.CountAsync();
 		Console.WriteLine($"Debug callback lines: {callbackCount}");
 		
