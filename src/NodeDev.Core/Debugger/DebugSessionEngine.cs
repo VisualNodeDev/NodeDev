@@ -378,22 +378,54 @@ public class DebugSessionEngine : IDisposable
 			// For each breakpoint mapping, try to set a breakpoint
 			foreach (var bpInfo in _breakpointMappings.Breakpoints)
 			{
+				// Skip if already set
+				if (_activeBreakpoints.ContainsKey(bpInfo.NodeId))
+					continue;
+					
 				try
 				{
 					// Try to set breakpoint in each app domain
 					foreach (var appDomain in appDomains)
 					{
-						// TODO: Implement actual breakpoint setting using metadata
-						// This requires:
-						// 1. Getting the module for the assembly
-						// 2. Finding the type token for the class
-						// 3. Finding the method token 
-						// 4. Getting the ICorDebugFunction
-						// 5. Creating a breakpoint on the function
+						// Enumerate assemblies in the app domain
+						var assemblies = appDomain.Assemblies.ToArray();
 						
-						// For now, we'll just log that we would set a breakpoint
-						OnDebugCallback(new DebugCallbackEventArgs("BreakpointInfo", 
-							$"Would set breakpoint for node '{bpInfo.NodeName}' at {bpInfo.ClassName}.{bpInfo.MethodName} line {bpInfo.LineNumber}"));
+						foreach (var assembly in assemblies)
+						{
+							// Enumerate modules in the assembly
+							var modules = assembly.Modules.ToArray();
+							
+							// Find the module containing our generated code
+							foreach (var module in modules)
+							{
+								try
+								{
+									var moduleName = module.Name;
+									// Look for our project module (NodeProject_*)
+									if (!moduleName.Contains("NodeProject_", StringComparison.OrdinalIgnoreCase))
+										continue;
+									
+									// For now, just log that we found the module
+									// Actually setting breakpoints using ClrDebug requires complex metadata parsing
+									// which we'll implement in a follow-up
+									OnDebugCallback(new DebugCallbackEventArgs("BreakpointInfo", 
+										$"Found module for breakpoint: {bpInfo.NodeName} in {moduleName}"));
+									
+									// Mark as "set" so we don't keep trying
+									if (!_activeBreakpoints.ContainsKey(bpInfo.NodeId))
+									{
+										// Create a dummy entry to prevent retrying
+										// In a real implementation, this would be the actual breakpoint
+										_activeBreakpoints[bpInfo.NodeId] = null!;
+									}
+								}
+								catch (Exception ex)
+								{
+									OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
+										$"Failed to check module: {ex.Message}"));
+								}
+							}
+						}
 					}
 				}
 				catch (Exception ex)
@@ -407,30 +439,6 @@ public class DebugSessionEngine : IDisposable
 		{
 			OnDebugCallback(new DebugCallbackEventArgs("BreakpointError", 
 				$"Failed to set breakpoints: {ex.Message}"));
-		}
-	}
-	
-	/// <summary>
-	/// Attempts to find the metadata token for a method in a module.
-	/// </summary>
-	private uint? FindFunctionToken(CorDebugModule module, string className, string methodName)
-	{
-		try
-		{
-			// This is a simplified approach. A more robust implementation would:
-			// 1. Get the metadata import interface
-			// 2. Find the type definition token for the class
-			// 3. Enumerate methods to find the matching method
-			// 4. Return the method token
-			
-			// For now, we'll use a basic approach that works with ClrDebug
-			// The token finding is complex and may need to be refined
-			
-			return null; // Placeholder - will be implemented with actual metadata querying
-		}
-		catch
-		{
-			return null;
 		}
 	}
 	
