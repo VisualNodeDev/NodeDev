@@ -122,6 +122,14 @@ The tests demonstrate:
 7. Enumerating CLRs in the target process
 8. Attaching to the process and obtaining ICorDebug interface
 
+**E2E Tests for Hard Debugging:**
+E2E tests that use hard debugging (ICorDebug) are marked with `[SkipOnLinuxCIFact]` instead of `[Fact]` because:
+- On Linux, ICorDebug uses ptrace for process debugging
+- The test host process conflicts with ptrace when running in CI environments
+- This causes the test host to crash with "Test host process crashed" errors
+- Tests are skipped on Linux CI but run normally on Windows CI and local development
+- Use `SkipOnLinuxCIFactAttribute` for any E2E test that clicks "Run with Debug" button
+
 ## Documentation
 Detailed topic-specific documentation is maintained in the `docs/` folder:
 
