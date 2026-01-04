@@ -112,6 +112,9 @@ public class HomePage
 	{
 		await SearchSaveAsButton.WaitForVisible();
 		await SearchSaveAsButton.ClickAsync();
+		
+		// Wait for the dialog to actually appear
+		await Task.Delay(200);
 	}
 
 	public async Task SetProjectNameAs(string projectName)
