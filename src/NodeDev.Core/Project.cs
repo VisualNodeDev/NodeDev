@@ -532,7 +532,8 @@ public class Project
 
 			// Detach debugger before notifying UI - this clears CurrentProcess
 			// so that IsHardDebugging returns false when UI re-evaluates state
-			_debugEngine?.Detach();
+			// Process has already exited, so pass false to avoid calling Stop()
+			_debugEngine?.Detach(processStillRunning: false);
 
 			// Notify that debugging has stopped
 			HardDebugStateChangedSubject.OnNext(false);
@@ -545,7 +546,9 @@ public class Project
 			ConsoleOutputSubject.OnNext($"Error during debug execution: {ex.Message}" + Environment.NewLine);
 			// Detach debugger before notifying UI - this clears CurrentProcess
 			// so that IsHardDebugging returns false when UI re-evaluates state
-			_debugEngine?.Detach();
+			// Check if process is still running before detaching
+			bool processStillRunning = _debuggedProcess != null && !_debuggedProcess.HasExited;
+			_debugEngine?.Detach(processStillRunning);
 			HardDebugStateChangedSubject.OnNext(false);
 			GraphExecutionChangedSubject.OnNext(false);
 			return null;
@@ -556,7 +559,8 @@ public class Project
 			_debugEngine = null;
 			_debuggedProcess = null;
 			NodeClassTypeCreator = null;
-			GC.Collect();
+			// Removed GC.Collect() - forcing collection immediately after disposing native resources
+			// can cause crashes, especially on Linux where cleanup might still be in progress
 		}
 	}
 
@@ -571,7 +575,9 @@ public class Project
 		try
 		{
 			// Detach debugger first
-			_debugEngine?.Detach();
+			// Check if process is still running to properly stop it
+			bool processStillRunning = _debuggedProcess != null && !_debuggedProcess.HasExited;
+			_debugEngine?.Detach(processStillRunning);
 
 			// Try to kill the process if it's still running
 			if (_debuggedProcess != null && !_debuggedProcess.HasExited)

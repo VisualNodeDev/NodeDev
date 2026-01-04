@@ -294,23 +294,48 @@ public class DebugSessionEngine : IDisposable
 	/// <summary>
 	/// Detaches from the current debug process.
 	/// </summary>
-	public void Detach()
+	/// <param name="processStillRunning">True if the debugged process is still running; false if it has already exited.</param>
+	public void Detach(bool processStillRunning = false)
 	{
-		if (CurrentProcess != null)
+		if (CurrentProcess == null)
+			return;
+
+		var processToDetach = CurrentProcess;
+		CurrentProcess = null; // Clear reference immediately to prevent re-entrance
+
+		try
 		{
+			// Only stop the process if it's still running
+			// Calling Stop on an already-exited process can cause crashes
+			if (processStillRunning)
+			{
+				try
+				{
+					processToDetach.Stop(0);
+				}
+				catch (Exception ex)
+				{
+					// Process may have exited since the check, or Stop may have failed
+					// Log but don't rethrow - we still want to attempt detach
+					Console.WriteLine($"Warning: Failed to stop process during detach: {ex.Message}");
+				}
+			}
+			
+			// Attempt to detach
 			try
 			{
-				CurrentProcess.Stop(0);
-				CurrentProcess.Detach();
+				processToDetach.Detach();
 			}
-			catch
+			catch (Exception ex)
 			{
-				// Ignore errors during detach
+				// Detach can fail if process is already gone or in invalid state
+				// This is not fatal - just log it
+				Console.WriteLine($"Warning: Failed to detach from process: {ex.Message}");
 			}
-			finally
-			{
-				CurrentProcess = null;
-			}
+		}
+		finally
+		{
+			// Always null out the reference (already done above)
 		}
 	}
 
@@ -356,12 +381,14 @@ public class DebugSessionEngine : IDisposable
 		if (disposing)
 		{
 			Detach();
-		}
-
-		if (_dbgShimHandle != IntPtr.Zero)
-		{
-			NativeLibrary.Free(_dbgShimHandle);
-			_dbgShimHandle = IntPtr.Zero;
+			
+			// Only free the native library from managed Dispose, not from finalizer
+			// Freeing native libraries from the finalizer thread can cause crashes on Linux
+			if (_dbgShimHandle != IntPtr.Zero)
+			{
+				NativeLibrary.Free(_dbgShimHandle);
+				_dbgShimHandle = IntPtr.Zero;
+			}
 		}
 
 		_dbgShim = null;
@@ -373,6 +400,11 @@ public class DebugSessionEngine : IDisposable
 	/// </summary>
 	~DebugSessionEngine()
 	{
+		// Note: We don't free the native library handle in the finalizer
+		// because NativeLibrary.Free can cause crashes when called from
+		// the finalizer thread, especially on Linux.
+		// This means we might leak the handle if Dispose() is not called explicitly,
+		// but that's better than crashing the application.
 		Dispose(false);
 	}
 }
