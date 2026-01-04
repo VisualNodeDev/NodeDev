@@ -612,6 +612,26 @@ public class Project
 			_debuggedProcess = null;
 		}
 	}
+	
+	/// <summary>
+	/// Continues execution after a breakpoint or other pause event.
+	/// Only available when hard debugging is active and execution is paused.
+	/// </summary>
+	public void ContinueExecution()
+	{
+		if (!IsHardDebugging)
+			throw new InvalidOperationException("Cannot continue execution when not debugging.");
+		
+		try
+		{
+			_debugEngine?.Continue();
+		}
+		catch (Exception ex)
+		{
+			ConsoleOutputSubject.OnNext($"Failed to continue execution: {ex.Message}" + Environment.NewLine);
+			throw;
+		}
+	}
 
 	#endregion
 

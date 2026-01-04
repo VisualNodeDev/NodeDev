@@ -330,6 +330,25 @@ public class DebugSessionEngine : IDisposable
 	}
 	
 	/// <summary>
+	/// Continues execution after a breakpoint or other pause event.
+	/// </summary>
+	public void Continue()
+	{
+		if (CurrentProcess == null)
+			throw new InvalidOperationException("No process is currently being debugged.");
+		
+		try
+		{
+			CurrentProcess.Continue(false);
+			OnDebugCallback(new DebugCallbackEventArgs("Continue", "Execution resumed"));
+		}
+		catch (Exception ex)
+		{
+			throw new DebugEngineException($"Failed to continue execution: {ex.Message}", ex);
+		}
+	}
+	
+	/// <summary>
 	/// Sets the breakpoint mappings for the current debug session.
 	/// This must be called before attaching to set breakpoints after modules load.
 	/// </summary>
