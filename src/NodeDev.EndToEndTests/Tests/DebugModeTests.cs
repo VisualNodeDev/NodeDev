@@ -11,6 +11,120 @@ public class DebugModeTests : E2ETestBase
 	}
 
 	[Fact(Timeout = 60_000)]
+	public async Task ToolbarButtons_ShouldShowRunAndDebugWhenNotDebugging()
+	{
+		// Arrange - Create a new project
+		await HomePage.CreateNewProject();
+		await Task.Delay(500);
+
+		// Assert - Check that Run and Run with Debug buttons are visible
+		var runButton = Page.Locator("[data-test-id='run-project']");
+		var runWithDebugButton = Page.Locator("[data-test-id='run-with-debug']");
+		var stopButton = Page.Locator("[data-test-id='stop-debug']");
+
+		await runButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
+		await runWithDebugButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
+
+		// Stop button should not be visible
+		var stopCount = await stopButton.CountAsync();
+		Assert.Equal(0, stopCount);
+
+		Console.WriteLine("✓ Run and Run with Debug buttons are visible when not debugging");
+
+		await HomePage.TakeScreenshot("/tmp/toolbar-not-debugging.png");
+	}
+
+	[Fact(Timeout = 60_000)]
+	public async Task ToolbarButtons_ShouldShowStopPauseResumeWhenDebugging()
+	{
+		// Arrange - Create a new project
+		await HomePage.CreateNewProject();
+		await Task.Delay(500);
+
+		// Act - Click "Run with Debug"
+		var runWithDebugButton = Page.Locator("[data-test-id='run-with-debug']");
+		await runWithDebugButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
+		await runWithDebugButton.ClickAsync();
+
+		// Wait for debugging to start
+		await Task.Delay(2000);
+
+		// Assert - Check that Stop/Pause/Resume buttons are visible
+		var stopButton = Page.Locator("[data-test-id='stop-debug']");
+		var pauseButton = Page.Locator("[data-test-id='pause-debug']");
+		var resumeButton = Page.Locator("[data-test-id='resume-debug']");
+		var statusText = Page.Locator("[data-test-id='debug-status-text']");
+
+		await stopButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible, Timeout = 10000 });
+		var isStopVisible = await stopButton.IsVisibleAsync();
+		var isPauseVisible = await pauseButton.IsVisibleAsync();
+		var isResumeVisible = await resumeButton.IsVisibleAsync();
+		var isStatusVisible = await statusText.IsVisibleAsync();
+
+		Console.WriteLine($"Stop button visible: {isStopVisible}");
+		Console.WriteLine($"Pause button visible: {isPauseVisible}");
+		Console.WriteLine($"Resume button visible: {isResumeVisible}");
+		Console.WriteLine($"Status text visible: {isStatusVisible}");
+
+		Assert.True(isStopVisible, "Stop button should be visible");
+		Assert.True(isPauseVisible, "Pause button should be visible");
+		Assert.True(isResumeVisible, "Resume button should be visible");
+		Assert.True(isStatusVisible, "Status text should be visible");
+
+		// Check that Run and Run with Debug buttons are NOT visible
+		var runButton = Page.Locator("[data-test-id='run-project']");
+		var runWithDebugCount = await Page.Locator("[data-test-id='run-with-debug']").CountAsync();
+
+		var runCount = await runButton.CountAsync();
+		Assert.Equal(0, runCount);
+		Assert.Equal(0, runWithDebugCount);
+
+		Console.WriteLine("✓ Stop/Pause/Resume buttons are visible when debugging");
+		Console.WriteLine("✓ Run/Run with Debug buttons are hidden when debugging");
+
+		await HomePage.TakeScreenshot("/tmp/toolbar-while-debugging.png");
+
+		// Cleanup - Stop debugging
+		await stopButton.ClickAsync();
+		await Task.Delay(1000);
+	}
+
+	[Fact(Timeout = 60_000)]
+	public async Task StopButton_ShouldStopDebugSession()
+	{
+		// Arrange - Start debugging
+		await HomePage.CreateNewProject();
+		await Task.Delay(500);
+
+		var runWithDebugButton = Page.Locator("[data-test-id='run-with-debug']");
+		await runWithDebugButton.ClickAsync();
+		await Task.Delay(2000);
+
+		// Verify we're debugging
+		var stopButton = Page.Locator("[data-test-id='stop-debug']");
+		await stopButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
+
+		// Act - Click Stop button
+		await stopButton.ClickAsync();
+		await Task.Delay(1000);
+
+		// Assert - Should return to normal state
+		var runButton = Page.Locator("[data-test-id='run-project']");
+		await runButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
+
+		var isRunVisible = await runButton.IsVisibleAsync();
+		Assert.True(isRunVisible, "Run button should be visible after stopping");
+
+		// Stop button should not be visible anymore
+		var stopCount = await stopButton.CountAsync();
+		Assert.Equal(0, stopCount);
+
+		Console.WriteLine("✓ Stop button successfully terminated debug session");
+
+		await HomePage.TakeScreenshot("/tmp/toolbar-after-stop.png");
+	}
+
+	[Fact(Timeout = 60_000)]
 	public async Task RunWithDebug_ShouldShowDebugIndicator()
 	{
 		// Arrange - Create a new project
