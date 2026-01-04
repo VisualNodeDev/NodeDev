@@ -49,7 +49,7 @@ public class BreakpointInfrastructureTests
 		// Arrange - Create a project with an Add node (inlinable)
 		var project = Project.CreateNewDefaultProject(out var mainMethod);
 		var graph = mainMethod.Graph;
-		
+
 		// Add is an inlinable node (no exec connections)
 		var addNode = new NodeDev.Core.Nodes.Math.Add(graph);
 		graph.Manager.AddNode(addNode);
@@ -90,7 +90,7 @@ public class BreakpointInfrastructureTests
 
 		// Assert - DLL should exist
 		Assert.True(File.Exists(dllPath), $"DLL should exist at {dllPath}");
-		
+
 		_output.WriteLine($"Built DLL: {dllPath}");
 		_output.WriteLine("Breakpoint infrastructure test passed!");
 	}
@@ -131,7 +131,7 @@ public class BreakpointInfrastructureTests
 		// Assert - Breakpoint should persist
 		var deserializedMethod = deserialized.Classes.First().Methods.First(m => m.Name == "Main");
 		var deserializedReturnNode = deserializedMethod.Graph.Nodes.Values.OfType<ReturnNode>().First();
-		
+
 		Assert.True(deserializedReturnNode.HasBreakpoint);
 		_output.WriteLine("Breakpoint persisted across serialization");
 	}
@@ -162,7 +162,7 @@ public class BreakpointInfrastructureTests
 
 		var debugCallbacks = new List<NodeDev.Core.Debugger.DebugCallbackEventArgs>();
 		var debugStates = new List<bool>();
-		
+
 		var callbackSubscription = project.DebugCallbacks.Subscribe(callback =>
 		{
 			debugCallbacks.Add(callback);
@@ -179,7 +179,7 @@ public class BreakpointInfrastructureTests
 		{
 			// Act - Run with debug
 			var result = project.RunWithDebug(BuildOptions.Debug);
-			
+
 			// Wait a bit for async operations
 			Thread.Sleep(2000);
 
@@ -196,10 +196,7 @@ public class BreakpointInfrastructureTests
 
 			// Check if we got the breakpoint info callback
 			var hasBreakpointInfo = debugCallbacks.Any(c => c.CallbackType == "BreakpointInfo" || c.CallbackType == "BreakpointSet");
-			if (hasBreakpointInfo)
-			{
-				_output.WriteLine("✓ Breakpoint system detected module and attempted to set breakpoints");
-			}
+			Assert.True(hasBreakpointInfo, "Should have received breakpoint info callback");
 
 			_output.WriteLine($"Total callbacks received: {debugCallbacks.Count}");
 			_output.WriteLine($"Debug state transitions: {string.Join(" -> ", debugStates)}");
@@ -222,7 +219,7 @@ public class BreakpointInfrastructureTests
 		var writeLine1 = new WriteLine(graph);
 		var writeLine2 = new WriteLine(graph);
 		var writeLine3 = new WriteLine(graph);
-		
+
 		graph.Manager.AddNode(writeLine1);
 		graph.Manager.AddNode(writeLine2);
 		graph.Manager.AddNode(writeLine3);
