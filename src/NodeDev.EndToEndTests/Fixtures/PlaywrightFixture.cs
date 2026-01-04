@@ -13,7 +13,11 @@ public class PlaywrightFixture : IAsyncLifetime
 		Playwright = await Microsoft.Playwright.Playwright.CreateAsync();
 		Browser = await Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
 		{
-			Headless = Environment.GetEnvironmentVariable("HEADLESS") != "false"
+#if DEBUG
+			Headless = false
+#else
+			Headless = true
+#endif
 		});
 	}
 
@@ -21,7 +25,7 @@ public class PlaywrightFixture : IAsyncLifetime
 	{
 		if (Browser != null)
 			await Browser.DisposeAsync();
-		
+
 		Playwright?.Dispose();
 	}
 }
