@@ -1,6 +1,8 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.Connections;
+using NodeDev.Core.Debugger;
+using NodeDev.Core.Nodes;
 
 namespace NodeDev.Core.CodeGeneration;
 
@@ -24,6 +26,12 @@ public class GenerationContext
 	/// Whether to generate debug-friendly code (e.g., with event calls for stepping)
 	/// </summary>
 	public bool IsDebug { get; }
+
+	/// <summary>
+	/// Collection of nodes with breakpoints and their line number mappings.
+	/// This is populated during code generation to track where breakpoints should be set.
+	/// </summary>
+	public List<NodeBreakpointInfo> BreakpointMappings { get; } = new();
 
 	/// <summary>
 	/// Gets the variable name for a connection, or null if not yet registered

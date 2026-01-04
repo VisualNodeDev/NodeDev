@@ -70,6 +70,7 @@ public class Project
 
 	private DebugSessionEngine? _debugEngine;
 	private System.Diagnostics.Process? _debuggedProcess;
+	private NodeDev.Core.Debugger.BreakpointMappingInfo? _currentBreakpointMappings;
 
 	/// <summary>
 	/// Gets whether the project is currently being debugged with hard debugging (ICorDebug).
@@ -139,6 +140,9 @@ public class Project
 		// Use Roslyn compilation
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
 		var result = compiler.Compile();
+		
+		// Store breakpoint mappings for debugger use
+		_currentBreakpointMappings = result.BreakpointMappings;
 
 		// Check if this is an executable (has a Program.Main method)
 		bool isExecutable = HasMainMethod();

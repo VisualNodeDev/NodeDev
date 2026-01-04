@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.Connections;
+using NodeDev.Core.Debugger;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
@@ -30,6 +31,11 @@ public class RoslynGraphBuilder
 		_graph = graph;
 		_context = context;
 	}
+	
+	/// <summary>
+	/// Gets the breakpoint mappings collected during code generation.
+	/// </summary>
+	public List<NodeBreakpointInfo> GetBreakpointMappings() => _context.BreakpointMappings;
 
 	/// <summary>
 	/// Builds a complete method syntax from the graph
@@ -88,7 +94,20 @@ public class RoslynGraphBuilder
 
 		// Build the execution flow starting from entry
 		var chunks = _graph.GetChunks(entryOutput, allowDeadEnd: false);
-		var bodyStatements = BuildStatements(chunks);
+		
+		// Calculate starting line number for breakpoint tracking
+		// Line numbers are approximately: 
+		// - using statements (4 lines)
+		// - namespace declaration (1 line)
+		// - class declaration (1 line)
+		// - method signature (1 line)
+		// - opening brace (1 line)
+		// - variable declarations (N lines)
+		int startingLineNumber = 8 + variableDeclarations.Sum(v => CountStatementLines(v));
+		
+		var bodyStatements = _context.IsDebug && _graph.Nodes.Values.Any(n => n.HasBreakpoint)
+			? BuildStatementsWithBreakpointTracking(chunks, _graph.SelfClass.FullName, method.Name, startingLineNumber)
+			: BuildStatements(chunks);
 
 		// Combine variable declarations with body statements
 		var allStatements = variableDeclarations.Cast<StatementSyntax>()
@@ -133,8 +152,10 @@ public class RoslynGraphBuilder
 
 		foreach (var chunk in chunks.Chunks)
 		{
+			var node = chunk.Input.Parent;
+			
 			// Resolve inputs first
-			foreach (var input in chunk.Input.Parent.Inputs)
+			foreach (var input in node.Inputs)
 			{
 				ResolveInputConnection(input);
 			}
@@ -146,18 +167,92 @@ public class RoslynGraphBuilder
 			try
 			{
 				// Generate the statement for this node
-				var statement = chunk.Input.Parent.GenerateRoslynStatement(chunk.SubChunk, _context);
+				var statement = node.GenerateRoslynStatement(chunk.SubChunk, _context);
 
 				// Add the main statement
 				statements.Add(statement);
 			}
 			catch (Exception ex) when (ex is not BuildError)
 			{
-				throw new BuildError($"Failed to generate statement for node type {chunk.Input.Parent.GetType().Name}: {ex.Message}", chunk.Input.Parent, ex);
+				throw new BuildError($"Failed to generate statement for node type {node.GetType().Name}: {ex.Message}", node, ex);
 			}
 		}
 
 		return statements;
+	}
+	
+	/// <summary>
+	/// Builds statements from node path chunks, tracking line numbers for breakpoints.
+	/// Returns the statements and populates breakpoint info in the context.
+	/// </summary>
+	internal List<StatementSyntax> BuildStatementsWithBreakpointTracking(Graph.NodePathChunks chunks, string className, string methodName, int startingLineNumber)
+	{
+		var statements = new List<StatementSyntax>();
+		int currentLineNumber = startingLineNumber;
+
+		foreach (var chunk in chunks.Chunks)
+		{
+			var node = chunk.Input.Parent;
+			
+			// Resolve inputs first
+			foreach (var input in node.Inputs)
+			{
+				ResolveInputConnection(input);
+			}
+
+			// Get auxiliary statements generated during input resolution (like inline variable declarations)
+			// These need to be added BEFORE the main statement
+			var auxiliaryStatements = _context.GetAndClearAuxiliaryStatements();
+			statements.AddRange(auxiliaryStatements);
+			
+			// Count auxiliary statements' lines
+			foreach (var auxStmt in auxiliaryStatements)
+			{
+				currentLineNumber += CountStatementLines(auxStmt);
+			}
+
+			try
+			{
+				// Generate the statement for this node
+				var statement = node.GenerateRoslynStatement(chunk.SubChunk, _context);
+
+				// If this node has a breakpoint, record its line number
+				if (node.HasBreakpoint)
+				{
+					_context.BreakpointMappings.Add(new NodeDev.Core.Debugger.NodeBreakpointInfo
+					{
+						NodeId = node.Id,
+						NodeName = node.Name,
+						ClassName = className,
+						MethodName = methodName,
+						LineNumber = currentLineNumber
+					});
+				}
+
+				// Add the main statement
+				statements.Add(statement);
+				
+				// Count this statement's lines
+				currentLineNumber += CountStatementLines(statement);
+			}
+			catch (Exception ex) when (ex is not BuildError)
+			{
+				throw new BuildError($"Failed to generate statement for node type {node.GetType().Name}: {ex.Message}", node, ex);
+			}
+		}
+
+		return statements;
+	}
+	
+	/// <summary>
+	/// Counts the number of lines a statement will take when normalized.
+	/// This is a rough estimate used for line number tracking.
+	/// </summary>
+	private static int CountStatementLines(StatementSyntax statement)
+	{
+		// Count the number of line breaks in the statement text
+		var text = statement.NormalizeWhitespace().ToFullString();
+		return text.Split('\n').Length;
 	}
 
 	/// <summary>

@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 using NodeDev.Core.CodeGeneration;
+using NodeDev.Core.Debugger;
 using System.Reflection;
 using System.Text;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
@@ -17,6 +18,7 @@ public class RoslynNodeClassCompiler
 {
 	private readonly Project _project;
 	private readonly BuildOptions _options;
+	private readonly List<NodeBreakpointInfo> _allBreakpoints = new();
 
 	public RoslynNodeClassCompiler(Project project, BuildOptions options)
 	{
@@ -29,6 +31,9 @@ public class RoslynNodeClassCompiler
 	/// </summary>
 	public CompilationResult Compile()
 	{
+		// Clear breakpoints from previous compilation
+		_allBreakpoints.Clear();
+		
 		// Generate the compilation unit (full source code)
 		var compilationUnit = GenerateCompilationUnit();
 
@@ -100,7 +105,14 @@ public class RoslynNodeClassCompiler
 
 		var assembly = Assembly.Load(peStream.ToArray(), pdbStream.ToArray());
 
-		return new CompilationResult(assembly, sourceText, peStream.ToArray(), pdbStream.ToArray());
+		// Create breakpoint mapping info
+		var breakpointMappingInfo = new BreakpointMappingInfo
+		{
+			Breakpoints = _allBreakpoints,
+			SourceFilePath = syntaxTree.FilePath
+		};
+
+		return new CompilationResult(assembly, sourceText, peStream.ToArray(), pdbStream.ToArray(), breakpointMappingInfo);
 	}
 
 	/// <summary>
@@ -196,7 +208,12 @@ public class RoslynNodeClassCompiler
 	private MethodDeclarationSyntax GenerateMethod(NodeClassMethod method)
 	{
 		var builder = new RoslynGraphBuilder(method.Graph, _options.BuildExpressionOptions.RaiseNodeExecutedEvents);
-		return builder.BuildMethod();
+		var methodSyntax = builder.BuildMethod();
+		
+		// Collect breakpoint mappings from the builder's context
+		_allBreakpoints.AddRange(builder.GetBreakpointMappings());
+		
+		return methodSyntax;
 	}
 
 	/// <summary>
@@ -229,7 +246,7 @@ public class RoslynNodeClassCompiler
 	/// <summary>
 	/// Result of a Roslyn compilation
 	/// </summary>
-	public record CompilationResult(Assembly Assembly, string SourceCode, byte[] PEBytes, byte[] PDBBytes);
+	public record CompilationResult(Assembly Assembly, string SourceCode, byte[] PEBytes, byte[] PDBBytes, BreakpointMappingInfo BreakpointMappings);
 
 	/// <summary>
 	/// Exception thrown when compilation fails
