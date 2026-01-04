@@ -62,6 +62,10 @@ public class DebugSessionEngine : IDisposable
 			
 			lock (_initLock)
 			{
+				// Double-check after acquiring lock
+				if (_dbgShim != null)
+					return; // Another thread initialized while we waited for lock
+				
 				// If using default path and global handle exists, reuse it
 				// Only reuse if this instance is using the default path (no custom _dbgShimPath)
 				if (_dbgShimPath == null && _globalDbgShimHandle != IntPtr.Zero)
