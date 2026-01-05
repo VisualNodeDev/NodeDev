@@ -24,6 +24,16 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 	private bool IsShowing = false;
 
 	private readonly Subject<object?> RefreshRequiredSubject = new();
+
+	private string GetPanelStyle()
+	{
+		return IsShowing ? "height: 200px" : "height: 40px";
+	}
+
+	private string GetTabsStyle()
+	{
+		return IsShowing ? "display: flex" : "display: none";
+	}
 	private IDisposable? RefreshRequiredDisposable;
 
 	protected override void OnInitialized()
