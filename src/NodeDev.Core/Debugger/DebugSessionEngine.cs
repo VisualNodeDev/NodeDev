@@ -383,6 +383,12 @@ public class DebugSessionEngine : IDisposable
 				_loadedModules.Add(module);
 				OnDebugCallback(new DebugCallbackEventArgs("ModuleCached", 
 					$"Cached module: {moduleName}"));
+				
+				// Immediately try to set any pending breakpoints for this module
+				// This handles cases where breakpoints were attempted before the module loaded
+				OnDebugCallback(new DebugCallbackEventArgs("ModuleCached", 
+					$"Retrying breakpoint setting for newly cached module ({_loadedModules.Count} modules cached)..."));
+				TrySetBreakpointsForLoadedModules();
 			}
 		}
 		catch (Exception ex)
@@ -421,12 +427,19 @@ public class DebugSessionEngine : IDisposable
 			var breakpointsToSet = breakpointsToConsider
 				.Where(bp => ShouldSetBreakpointForNode == null || ShouldSetBreakpointForNode(bp.NodeId))
 				.ToList();
+			
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointInfo", 
+				$"Processing {breakpointsToSet.Count} breakpoints (from {_breakpointMappings.Breakpoints.Count} total, {_loadedModules.Count} modules cached)"));
 				
 			foreach (var bpInfo in breakpointsToSet)
 			{
 				// Skip if already set
 				if (_activeBreakpoints.ContainsKey(bpInfo.NodeId))
+				{
+					OnDebugCallback(new DebugCallbackEventArgs("BreakpointInfo", 
+						$"Skipping {bpInfo.NodeName} - already set"));
 					continue;
+				}
 					
 				try
 				{
@@ -519,12 +532,12 @@ public class DebugSessionEngine : IDisposable
 						}
 					}
 					
-					// If we still couldn't set the breakpoint, mark as attempted
-					if (!breakpointSet && !_activeBreakpoints.ContainsKey(bpInfo.NodeId))
+					// If we still couldn't set the breakpoint, DON'T mark as attempted yet
+					// We want to retry when the module loads
+					if (!breakpointSet)
 					{
-						_activeBreakpoints[bpInfo.NodeId] = null!;
 						OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
-							$"Could not set breakpoint for {bpInfo.NodeName} - module might not be loaded yet"));
+							$"Could not set breakpoint for {bpInfo.NodeName} - will retry when modules load"));
 					}
 				}
 				catch (Exception ex)
