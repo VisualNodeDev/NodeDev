@@ -17,6 +17,11 @@ public class GenerationContext
 	private readonly HashSet<string> _usedVariableNames = new();
 	private int _uniqueCounter = 0;
 
+	// Track variable mappings for debugging
+	private readonly List<ConnectionVariableMapping> _variableMappings = new();
+	private string? _currentClassName;
+	private string? _currentMethodName;
+
 	public GenerationContext(bool isDebug)
 	{
 		IsDebug = isDebug;
@@ -34,6 +39,21 @@ public class GenerationContext
 	public List<NodeBreakpointInfo> BreakpointMappings { get; } = new();
 
 	/// <summary>
+	/// Collection of connection-to-variable mappings for debugging.
+	/// </summary>
+	public List<ConnectionVariableMapping> VariableMappings => _variableMappings;
+
+	/// <summary>
+	/// Sets the current class and method being generated.
+	/// Used for variable mapping tracking.
+	/// </summary>
+	public void SetCurrentMethod(string className, string methodName)
+	{
+		_currentClassName = className;
+		_currentMethodName = methodName;
+	}
+
+	/// <summary>
 	/// Gets the variable name for a connection, or null if not yet registered
 	/// </summary>
 	public string? GetVariableName(Connection connection)
@@ -48,6 +68,21 @@ public class GenerationContext
 	public void RegisterVariableName(Connection connection, string variableName)
 	{
 		_connectionToVariableName[connection.Id] = variableName;
+
+		// Track this mapping for debugging (if we have method context)
+		if (_currentClassName != null && _currentMethodName != null && connection.GraphIndex >= 0)
+		{
+			// Note: SlotIndex will be -1 initially, as we don't know it until after compilation
+			// It could be determined later by analyzing the PDB, but for now we'll use variable name lookup
+			_variableMappings.Add(new ConnectionVariableMapping
+			{
+				ConnectionGraphIndex = connection.GraphIndex,
+				VariableName = variableName,
+				SlotIndex = -1, // Unknown at code generation time
+				ClassName = _currentClassName,
+				MethodName = _currentMethodName
+			});
+		}
 	}
 
 	/// <summary>

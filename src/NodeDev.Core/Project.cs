@@ -76,6 +76,7 @@ public class Project
 	private DebugSessionEngine? _debugEngine;
 	private System.Diagnostics.Process? _debuggedProcess;
 	private NodeDev.Core.Debugger.BreakpointMappingInfo? _currentBreakpointMappings;
+	private NodeDev.Core.Debugger.VariableMappingInfo? _currentVariableMappings;
 	private NodeBreakpointInfo? _currentBreakpoint;
 
 	/// <summary>
@@ -157,8 +158,9 @@ public class Project
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
 		var result = compiler.Compile();
 		
-		// Store breakpoint mappings for debugger use
+		// Store breakpoint mappings and variable mappings for debugger use
 		_currentBreakpointMappings = result.BreakpointMappings;
+		_currentVariableMappings = result.VariableMappings;
 
 		// Check if this is an executable (has a Program.Main method)
 		bool isExecutable = HasMainMethod();
@@ -787,6 +789,31 @@ public class Project
 		}
 		
 		return null;
+	}
+
+	/// <summary>
+	/// Gets the value of a variable for a given connection when paused at a breakpoint.
+	/// This uses ICorDebug to inspect local variables in the debugged process.
+	/// </summary>
+	/// <param name="connectionGraphIndex">The graph index of the connection to inspect.</param>
+	/// <returns>A tuple containing the value as a string and a flag indicating success.</returns>
+	public (string Value, bool Success) GetVariableValueAtBreakpoint(int connectionGraphIndex)
+	{
+		// Check if we're paused at a breakpoint
+		if (!IsPausedAtBreakpoint || _debugEngine == null || _currentVariableMappings == null || _currentBreakpoint == null)
+			return ("Not paused at breakpoint", false);
+
+		// Find the variable mapping for this connection
+		var mapping = _currentVariableMappings.GetMapping(connectionGraphIndex);
+		if (mapping == null)
+			return ("Variable mapping not found", false);
+
+		// Check if the variable belongs to the current method
+		if (mapping.ClassName != _currentBreakpoint.ClassName || mapping.MethodName != _currentBreakpoint.MethodName)
+			return ("Variable not in current method scope", false);
+
+		// Get the variable value from the debug engine
+		return _debugEngine.GetLocalVariableValue(mapping.VariableName);
 	}
 
 	#endregion

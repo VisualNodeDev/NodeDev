@@ -35,9 +35,22 @@
 
 	private string GetDebugValue(GraphPortModel port)
 	{
-		if (!GraphCanvas.Graph.Project.IsLiveDebuggingEnabled || port.Connection.GraphIndex == -1)
-			return port.Connection.Type.FriendlyName;
+		// Check if we're paused at a breakpoint in hard debugging mode
+		if (GraphCanvas.Graph.Project.IsPausedAtBreakpoint && port.Connection.GraphIndex >= 0)
+		{
+			var (value, success) = GraphCanvas.Graph.Project.GetVariableValueAtBreakpoint(port.Connection.GraphIndex);
+			if (success)
+				return value;
+			// If not successful (e.g., variable not in current scope), fall through to show type
+		}
 
-		return GraphCanvas.DebuggedPathService.GetDebugValue(port.Connection);
+		// Check for live debugging (soft debugging with GraphExecutor)
+		if (GraphCanvas.Graph.Project.IsLiveDebuggingEnabled && port.Connection.GraphIndex >= 0)
+		{
+			return GraphCanvas.DebuggedPathService.GetDebugValue(port.Connection);
+		}
+
+		// Default: just show the type name
+		return port.Connection.Type.FriendlyName;
 	}
 }
