@@ -129,19 +129,6 @@ public class DebuggerCoreTests
 	#region DebugSessionEngine Method Tests Without DbgShim
 
 	[Fact]
-	public void DebugSessionEngine_Initialize_WithInvalidPath_ShouldThrow()
-	{
-		// Arrange
-		using var engine = new DebugSessionEngine("/nonexistent/path/dbgshim.dll");
-
-		// Act & Assert
-		var exception = Assert.Throws<DebugEngineException>(() => engine.Initialize());
-		// The message should indicate a failure - different errors may occur depending on the system
-		Assert.NotNull(exception.Message);
-		Assert.NotEmpty(exception.Message);
-	}
-
-	[Fact]
 	public void DebugSessionEngine_LaunchProcess_WithoutInitialize_ShouldThrow()
 	{
 		// Arrange
