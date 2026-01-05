@@ -28,9 +28,16 @@ public class NodeBreakpointInfo
 
 	/// <summary>
 	/// The line number in the generated source code where this node's statement begins.
+	/// For #line directive approach, this is a virtual line number (e.g., 10000, 11000, 12000).
 	/// 1-based line number.
 	/// </summary>
 	public required int LineNumber { get; init; }
+	
+	/// <summary>
+	/// The source file name used in #line directives.
+	/// For virtual files, this is a generated name like "NodeDev_ClassName_MethodName.g.cs".
+	/// </summary>
+	public string SourceFile { get; init; } = string.Empty;
 }
 
 /// <summary>

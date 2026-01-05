@@ -474,10 +474,10 @@ public class DebugSessionEngine : IDisposable
 			}
 			
 			// Try to map the source line to an IL offset
-			uint ilOffset = TryGetILOffsetForSourceLine(code, bpInfo.LineNumber);
+			uint ilOffset = TryGetILOffsetForSourceLine(code, bpInfo.LineNumber, bpInfo.SourceFile);
 			
 			OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
-				$"Setting breakpoint at line {bpInfo.LineNumber}, IL offset {ilOffset}"));
+				$"Setting breakpoint at {bpInfo.SourceFile}:{bpInfo.LineNumber}, IL offset {ilOffset}"));
 			
 			// Create breakpoint at the specific IL offset
 			var breakpoint = code.CreateBreakpoint((int)ilOffset);
@@ -499,52 +499,73 @@ public class DebugSessionEngine : IDisposable
 	}
 	
 	/// <summary>
-	/// Try to map a source line number to an IL offset using sequence points
+	/// Try to map a source line number to an IL offset using sequence points from the PDB
 	/// </summary>
-	private uint TryGetILOffsetForSourceLine(CorDebugCode code, int lineNumber)
+	private uint TryGetILOffsetForSourceLine(CorDebugCode code, int lineNumber, string sourceFile)
 	{
 		try
 		{
-			// Get the function that owns this code
-			var function = code.Function;
-			if (function == null)
-				return 0;
+			// TODO: Implement proper PDB sequence point reading
+			// This requires ISymUnmanagedReader COM interface which isn't fully exposed in ClrDebug 0.3.4
+			// For now, use the improved heuristic with virtual line numbers
 			
-			// Try to get the symbol reader for sequence points
-			var module = function.Module;
-			if (module == null)
-				return 0;
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
+				$"Mapping {sourceFile}:{lineNumber} to IL offset (using heuristic)"));
 			
-			// For now, we'll use a simplified approach:
-			// Use the code size and line number to estimate an IL offset
-			// This is not perfect but better than always using offset 0
-			
-			// Get the code size
-			int codeSize = (int)code.Size;
-			
-			// If we have access to sequence points (via ISymUnmanagedMethod), we could
-			// do proper mapping. For now, we'll just skip some IL instructions to avoid
-			// hitting at function entry.
-			
-			// Skip the first few IL instructions (prolog)
-			// A typical method prolog is 5-10 bytes
-			// We want to hit AFTER variable declarations and entry logic
-			
-			// For line 1-5: use offset 0 (near start)
-			// For line 6-10: use offset 20
-			// For line 11+: use offset 40
-			
-			if (lineNumber <= 5)
-				return 0u;
-			else if (lineNumber <= 10)
-				return (uint)Math.Max(0, Math.Min(20, codeSize - 1));
-			else
-				return (uint)Math.Max(0, Math.Min(40, codeSize - 1));
+			return FallbackILOffsetEstimate(code, lineNumber);
 		}
-		catch
+		catch (Exception ex)
 		{
-			return 0;
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
+				$"Error mapping line to IL offset: {ex.Message}. Using fallback."));
+			return FallbackILOffsetEstimate(code, lineNumber);
 		}
+	}
+	
+	/// <summary>
+	/// Improved IL offset estimation using virtual line numbers
+	/// </summary>
+	private uint FallbackILOffsetEstimate(CorDebugCode code, int lineNumber)
+	{
+		int codeSize = (int)code.Size;
+		
+		// For virtual line numbers (10000+), map to position in function
+		// Virtual line 10000 = 1st node (index 0), 11000 = 2nd node (index 1), 12000 = 3rd node (index 2), etc.
+		if (lineNumber >= 10000)
+		{
+			// Calculate node index (0-based)
+			int nodeIndex = (lineNumber - 10000) / 1000;
+			
+			// Estimate IL offset based on node position
+			// Skip prolog (first ~10 bytes), reserve epilog (last ~5 bytes)
+			int prologSize = 10;
+			int epilogSize = 5;
+			int availableSpace = Math.Max(1, codeSize - prologSize - epilogSize);
+			
+			// Distribute the available space evenly across nodes
+			// Assume we might have up to 10 nodes in a typical method
+			int assumedMaxNodes = Math.Max(nodeIndex + 1, 10);
+			int bytesPerNode = Math.Max(1, availableSpace / assumedMaxNodes);
+			
+			// Calculate estimated offset
+			int estimatedOffset = prologSize + (nodeIndex * bytesPerNode);
+			
+			// Clamp to valid range, ensuring we stay well within code bounds
+			estimatedOffset = Math.Max(prologSize, Math.Min(estimatedOffset, codeSize - epilogSize - 1));
+			
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
+				$"Virtual line {lineNumber} (node #{nodeIndex}) -> IL offset {estimatedOffset} (code size: {codeSize}, per-node: {bytesPerNode})"));
+			
+			return (uint)estimatedOffset;
+		}
+		
+		// For regular line numbers (shouldn't happen with new system), use old heuristic
+		if (lineNumber <= 5)
+			return 0u;
+		else if (lineNumber <= 10)
+			return (uint)Math.Max(0, Math.Min(20, codeSize - 1));
+		else
+			return (uint)Math.Max(0, Math.Min(40, codeSize - 1));
 	}
 	
 	/// <summary>

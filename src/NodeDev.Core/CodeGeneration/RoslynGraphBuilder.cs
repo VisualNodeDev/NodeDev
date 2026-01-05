@@ -191,7 +191,9 @@ public class RoslynGraphBuilder
 	internal List<StatementSyntax> BuildStatementsWithBreakpointTracking(Graph.NodePathChunks chunks, string className, string methodName, int startingLineNumber)
 	{
 		var statements = new List<StatementSyntax>();
-		int currentLineNumber = startingLineNumber;
+		int virtualLineNumber = 10000; // Start at a high number to avoid conflicts
+		string virtualFileName = $"NodeDev_{className}_{methodName}.g.cs";
+		int nodeExecutionOrder = 0; // Track execution order of ALL nodes
 
 		foreach (var chunk in chunks.Chunks)
 		{
@@ -207,36 +209,51 @@ public class RoslynGraphBuilder
 			// These need to be added BEFORE the main statement
 			var auxiliaryStatements = _context.GetAndClearAuxiliaryStatements();
 			statements.AddRange(auxiliaryStatements);
-			
-			// Count auxiliary statements' lines
-			foreach (var auxStmt in auxiliaryStatements)
-			{
-				currentLineNumber += CountStatementLines(auxStmt);
-			}
 
 			try
 			{
 				// Generate the statement for this node
 				var statement = node.GenerateRoslynStatement(chunk.SubChunk, _context);
 
-				// If this node has a breakpoint, record its line number
+				// If this node has a breakpoint, add #line directive and record mapping
 				if (node.HasBreakpoint)
 				{
+					// Create a #line directive that maps this statement to a unique virtual line
+					// The virtual line encodes the node's execution order: 10000 + (order * 1000)
+					int nodeVirtualLine = 10000 + (nodeExecutionOrder * 1000);
+					
+					// Format: #line 10000 "virtual_file.cs"
+					var lineDirective = SF.Trivia(
+						SF.LineDirectiveTrivia(
+							SF.Token(SyntaxKind.HashToken),
+							SF.Token(SyntaxKind.LineKeyword),
+							SF.Literal(nodeVirtualLine),
+							SF.Literal($"\"{virtualFileName}\"", virtualFileName), // Quoted filename
+							SF.Token(SyntaxKind.EndOfDirectiveToken),
+							true
+						)
+					);
+					
+					// Add the #line directive before the statement
+					statement = statement.WithLeadingTrivia(lineDirective);
+					
+					// Record the breakpoint mapping with the virtual line number
 					_context.BreakpointMappings.Add(new NodeDev.Core.Debugger.NodeBreakpointInfo
 					{
 						NodeId = node.Id,
 						NodeName = node.Name,
 						ClassName = className,
 						MethodName = methodName,
-						LineNumber = currentLineNumber
+						LineNumber = nodeVirtualLine,
+						SourceFile = virtualFileName
 					});
 				}
 
 				// Add the main statement
 				statements.Add(statement);
 				
-				// Count this statement's lines
-				currentLineNumber += CountStatementLines(statement);
+				// Increment execution order for next node
+				nodeExecutionOrder++;
 			}
 			catch (Exception ex) when (ex is not BuildError)
 			{
