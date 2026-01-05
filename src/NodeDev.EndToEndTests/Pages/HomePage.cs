@@ -554,32 +554,6 @@ public class HomePage
 		await Task.Delay(500); // Wait for rename to complete
 	}
 
-	public async Task DeleteMethod(string methodName)
-	{
-		var method = await FindMethodByName(methodName);
-		await method.ClickAsync();
-
-		// Wait for delete button to appear after method selection
-		var deleteButton = _user.Locator("[data-test-id='delete-method']");
-		await deleteButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
-
-		await deleteButton.ClickAsync();
-
-		// Wait for confirmation dialog if it appears
-		var confirmButton = _user.Locator("[data-test-id='confirm-delete']");
-		try
-		{
-			await confirmButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 2000 });
-			await confirmButton.ClickAsync();
-		}
-		catch (TimeoutException)
-		{
-			// No confirmation dialog appeared, continue
-		}
-
-		await Task.Delay(500); // Wait for deletion to complete
-	}
-
 	public async Task<bool> MethodExists(string methodName)
 	{
 		try

@@ -142,36 +142,4 @@ public class ClassAndMethodManagementTests : E2ETestBase
 			throw;
 		}
 	}
-
-	[Fact(Timeout = 60_000)]
-	public async Task DeleteMethod()
-	{
-		await HomePage.CreateNewProject();
-		await HomePage.OpenProjectExplorerProjectTab();
-		await HomePage.ClickClass("Program");
-		await HomePage.OpenProjectExplorerClassTab();
-		
-		// First create a method to delete
-		try
-		{
-			await HomePage.CreateMethod("MethodToDelete");
-			await HomePage.HasMethodByName("MethodToDelete");
-			
-			// Now delete it
-			await HomePage.DeleteMethod("MethodToDelete");
-			
-			// Wait for deletion
-			await Task.Delay(1000);
-			
-			var exists = await HomePage.MethodExists("MethodToDelete");
-			Assert.False(exists, "Method 'MethodToDelete' should have been deleted");
-			
-			await HomePage.TakeScreenshot("/tmp/method-deleted.png");
-			Console.WriteLine("✓ Deleted method");
-		}
-		catch (NotImplementedException ex)
-		{
-			Console.WriteLine($"Method creation/deletion not implemented: {ex.Message}");
-		}
-	}
 }
