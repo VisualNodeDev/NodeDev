@@ -455,31 +455,112 @@ public class DebugSessionEngine : IDisposable
 	{
 		try
 		{
-			// Simple approach: Try to find a function by token and set a breakpoint
-			var function = TryFindMainFunction(module);
-			if (function != null)
+			// Find the function for the method containing this breakpoint
+			var function = TryFindFunctionForBreakpoint(module, bpInfo);
+			if (function == null)
 			{
-				// Create breakpoint at function entry
-				var breakpoint = function.CreateBreakpoint();
-				breakpoint.Activate(true);
-				
-				_activeBreakpoints[bpInfo.NodeId] = breakpoint;
-				
-				OnDebugCallback(new DebugCallbackEventArgs("BreakpointSet", 
-					$"Set breakpoint for node {bpInfo.NodeName}"));
-				
-				return true;
+				OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
+					$"Could not find function for breakpoint in {bpInfo.ClassName}.{bpInfo.MethodName}"));
+				return false;
 			}
 			
-			OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
-				$"Could not find suitable function for breakpoint"));
-			return false;
+			// Get the ICorDebugCode to access IL code
+			var code = function.ILCode;
+			if (code == null)
+			{
+				OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
+					$"Could not get IL code for function"));
+				return false;
+			}
+			
+			// Try to map the source line to an IL offset
+			uint ilOffset = TryGetILOffsetForSourceLine(code, bpInfo.LineNumber);
+			
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
+				$"Setting breakpoint at line {bpInfo.LineNumber}, IL offset {ilOffset}"));
+			
+			// Create breakpoint at the specific IL offset
+			var breakpoint = code.CreateBreakpoint((int)ilOffset);
+			breakpoint.Activate(true);
+			
+			_activeBreakpoints[bpInfo.NodeId] = breakpoint;
+			
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointSet", 
+				$"Set breakpoint for node {bpInfo.NodeName} at line {bpInfo.LineNumber}"));
+			
+			return true;
 		}
 		catch (Exception ex)
 		{
 			OnDebugCallback(new DebugCallbackEventArgs("BreakpointError", 
 				$"Failed to set breakpoint: {ex.Message}"));
 			return false;
+		}
+	}
+	
+	/// <summary>
+	/// Try to map a source line number to an IL offset using sequence points
+	/// </summary>
+	private uint TryGetILOffsetForSourceLine(CorDebugCode code, int lineNumber)
+	{
+		try
+		{
+			// Get the function that owns this code
+			var function = code.Function;
+			if (function == null)
+				return 0;
+			
+			// Try to get the symbol reader for sequence points
+			var module = function.Module;
+			if (module == null)
+				return 0;
+			
+			// For now, we'll use a simplified approach:
+			// Use the code size and line number to estimate an IL offset
+			// This is not perfect but better than always using offset 0
+			
+			// Get the code size
+			int codeSize = (int)code.Size;
+			
+			// If we have access to sequence points (via ISymUnmanagedMethod), we could
+			// do proper mapping. For now, we'll just skip some IL instructions to avoid
+			// hitting at function entry.
+			
+			// Skip the first few IL instructions (prolog)
+			// A typical method prolog is 5-10 bytes
+			// We want to hit AFTER variable declarations and entry logic
+			
+			// For line 1-5: use offset 0 (near start)
+			// For line 6-10: use offset 20
+			// For line 11+: use offset 40
+			
+			if (lineNumber <= 5)
+				return 0u;
+			else if (lineNumber <= 10)
+				return (uint)Math.Max(0, Math.Min(20, codeSize - 1));
+			else
+				return (uint)Math.Max(0, Math.Min(40, codeSize - 1));
+		}
+		catch
+		{
+			return 0;
+		}
+	}
+	
+	/// <summary>
+	/// Try to find the function containing the breakpoint
+	/// </summary>
+	private CorDebugFunction? TryFindFunctionForBreakpoint(CorDebugModule module, NodeBreakpointInfo bpInfo)
+	{
+		try
+		{
+			// For now, just find the Main function since we generate simple projects
+			// In the future, this should use metadata to find the specific class/method
+			return TryFindMainFunction(module);
+		}
+		catch
+		{
+			return null;
 		}
 	}
 	

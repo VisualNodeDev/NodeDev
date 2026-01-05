@@ -294,4 +294,117 @@ public class BreakpointInfrastructureTests
 		// Act & Assert
 		Assert.Throws<InvalidOperationException>(() => project.ContinueExecution());
 	}
+	
+	[Fact]
+	public void Breakpoint_HitsAtCorrectLocation()
+	{
+		// Arrange - Create a project with WriteLine before and after a breakpoint
+		var project = Project.CreateNewDefaultProject(out var mainMethod);
+		var graph = mainMethod.Graph;
+
+		var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
+		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
+
+		// Add first WriteLine: "before"
+		var writeLineBefore = new WriteLine(graph);
+		graph.Manager.AddNode(writeLineBefore);
+		writeLineBefore.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+		writeLineBefore.Inputs[1].UpdateTextboxText("\"before\"");
+
+		// Add Sleep node: 2 seconds
+		var sleepNode = new Sleep(graph);
+		graph.Manager.AddNode(sleepNode);
+		sleepNode.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<int>(), overrideInitialType: true);
+		sleepNode.Inputs[1].UpdateTextboxText("2000"); // 2 seconds
+
+		// Add second WriteLine: "after" - THIS ONE HAS THE BREAKPOINT
+		var writeLineAfter = new WriteLine(graph);
+		graph.Manager.AddNode(writeLineAfter);
+		writeLineAfter.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+		writeLineAfter.Inputs[1].UpdateTextboxText("\"after\"");
+
+		// Connect: Entry -> WriteLineBefore -> Sleep -> WriteLineAfter -> Return
+		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], writeLineBefore.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(writeLineBefore.Outputs[0], sleepNode.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(sleepNode.Outputs[0], writeLineAfter.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(writeLineAfter.Outputs[0], returnNode.Inputs[0]);
+		returnNode.Inputs[1].UpdateTextboxText("0");
+
+		// Add a breakpoint to the SECOND WriteLine (after sleep)
+		writeLineAfter.ToggleBreakpoint();
+
+		var debugCallbacks = new List<NodeDev.Core.Debugger.DebugCallbackEventArgs>();
+		var outputLines = new List<string>();
+		var breakpointHitTime = DateTime.MinValue;
+		var startTime = DateTime.MinValue;
+
+		var callbackSubscription = project.DebugCallbacks.Subscribe(callback =>
+		{
+			debugCallbacks.Add(callback);
+			_output.WriteLine($"[DEBUG CALLBACK] {callback.CallbackType}: {callback.Description}");
+			
+			// Capture console output
+			if (callback.CallbackType == "ConsoleOutput")
+			{
+				outputLines.Add(callback.Description);
+				_output.WriteLine($"[CONSOLE] {callback.Description}");
+			}
+			
+			// If a breakpoint is hit, record the time and call Continue()
+			if (callback.CallbackType == "Breakpoint")
+			{
+				breakpointHitTime = DateTime.Now;
+				var elapsed = breakpointHitTime - startTime;
+				_output.WriteLine($">>> Breakpoint hit after {elapsed.TotalSeconds:F2} seconds");
+				
+				// Call Continue in a background task
+				Task.Run(() =>
+				{
+					try
+					{
+						Thread.Sleep(100);
+						project.ContinueExecution();
+						_output.WriteLine(">>> Continue() called successfully");
+					}
+					catch (Exception ex)
+					{
+						_output.WriteLine($">>> Failed to continue: {ex.Message}");
+					}
+				});
+			}
+		});
+
+		try
+		{
+			// Act - Run with debug
+			startTime = DateTime.Now;
+			var result = project.RunWithDebug(BuildOptions.Debug);
+			
+			// Wait for execution to complete
+			Thread.Sleep(1000);
+
+			// Assert
+			Assert.NotNull(result);
+			_output.WriteLine($"Exit code: {result}");
+
+			// Check if breakpoint was hit
+			var hasBreakpointHit = debugCallbacks.Any(c => c.CallbackType == "Breakpoint");
+			Assert.True(hasBreakpointHit, "Should have hit the breakpoint");
+
+			// The elapsed time should be >= 1.5 seconds (close to the 2-second sleep duration)
+			// If breakpoint hits at function entry, it will be < 0.1 seconds
+			var elapsed = breakpointHitTime - startTime;
+			_output.WriteLine($"Total elapsed time before breakpoint: {elapsed.TotalSeconds:F2} seconds");
+			
+			Assert.True(elapsed.TotalSeconds >= 1.5, 
+				$"Breakpoint should hit AFTER sleep (expected >= 1.5s, got {elapsed.TotalSeconds:F2}s). " +
+				"If it hits immediately, the breakpoint is at the wrong location!");
+
+			_output.WriteLine($"✓ Breakpoint hit at the correct location (after {elapsed.TotalSeconds:F2}s, indicating sleep completed)!");
+		}
+		finally
+		{
+			callbackSubscription.Dispose();
+		}
+	}
 }
