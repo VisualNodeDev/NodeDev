@@ -46,6 +46,7 @@ The main UI consists of:
 - **GraphCanvas**: Central canvas where nodes are placed and connected
 - **ClassExplorer**: Shows details of the currently selected class
 - **DebuggerConsolePanel**: Bottom panel with tabs for Console Output and Debug Callbacks
+  - **Auto-scroll feature**: By default, the console automatically scrolls to show new log entries. The lock icon in the top-right corner toggles auto-scroll on/off, allowing users to browse old logs without being interrupted by new entries.
 
 ### Graph System
 - Uses Blazor.Diagrams library for visual node editing
