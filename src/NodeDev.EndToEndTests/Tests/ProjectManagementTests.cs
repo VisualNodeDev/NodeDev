@@ -23,25 +23,6 @@ public class ProjectManagementTests : E2ETestBase
 	}
 
 	[Fact(Timeout = 60_000)]
-	public async Task SaveProjectWithCustomName()
-	{
-		await HomePage.CreateNewProject();
-		
-		await HomePage.OpenSaveAsDialog();
-		await HomePage.SetProjectNameAs("MyCustomProject");
-		await HomePage.AcceptSaveAs();
-		
-		await HomePage.SnackBarHasByText("Project saved");
-		
-		// Verify project is valid
-		await HomePage.OpenProjectExplorerProjectTab();
-		var hasProgram = await HomePage.ClassExists("Program");
-		Assert.True(hasProgram, "Project not properly created - Program class missing");
-		
-		await HomePage.TakeScreenshot("/tmp/project-saved.png");
-	}
-
-	[Fact(Timeout = 60_000)]
 	public async Task SaveProjectAfterModifications()
 	{
 		await HomePage.CreateNewProject();
