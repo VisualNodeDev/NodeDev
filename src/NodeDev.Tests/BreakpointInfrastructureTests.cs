@@ -505,4 +505,118 @@ public class BreakpointInfrastructureTests
 			callbackSubscription.Dispose();
 		}
 	}
+
+	[Fact]
+	public void TwoBreakpoints_OneInitialOneLate_BothHit()
+	{
+		// Arrange - Create a project with ONE pre-set breakpoint
+		var project = Project.CreateNewDefaultProject(out var mainMethod);
+		var graph = mainMethod.Graph;
+
+		var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
+		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
+
+		// Add first WriteLine node with INITIAL breakpoint
+		var writeLine1 = new WriteLine(graph);
+		graph.Manager.AddNode(writeLine1);
+		writeLine1.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+		writeLine1.Inputs[1].UpdateTextboxText("\"First statement\"");
+		writeLine1.ToggleBreakpoint(); // PRE-SET breakpoint
+
+		// Add Sleep to give us time to add second breakpoint
+		var sleepNode = new Sleep(graph);
+		graph.Manager.AddNode(sleepNode);
+		sleepNode.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<int>(), overrideInitialType: true);
+		sleepNode.Inputs[1].UpdateTextboxText("1000"); // 1 second
+
+		// Add second WriteLine node WITHOUT initial breakpoint
+		var writeLine2 = new WriteLine(graph);
+		graph.Manager.AddNode(writeLine2);
+		writeLine2.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+		writeLine2.Inputs[1].UpdateTextboxText("\"Second statement\"");
+		// NO breakpoint initially!
+
+		// Connect: Entry -> WriteLine1 -> Sleep -> WriteLine2 -> Return
+		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], writeLine1.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(writeLine1.Outputs[0], sleepNode.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(sleepNode.Outputs[0], writeLine2.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(writeLine2.Outputs[0], returnNode.Inputs[0]);
+		returnNode.Inputs[1].UpdateTextboxText("0");
+
+		// Build with ONE breakpoint
+		var dllPath = project.Build(BuildOptions.Debug);
+		_output.WriteLine($"Built DLL: {dllPath}");
+		_output.WriteLine($"Initial breakpoint on writeLine1: {writeLine1.HasBreakpoint}");
+		_output.WriteLine($"Initial breakpoint on writeLine2: {writeLine2.HasBreakpoint}");
+
+		var debugCallbacks = new List<NodeDev.Core.Debugger.DebugCallbackEventArgs>();
+		var breakpointsHit = new HashSet<string>(); // Track which nodes hit breakpoints
+		var secondBreakpointAdded = false;
+
+		var callbackSubscription = project.DebugCallbacks.Subscribe(callback =>
+		{
+			debugCallbacks.Add(callback);
+			_output.WriteLine($"[DEBUG CALLBACK] {callback.CallbackType}: {callback.Description}");
+			
+			// When first breakpoint is hit, add the second breakpoint
+			if (callback.CallbackType == "BreakpointHit" && !secondBreakpointAdded)
+			{
+				secondBreakpointAdded = true;
+				breakpointsHit.Add("writeLine1");
+				_output.WriteLine($">>> First breakpoint hit! Now adding SECOND breakpoint to writeLine2 (node ID: {writeLine2.Id})");
+				
+				// Add the late breakpoint DURING execution
+				var result = project.SetBreakpointForNode(writeLine2.Id);
+				Assert.True(result, "SetBreakpointForNode should return true");
+				Assert.True(writeLine2.HasBreakpoint, "Breakpoint should be set on writeLine2");
+				_output.WriteLine(">>> Second (late) breakpoint added successfully!");
+				
+				// Continue execution
+				Thread.Sleep(100);
+				project.ContinueExecution();
+				_output.WriteLine(">>> Continued after first breakpoint");
+			}
+			// When second breakpoint is hit, record it and continue
+			else if (callback.CallbackType == "BreakpointHit" && secondBreakpointAdded)
+			{
+				breakpointsHit.Add("writeLine2");
+				_output.WriteLine(">>> Second (late) breakpoint HIT!");
+				
+				// Continue execution
+				Thread.Sleep(100);
+				project.ContinueExecution();
+				_output.WriteLine(">>> Continued after second breakpoint");
+			}
+		});
+
+		try
+		{
+			// Act - Run with debug
+			var result = project.RunWithDebug(BuildOptions.Debug);
+			
+			// Wait for execution to complete
+			Thread.Sleep(2000);
+
+			// Assert - BOTH breakpoints should have been hit
+			_output.WriteLine($"Second breakpoint added: {secondBreakpointAdded}");
+			_output.WriteLine($"Total unique breakpoints hit: {breakpointsHit.Count}");
+			foreach (var bp in breakpointsHit)
+			{
+				_output.WriteLine($"  - Breakpoint hit: {bp}");
+			}
+			
+			Assert.True(secondBreakpointAdded, "Second breakpoint should have been added during execution");
+			Assert.Contains("writeLine1", breakpointsHit);
+			Assert.Contains("writeLine2", breakpointsHit);
+			Assert.Equal(2, breakpointsHit.Count);
+
+			_output.WriteLine("✓ SUCCESS! Both breakpoints hit:");
+			_output.WriteLine("  1. Initial breakpoint (set before build) - HIT ✓");
+			_output.WriteLine("  2. Late breakpoint (added during debug) - HIT ✓");
+		}
+		finally
+		{
+			callbackSubscription.Dispose();
+		}
+	}
 }

@@ -16,6 +16,7 @@ public class DebugSessionEngine : IDisposable
 	private readonly Dictionary<string, CorDebugFunctionBreakpoint> _activeBreakpoints = new();
 	private BreakpointMappingInfo? _breakpointMappings;
 	private CorDebug? _corDebug;
+	private readonly List<CorDebugModule> _loadedModules = new();
 
 	/// <summary>
 	/// Event raised when a debug callback is received.
@@ -366,6 +367,32 @@ public class DebugSessionEngine : IDisposable
 	}
 	
 	/// <summary>
+	/// Caches a module when it's loaded so we can set breakpoints on it later.
+	/// This is called from the LoadModule callback.
+	/// </summary>
+	/// <param name="module">The module that was loaded.</param>
+	internal void CacheLoadedModule(CorDebugModule module)
+	{
+		try
+		{
+			var moduleName = module.Name;
+			
+			// Only cache our project modules
+			if (moduleName.Contains("project_", StringComparison.OrdinalIgnoreCase))
+			{
+				_loadedModules.Add(module);
+				OnDebugCallback(new DebugCallbackEventArgs("ModuleCached", 
+					$"Cached module: {moduleName}"));
+			}
+		}
+		catch (Exception ex)
+		{
+			OnDebugCallback(new DebugCallbackEventArgs("ModuleCacheError", 
+				$"Failed to cache module: {ex.Message}"));
+		}
+	}
+	
+	/// <summary>
 	/// Sets breakpoints in the debugged process based on the breakpoint mappings.
 	/// This should be called after modules are loaded (typically in LoadModule callback).
 	/// In the new design, this method is called during module load but only sets breakpoints
@@ -382,9 +409,6 @@ public class DebugSessionEngine : IDisposable
 		
 		try
 		{
-			// Get all app domains
-			var appDomains = CurrentProcess.AppDomains.ToArray();
-			
 			// For each breakpoint mapping, check if we should set a breakpoint
 			// Only process nodes that:
 			// 1. Pass the filter (if provided), AND
@@ -406,54 +430,101 @@ public class DebugSessionEngine : IDisposable
 					
 				try
 				{
-					// Try to set breakpoint in each app domain
-					foreach (var appDomain in appDomains)
+					// First, try using cached modules (much faster and more reliable)
+					bool breakpointSet = false;
+					
+					if (_loadedModules.Count > 0)
 					{
-						// Enumerate assemblies in the app domain
-						var assemblies = appDomain.Assemblies.ToArray();
+						OnDebugCallback(new DebugCallbackEventArgs("BreakpointInfo", 
+							$"Trying to set breakpoint for {bpInfo.NodeName} using cached modules ({_loadedModules.Count} available)"));
 						
-						foreach (var assembly in assemblies)
+						foreach (var module in _loadedModules)
 						{
-							// Enumerate modules in the assembly
-							var modules = assembly.Modules.ToArray();
-							
-							// Find the module containing our generated code
-							foreach (var module in modules)
+							try
 							{
-								try
+								// Try to set an actual breakpoint
+								if (TrySetActualBreakpointInModule(module, bpInfo))
 								{
-									var moduleName = module.Name;
-									
-									// Look for our project module (project_*)
-									if (!moduleName.Contains("project_", StringComparison.OrdinalIgnoreCase))
-										continue;
-									
-									// Found our module! Now try to actually set a breakpoint
-									OnDebugCallback(new DebugCallbackEventArgs("BreakpointInfo", 
-										$"Found module for breakpoint: {bpInfo.NodeName} in {moduleName}"));
-									
-									// Try to set an actual breakpoint
-									if (TrySetActualBreakpointInModule(module, bpInfo))
-									{
-										OnDebugCallback(new DebugCallbackEventArgs("BreakpointSet", 
-											$"Successfully set breakpoint for {bpInfo.NodeName}"));
-									}
-									else
-									{
-										// Still mark as "attempted" to avoid retrying
-										if (!_activeBreakpoints.ContainsKey(bpInfo.NodeId))
-										{
-											_activeBreakpoints[bpInfo.NodeId] = null!;
-										}
-									}
-								}
-								catch (Exception ex)
-								{
-									OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
-										$"Failed to check module: {ex.Message}"));
+									OnDebugCallback(new DebugCallbackEventArgs("BreakpointSet", 
+										$"Successfully set breakpoint for {bpInfo.NodeName} using cached module"));
+									breakpointSet = true;
+									break;
 								}
 							}
+							catch (Exception ex)
+							{
+								OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
+									$"Failed to set breakpoint in cached module: {ex.Message}"));
+							}
 						}
+					}
+					
+					// If cached modules didn't work, try the old approach (enumerate all modules)
+					if (!breakpointSet)
+					{
+						OnDebugCallback(new DebugCallbackEventArgs("BreakpointInfo", 
+							$"Trying to set breakpoint for {bpInfo.NodeName} by enumerating modules"));
+						
+						// Get all app domains
+						var appDomains = CurrentProcess.AppDomains.ToArray();
+						
+						// Try to set breakpoint in each app domain
+						foreach (var appDomain in appDomains)
+						{
+							// Enumerate assemblies in the app domain
+							var assemblies = appDomain.Assemblies.ToArray();
+							
+							foreach (var assembly in assemblies)
+							{
+								// Enumerate modules in the assembly
+								var modules = assembly.Modules.ToArray();
+								
+								// Find the module containing our generated code
+								foreach (var module in modules)
+								{
+									try
+									{
+										var moduleName = module.Name;
+										
+										// Look for our project module (project_*)
+										if (!moduleName.Contains("project_", StringComparison.OrdinalIgnoreCase))
+											continue;
+										
+										// Found our module! Now try to actually set a breakpoint
+										OnDebugCallback(new DebugCallbackEventArgs("BreakpointInfo", 
+											$"Found module for breakpoint: {bpInfo.NodeName} in {moduleName}"));
+										
+										// Try to set an actual breakpoint
+										if (TrySetActualBreakpointInModule(module, bpInfo))
+										{
+											OnDebugCallback(new DebugCallbackEventArgs("BreakpointSet", 
+												$"Successfully set breakpoint for {bpInfo.NodeName}"));
+											breakpointSet = true;
+											break;
+										}
+									}
+									catch (Exception ex)
+									{
+										OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
+											$"Failed to check module: {ex.Message}"));
+									}
+								}
+								
+								if (breakpointSet)
+									break;
+							}
+							
+							if (breakpointSet)
+								break;
+						}
+					}
+					
+					// If we still couldn't set the breakpoint, mark as attempted
+					if (!breakpointSet && !_activeBreakpoints.ContainsKey(bpInfo.NodeId))
+					{
+						_activeBreakpoints[bpInfo.NodeId] = null!;
+						OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
+							$"Could not set breakpoint for {bpInfo.NodeName} - module might not be loaded yet"));
 					}
 				}
 				catch (Exception ex)

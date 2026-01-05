@@ -43,8 +43,19 @@ public static class ManagedDebuggerCallbackFactory
 			{
 				try
 				{
+					// Cache the module for later breakpoint setting
+					// The event object should have a Module property for LoadModule events
+					var moduleProperty = e.GetType().GetProperty("Module");
+					if (moduleProperty != null)
+					{
+						var module = moduleProperty.GetValue(e) as CorDebugModule;
+						if (module != null)
+						{
+							engine.CacheLoadedModule(module);
+						}
+					}
+					
 					// Try to set breakpoints when a module loads
-					// The module name extraction will need to be done differently
 					engine.TrySetBreakpointsForLoadedModules();
 				}
 				catch (Exception ex)
