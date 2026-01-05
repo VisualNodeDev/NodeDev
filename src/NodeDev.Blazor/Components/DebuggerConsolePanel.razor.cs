@@ -43,6 +43,8 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 			await InvokeAsync(StateHasChanged);
 			if (AutoScrollEnabled && IsShowing)
 			{
+				// Add a small delay to ensure DOM has been updated before scrolling
+				await Task.Delay(50);
 				await ScrollToBottom();
 			}
 		});

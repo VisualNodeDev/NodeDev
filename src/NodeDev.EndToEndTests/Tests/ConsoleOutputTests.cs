@@ -25,21 +25,89 @@ public class ConsoleOutputTests : E2ETestBase
 		await HomePage.TakeScreenshot("/tmp/console-output-test.png");
 	}
 
-	[Fact(Timeout = 90_000)]
+	[Fact(Timeout = 120_000)]
 	public async Task TestAutoScrollInConsoleOutput()
 	{
 		// Create a new project
 		await HomePage.CreateNewProject();
 		await Task.Delay(500);
 		
-		// Take screenshot of initial state
-		await HomePage.TakeScreenshot("/tmp/autoscroll-initial.png");
+		// Open the Project Explorer and select Program class
+		await HomePage.OpenProjectExplorerProjectTab();
+		await HomePage.HasClass("Program");
+		await HomePage.ClickClass("Program");
 		
-		// Run the project (it will run the default Main method)
+		// Open the Main method to add WriteLine nodes
+		await HomePage.OpenMethod("Main");
+		await Task.Delay(500);
+		
+		// Take screenshot of initial graph
+		await HomePage.TakeScreenshot("/tmp/autoscroll-initial-graph.png");
+		
+		// Move Return node to make space
+		await HomePage.DragNodeTo("Return", 1500, 400);
+		await Task.Delay(300);
+		
+		// Add 10 WriteLine nodes to ensure scrolling is needed
+		Console.WriteLine("Adding 10 WriteLine nodes...");
+		for (int i = 0; i < 10; i++)
+		{
+			await HomePage.AddNodeToCanvas("WriteLine");
+			await Task.Delay(400);
+			Console.WriteLine($"Added WriteLine node {i + 1}");
+		}
+		
+		// Get all WriteLine nodes
+		var writeLineNodes = HomePage.GetGraphNodes("WriteLine");
+		Console.WriteLine($"Total WriteLine nodes: {writeLineNodes.Count}");
+		
+		// Set input values for each node
+		for (int i = 0; i < writeLineNodes.Count && i < 10; i++)
+		{
+			var node = writeLineNodes[i];
+			try
+			{
+				// Try to find the text input in the node - WriteLine has a parameter called "text"
+				var inputFields = await node.Locator("input").AllAsync();
+				Console.WriteLine($"Node {i} has {inputFields.Count} input fields");
+				
+				if (inputFields.Count > 0)
+				{
+					var inputField = inputFields[0];
+					await inputField.FillAsync($"Line {i + 1:D3}");
+					Console.WriteLine($"Set WriteLine node {i + 1} value to 'Line {i + 1:D3}'");
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Warning: Could not set input for node {i}: {ex.Message}");
+			}
+		}
+		
+		// Connect all WriteLine nodes in sequence
+		Console.WriteLine("Connecting nodes...");
+		await HomePage.ConnectPorts("Entry", "Exec", "WriteLine", "Exec", sourceIndex: 0, targetIndex: 0);
+		await Task.Delay(300);
+		
+		for (int i = 0; i < 9; i++)
+		{
+			await HomePage.ConnectPorts("WriteLine", "Exec", "WriteLine", "Exec", sourceIndex: i, targetIndex: i + 1);
+			await Task.Delay(200);
+		}
+		
+		// Connect last WriteLine to Return
+		await HomePage.ConnectPorts("WriteLine", "Exec", "Return", "Exec", sourceIndex: 9, targetIndex: 0);
+		await Task.Delay(300);
+		
+		// Take screenshot of complete graph
+		await HomePage.TakeScreenshot("/tmp/autoscroll-graph-complete.png");
+		
+		// Run the project
+		Console.WriteLine("Running project...");
 		var runButton = Page.Locator("[data-test-id='run-project']");
 		await runButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
 		await runButton.ClickAsync();
-		await Task.Delay(2000); // Wait for execution
+		await Task.Delay(3000); // Wait for execution to complete
 		
 		// Verify console panel is visible
 		var isVisible = await HomePage.IsConsolePanelVisible();
@@ -48,42 +116,68 @@ public class ConsoleOutputTests : E2ETestBase
 		// Make sure Console Output tab is active
 		var consoleOutputTab = Page.Locator(".consoleTabs").GetByText("Console Output");
 		await consoleOutputTab.ClickAsync();
-		await Task.Delay(300);
+		await Task.Delay(500);
 		
-		// Take screenshot of console output
-		await HomePage.TakeScreenshot("/tmp/autoscroll-console-output.png");
+		// Take screenshot of console output - should show bottom lines due to auto-scroll
+		await HomePage.TakeScreenshot("/tmp/autoscroll-console-with-content.png");
+		
+		// Get all console lines to verify content
+		var consoleLines = Page.Locator(".consoleLine");
+		var lineCount = await consoleLines.CountAsync();
+		Console.WriteLine($"Console has {lineCount} lines");
+		
+		// If we have lines, check the content
+		if (lineCount > 0)
+		{
+			var firstLineText = await consoleLines.First.TextContentAsync();
+			var lastLineText = await consoleLines.Last.TextContentAsync();
+			Console.WriteLine($"First line: {firstLineText}");
+			Console.WriteLine($"Last line: {lastLineText}");
+		}
+		
+		// Verify scroll position - should be at 0 (top of flex-column-reverse = bottom visually)
+		var scrollPosition = await HomePage.GetConsoleScrollPosition();
+		Console.WriteLine($"Scroll position with auto-scroll enabled: {scrollPosition}");
+		Assert.True(scrollPosition <= 10, $"Auto-scroll should scroll to top (scrollTop near 0), but got {scrollPosition}");
 		
 		// Verify auto-scroll toggle button exists and is visible
 		var toggleButton = Page.Locator("[data-test-id='autoScrollToggle']");
 		await toggleButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
-		var isToggleVisible = await toggleButton.IsVisibleAsync();
-		Assert.True(isToggleVisible, "Auto-scroll toggle button should be visible");
 		Console.WriteLine("✓ Auto-scroll toggle button is visible");
 		
-		// Test toggling the button (clicks should work without errors)
+		// Disable auto-scroll
 		await HomePage.ToggleAutoScroll();
 		await Task.Delay(200);
-		Console.WriteLine("✓ Successfully toggled auto-scroll off");
+		Console.WriteLine("✓ Disabled auto-scroll");
 		
-		// Take screenshot with auto-scroll disabled
-		await HomePage.TakeScreenshot("/tmp/autoscroll-toggled-off.png");
+		// Scroll to bottom (which is actually scrollHeight for flex-column-reverse)
+		var container = Page.Locator("[data-test-id='consoleOutputContainer']");
+		await container.EvaluateAsync("el => el.scrollTop = el.scrollHeight");
+		await Task.Delay(500);
 		
-		// Toggle it back on
+		// Take screenshot with auto-scroll disabled and scrolled away
+		await HomePage.TakeScreenshot("/tmp/autoscroll-disabled-scrolled.png");
+		
+		var scrolledPosition = await HomePage.GetConsoleScrollPosition();
+		Console.WriteLine($"Scroll position after manual scroll: {scrolledPosition}");
+		
+		// Re-enable auto-scroll
 		await HomePage.ToggleAutoScroll();
 		await Task.Delay(200);
-		Console.WriteLine("✓ Successfully toggled auto-scroll back on");
+		Console.WriteLine("✓ Re-enabled auto-scroll");
 		
-		// Take final screenshot
-		await HomePage.TakeScreenshot("/tmp/autoscroll-toggled-on.png");
+		// Run again to trigger auto-scroll with new content
+		await runButton.ClickAsync();
+		await Task.Delay(3000);
 		
-		// Verify scroll position is accessible (even if content is small)
-		var scrollPosition = await HomePage.GetConsoleScrollPosition();
-		Console.WriteLine($"Final scroll position: {scrollPosition}");
+		// Take final screenshot - should auto-scroll to show latest output
+		await HomePage.TakeScreenshot("/tmp/autoscroll-final-with-new-content.png");
 		
-		// The key requirement is that auto-scroll is enabled by default and new logs are visible
-		// For flex-column-reverse, scrollTop should be 0 when showing newest items
-		Assert.True(scrollPosition >= 0, "Scroll position should be valid");
+		// Verify it scrolled back to show newest items
+		var finalScrollPosition = await HomePage.GetConsoleScrollPosition();
+		Console.WriteLine($"Scroll position after re-run with auto-scroll: {finalScrollPosition}");
+		Assert.True(finalScrollPosition <= 10, $"Auto-scroll should work after re-enabling, but got {finalScrollPosition}");
 		
-		Console.WriteLine("✓ Auto-scroll test completed successfully");
+		Console.WriteLine("✓ Auto-scroll test completed successfully with 10 WriteLine nodes");
 	}
 }
