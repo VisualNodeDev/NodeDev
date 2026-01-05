@@ -407,4 +407,102 @@ public class BreakpointInfrastructureTests
 			callbackSubscription.Dispose();
 		}
 	}
+
+	[Fact]
+	public void LateBreakpoint_CanBeAddedDuringDebugSession()
+	{
+		// Arrange - Create a project WITHOUT pre-set breakpoints
+		var project = Project.CreateNewDefaultProject(out var mainMethod);
+		var graph = mainMethod.Graph;
+
+		var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
+		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
+
+		// Add Sleep node to give us time to add breakpoint
+		var sleepNode = new Sleep(graph);
+		graph.Manager.AddNode(sleepNode);
+		sleepNode.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<int>(), overrideInitialType: true);
+		sleepNode.Inputs[1].UpdateTextboxText("2000"); // 2 seconds - gives us time to add breakpoint
+
+		// Add WriteLine node that will have breakpoint added dynamically
+		var writeLine = new WriteLine(graph);
+		graph.Manager.AddNode(writeLine);
+		writeLine.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+		writeLine.Inputs[1].UpdateTextboxText("\"After sleep\"");
+
+		// Connect: Entry -> Sleep -> WriteLine -> Return
+		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], sleepNode.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(sleepNode.Outputs[0], writeLine.Inputs[0]);
+		graph.Manager.AddNewConnectionBetween(writeLine.Outputs[0], returnNode.Inputs[0]);
+		returnNode.Inputs[1].UpdateTextboxText("0");
+
+		// Build BEFORE adding breakpoint
+		var dllPath = project.Build(BuildOptions.Debug);
+		_output.WriteLine($"Built DLL: {dllPath}");
+
+		var debugCallbacks = new List<NodeDev.Core.Debugger.DebugCallbackEventArgs>();
+		var breakpointsHit = new List<string>();
+		var lateBreakpointAdded = false;
+
+		var callbackSubscription = project.DebugCallbacks.Subscribe(callback =>
+		{
+			debugCallbacks.Add(callback);
+			_output.WriteLine($"[DEBUG CALLBACK] {callback.CallbackType}: {callback.Description}");
+			
+			// Once we see the first thread created, the process is running - add the late breakpoint
+			if (callback.CallbackType == "CreateThread" && !lateBreakpointAdded)
+			{
+				lateBreakpointAdded = true;
+				_output.WriteLine($">>> Adding LATE breakpoint to writeLine (node ID: {writeLine.Id})");
+				project.SetBreakpointForNode(writeLine.Id);
+				Assert.True(writeLine.HasBreakpoint, "Breakpoint should be set on writeLine");
+				_output.WriteLine(">>> Late breakpoint added!");
+			}
+			
+			// If a breakpoint is hit, record it and call Continue()
+			if (callback.CallbackType == "Breakpoint")
+			{
+				breakpointsHit.Add(callback.Description);
+				_output.WriteLine($">>> BREAKPOINT HIT: {callback.Description}");
+				
+				// Call Continue in a background task
+				Task.Run(() =>
+				{
+					try
+					{
+						Thread.Sleep(100);
+						project.ContinueExecution();
+						_output.WriteLine(">>> Continue() called successfully");
+					}
+					catch (Exception ex)
+					{
+						_output.WriteLine($">>> Failed to continue: {ex.Message}");
+					}
+				});
+			}
+		});
+
+		try
+		{
+			// Act - Run with debug
+			var result = project.RunWithDebug(BuildOptions.Debug);
+
+			// Wait for execution to complete
+			Thread.Sleep(500);
+
+			// Assert - Late breakpoint should have been added and hit
+			_output.WriteLine($"Late breakpoint added: {lateBreakpointAdded}");
+			_output.WriteLine($"Total breakpoints hit: {breakpointsHit.Count}");
+			
+			Assert.True(lateBreakpointAdded, "Late breakpoint should have been added during execution");
+			Assert.True(breakpointsHit.Count >= 1, 
+				$"Should have hit at least 1 late breakpoint, but only hit {breakpointsHit.Count}");
+
+			_output.WriteLine("✓ Late breakpoint functionality working! Breakpoint added during debug session was hit!");
+		}
+		finally
+		{
+			callbackSubscription.Dispose();
+		}
+	}
 }

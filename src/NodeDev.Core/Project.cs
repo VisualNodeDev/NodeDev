@@ -51,6 +51,7 @@ public class Project
 	internal Subject<string> ConsoleOutputSubject { get; } = new();
 	internal Subject<DebugCallbackEventArgs> DebugCallbackSubject { get; } = new();
 	internal Subject<bool> HardDebugStateChangedSubject { get; } = new();
+	internal Subject<NodeBreakpointInfo?> CurrentBreakpointSubject { get; } = new();
 
 	public IObservable<(Graph Graph, bool RequireUIRefresh)> GraphChanged => GraphChangedSubject.AsObservable();
 
@@ -66,11 +67,14 @@ public class Project
 
 	public IObservable<bool> HardDebugStateChanged => HardDebugStateChangedSubject.AsObservable();
 
+	public IObservable<NodeBreakpointInfo?> CurrentBreakpointChanged => CurrentBreakpointSubject.AsObservable();
+
 	public bool IsLiveDebuggingEnabled { get; private set; }
 
 	private DebugSessionEngine? _debugEngine;
 	private System.Diagnostics.Process? _debuggedProcess;
 	private NodeDev.Core.Debugger.BreakpointMappingInfo? _currentBreakpointMappings;
+	private NodeBreakpointInfo? _currentBreakpoint;
 
 	/// <summary>
 	/// Gets whether the project is currently being debugged with hard debugging (ICorDebug).
@@ -81,6 +85,16 @@ public class Project
 	/// Gets the process ID of the currently debugged process, or null if not debugging.
 	/// </summary>
 	public int? DebuggedProcessId => _debuggedProcess?.Id;
+
+	/// <summary>
+	/// Gets the current breakpoint that execution is paused at, or null if not paused at a breakpoint.
+	/// </summary>
+	public NodeBreakpointInfo? CurrentBreakpoint => _currentBreakpoint;
+
+	/// <summary>
+	/// Gets whether execution is currently paused at a breakpoint.
+	/// </summary>
+	public bool IsPausedAtBreakpoint => _currentBreakpoint != null;
 
 	public Project(Guid id, string? nodeDevVersion = null)
 	{
@@ -518,6 +532,8 @@ public class Project
 			// Subscribe to breakpoint hits
 			_debugEngine.BreakpointHit += (sender, bpInfo) =>
 			{
+				_currentBreakpoint = bpInfo;
+				CurrentBreakpointSubject.OnNext(bpInfo);
 				ConsoleOutputSubject.OnNext($"Breakpoint hit: {bpInfo.NodeName} in {bpInfo.ClassName}.{bpInfo.MethodName}" + Environment.NewLine);
 			};
 
@@ -668,6 +684,10 @@ public class Project
 		
 		try
 		{
+			// Clear current breakpoint before continuing
+			_currentBreakpoint = null;
+			CurrentBreakpointSubject.OnNext(null);
+			
 			_debugEngine?.Continue();
 		}
 		catch (Exception ex)

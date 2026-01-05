@@ -18,8 +18,17 @@
 {
     <MudIconButton Icon="@Icons.Material.Filled.Stop" Class="ml-3" OnClick="StopDebugging" data-test-id="stop-debug" Title="Stop Debugging" Color="Color.Error" />
     <MudIconButton Icon="@Icons.Material.Filled.Pause" Class="ml-3" OnClick="PauseDebugging" data-test-id="pause-debug" Title="Pause" Disabled="true" />
-    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Class="ml-3" OnClick="ResumeDebugging" data-test-id="resume-debug" Title="Resume" Disabled="true" />
-    <MudText Color="Color.Warning" Class="ml-2 align-self-center" data-test-id="debug-status-text" Typo="Typo.body2">Debugging (PID: @Project.DebuggedProcessId)</MudText>
+    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Class="ml-3" OnClick="ResumeDebugging" data-test-id="resume-debug" Title="Continue" Disabled="@(!Project.IsPausedAtBreakpoint)" Color="@(Project.IsPausedAtBreakpoint ? Color.Success : Color.Default)" />
+    @if (Project.IsPausedAtBreakpoint && Project.CurrentBreakpoint != null)
+    {
+        <MudText Color="Color.Error" Class="ml-2 align-self-center" data-test-id="breakpoint-status-text" Typo="Typo.body2">
+            ⏸ PAUSED at breakpoint: @Project.CurrentBreakpoint.NodeName
+        </MudText>
+    }
+    else
+    {
+        <MudText Color="Color.Warning" Class="ml-2 align-self-center" data-test-id="debug-status-text" Typo="Typo.body2">Debugging (PID: @Project.DebuggedProcessId)</MudText>
+    }
 }
 else
 {
@@ -45,9 +54,10 @@ else
 
     private Project Project => ProjectService.Project;
 
-	private DialogOptions DialogOptions => new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+    private DialogOptions DialogOptions => new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
 
     private IDisposable? HardDebugStateSubscription;
+    private IDisposable? CurrentBreakpointSubscription;
 
     protected override void OnInitialized()
     {
@@ -58,11 +68,18 @@ else
         {
             InvokeAsync(StateHasChanged);
         });
+        
+        // Subscribe to current breakpoint changes to refresh UI
+        CurrentBreakpointSubscription = Project.CurrentBreakpointChanged.Subscribe(_ =>
+        {
+            InvokeAsync(StateHasChanged);
+        });
     }
 
     public void Dispose()
     {
         HardDebugStateSubscription?.Dispose();
+        CurrentBreakpointSubscription?.Dispose();
     }
 
     private Task Open()
@@ -156,8 +173,19 @@ else
 
     public void ResumeDebugging()
     {
-        // Placeholder for future implementation
-        Snackbar.Add("Resume functionality coming soon", Severity.Info);
+        try
+        {
+            Project.ContinueExecution();
+            Snackbar.Add("Execution resumed", Severity.Success);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Snackbar.Add($"Cannot resume: {ex.Message}", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to resume: {ex.Message}", Severity.Error);
+        }
     }
 
     public void Build()
