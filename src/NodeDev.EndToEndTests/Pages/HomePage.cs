@@ -79,7 +79,7 @@ public class HomePage
 		await locator.WaitForVisible();
 		await locator.ClickAsync();
 
-		await Task.Delay(200); // Wait for method to open
+		await Task.Delay(100); // Wait for method to open - reduced from 200ms
 	}
 
 	public async Task SaveProject()
@@ -190,21 +190,18 @@ public class HomePage
 		// Perform manual drag with proper event sequence for Blazor.Diagrams
 		// 1. Move mouse to starting position
 		await _user.Mouse.MoveAsync(sourceX, sourceY);
-		await Task.Delay(50);
-
 		// 2. Press mouse button down (pointerdown event)
 		await _user.Mouse.DownAsync();
-		await Task.Delay(50);
+		await Task.Delay(50); // Single delay for event propagation
 
 		// 3. Move mouse to target position with multiple steps (pointermove events)
 		await _user.Mouse.MoveAsync(targetX, targetY, new() { Steps = 15 });
-		await Task.Delay(50);
 
 		// 4. Release mouse button (pointerup event)
 		await _user.Mouse.UpAsync();
 
 		// Wait for the UI to update after drag
-		await Task.Delay(300);
+		await Task.Delay(200); // Reduced from 300ms
 	}
 
 	public async Task SetNodeInputValue(string nodeName, string inputName, string value)
@@ -275,13 +272,11 @@ public class HomePage
 
 		// Perform drag from source port to target port using same approach as node dragging
 		await _user.Mouse.MoveAsync(sourceX, sourceY);
-		await Task.Delay(50);
 		await _user.Mouse.DownAsync();
-		await Task.Delay(50);
+		await Task.Delay(50); // Single delay for event propagation
 		await _user.Mouse.MoveAsync(targetX, targetY, new() { Steps = 20 });
-		await Task.Delay(50);
 		await _user.Mouse.UpAsync();
-		await Task.Delay(200); // Wait for connection to be established
+		await Task.Delay(150); // Wait for connection to be established - reduced from 200ms
 	}
 
 	public async Task DeleteConnection(string sourceNodeName, string sourcePortName, string targetNodeName, string targetPortName)
@@ -423,7 +418,7 @@ public class HomePage
 		var canvas = GetGraphCanvas();
 		await canvas.HoverAsync();
 		await _user.Mouse.WheelAsync(0, -100); // Scroll up to zoom in
-		await Task.Delay(200);
+		await Task.Delay(100); // Reduced from 200ms
 		Console.WriteLine("Zoomed in on canvas");
 	}
 
@@ -432,7 +427,7 @@ public class HomePage
 		var canvas = GetGraphCanvas();
 		await canvas.HoverAsync();
 		await _user.Mouse.WheelAsync(0, 100); // Scroll down to zoom out
-		await Task.Delay(200);
+		await Task.Delay(100); // Reduced from 200ms
 		Console.WriteLine("Zoomed out on canvas");
 	}
 
@@ -449,7 +444,7 @@ public class HomePage
 			await _user.Mouse.DownAsync(new() { Button = MouseButton.Middle });
 			await _user.Mouse.MoveAsync(startX + deltaX, startY + deltaY, new() { Steps = 10 });
 			await _user.Mouse.UpAsync(new() { Button = MouseButton.Middle });
-			await Task.Delay(100);
+			await Task.Delay(50); // Reduced from 100ms
 		}
 		Console.WriteLine($"Panned canvas by ({deltaX}, {deltaY})");
 	}
@@ -467,7 +462,7 @@ public class HomePage
 			// Simulate with keyboard shortcut
 			await _user.Keyboard.PressAsync("Control+0");
 		}
-		await Task.Delay(200);
+		await Task.Delay(100); // Reduced from 200ms
 		Console.WriteLine("Reset canvas view");
 	}
 

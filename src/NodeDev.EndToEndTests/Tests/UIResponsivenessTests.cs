@@ -69,7 +69,7 @@ public class UIResponsivenessTests : E2ETestBase
 		
 		// Resize browser window
 		await Page.SetViewportSizeAsync(1200, 800);
-		await Task.Delay(500);
+		await Task.Delay(200); // Reduced from 500ms
 		
 		// Verify canvas is still visible
 		var canvas = HomePage.GetGraphCanvas();
@@ -78,7 +78,7 @@ public class UIResponsivenessTests : E2ETestBase
 		
 		// Resize back
 		await Page.SetViewportSizeAsync(1900, 1000);
-		await Task.Delay(500);
+		await Task.Delay(200); // Reduced from 500ms
 		
 		await HomePage.TakeScreenshot("/tmp/window-resized.png");
 		Console.WriteLine("✓ UI adapted to window resize");
@@ -95,7 +95,7 @@ public class UIResponsivenessTests : E2ETestBase
 		
 		// Test save with keyboard shortcut
 		await HomePage.SaveProjectWithKeyboard();
-		await Task.Delay(500);
+		await Task.Delay(300); // Reduced from 500ms
 		
 		// Test delete with keyboard shortcut
 		try
@@ -103,7 +103,7 @@ public class UIResponsivenessTests : E2ETestBase
 			var returnNode = HomePage.GetGraphNode("Return");
 			await returnNode.ClickAsync();
 			await Page.Keyboard.PressAsync("Delete");
-			await Task.Delay(200);
+			await Task.Delay(100); // Reduced from 200ms
 			Console.WriteLine("✓ Keyboard shortcuts work");
 		}
 		catch (Exception ex)

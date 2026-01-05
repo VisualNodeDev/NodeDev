@@ -30,14 +30,14 @@ public class BreakpointTests : E2ETestBase
 
 		// Click the toggle breakpoint button
 		await HomePage.ClickToggleBreakpointButton();
-		await Task.Delay(300); // Wait for UI update
+		await Task.Delay(150); // Wait for UI update - reduced from 300ms
 
 		// Verify breakpoint was added
 		await HomePage.VerifyNodeHasBreakpoint("Return");
 
 		// Click the toggle breakpoint button again to remove
 		await HomePage.ClickToggleBreakpointButton();
-		await Task.Delay(300); // Wait for UI update
+		await Task.Delay(150); // Wait for UI update - reduced from 300ms
 
 		// Verify breakpoint was removed
 		await HomePage.VerifyNodeHasNoBreakpoint("Return");
@@ -63,14 +63,14 @@ public class BreakpointTests : E2ETestBase
 
 		// Press F9 to add breakpoint
 		await Page.Keyboard.PressAsync("F9");
-		await Task.Delay(300); // Wait for UI update
+		await Task.Delay(150); // Wait for UI update - reduced from 300ms
 
 		// Verify breakpoint was added
 		await HomePage.VerifyNodeHasBreakpoint("Return");
 
 		// Press F9 again to remove breakpoint
 		await Page.Keyboard.PressAsync("F9");
-		await Task.Delay(300); // Wait for UI update
+		await Task.Delay(150); // Wait for UI update - reduced from 300ms
 
 		// Verify breakpoint was removed
 		await HomePage.VerifyNodeHasNoBreakpoint("Return");
@@ -245,9 +245,9 @@ public class BreakpointTests : E2ETestBase
 		await returnNode.WaitForVisible();
 		var returnNodeTitle = returnNode.Locator(".title");
 		await returnNodeTitle.ClickAsync(new() { Force = true });
-		await Task.Delay(200);
+		await Task.Delay(100); // Reduced from 200ms
 		await Page.Keyboard.PressAsync("F9");
-		await Task.Delay(300);
+		await Task.Delay(150); // Reduced from 300ms
 
 		// Verify breakpoint was added
 		await HomePage.VerifyNodeHasBreakpoint("Return");
@@ -255,7 +255,7 @@ public class BreakpointTests : E2ETestBase
 		// Build the project first
 		var buildButton = Page.Locator("[data-test-id='build-project']");
 		await buildButton.ClickAsync();
-		await Task.Delay(2000); // Wait for build to complete
+		await Task.Delay(1500); // Wait for build to complete - reduced from 2000ms
 
 		// Verify no breakpoint status message before running
 		await HomePage.VerifyNoBreakpointStatusMessage();
@@ -264,7 +264,7 @@ public class BreakpointTests : E2ETestBase
 		await HomePage.RunWithDebug();
 		
 		// Wait a bit for the process to start and hit breakpoint
-		await Task.Delay(3000);
+		await Task.Delay(2000); // Reduced from 3000ms
 
 		// Take screenshot showing paused state
 		await HomePage.TakeScreenshot("/tmp/paused-at-breakpoint.png");
@@ -277,7 +277,7 @@ public class BreakpointTests : E2ETestBase
 
 		// Click Continue to resume execution
 		await HomePage.ClickContinueButton();
-		await Task.Delay(1000);
+		await Task.Delay(500); // Reduced from 1000ms
 
 		// Take screenshot after continue
 		await HomePage.TakeScreenshot("/tmp/after-continue.png");
