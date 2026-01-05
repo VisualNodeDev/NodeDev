@@ -13,18 +13,18 @@
     }
 </style>
 
-@if (Method == null || CodeCs == null || CodeMsil == null)
+@if (Method == null || CodeCs == null)
 {
     <MudText Typo="Typo.caption">Open a method to view its generated source code</MudText>
 }
 else
 {
     <MudTabs Class="sourceViewer">
-        <MudTabPanel Text="Debug pseudo-CS" Class="wh100">
+        <MudTabPanel Text="Generated C#" Class="wh100">
             <StandaloneCodeEditor @key="CodeCs.GetHashCode().ToString()" ConstructionOptions="@(x => EditorConstructionOptions(x, CodeCs, "csharp"))" CssClass="wh100" />
         </MudTabPanel>
-        <MudTabPanel Text="Debug MSIL" Class="wh100">
-            <StandaloneCodeEditor @key="CodeMsil.GetHashCode().ToString()" ConstructionOptions="@(x => EditorConstructionOptions(x, CodeMsil, "yaml"))" CssClass="wh100" />
+        <MudTabPanel Text="IL Code" Class="wh100">
+            <MudText Typo="Typo.body1" Style="padding: 16px;">IL code viewer will be added in a future update.</MudText>
         </MudTabPanel>
     </MudTabs>
 }
@@ -40,10 +40,7 @@ else
 
     private IDisposable? GraphChangedSubscription { get; set; }
 
-    private string? CodeMsil;
     private string? CodeCs;
-
-    private NodeClassTypeCreator? Creator;
 
     private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor, string code, string language)
     {
@@ -68,12 +65,11 @@ else
             return;
 
         // Either the target method changed or it previously failed to compile
-        if (Method != PreviousMethod || Creator == null)
+        if (Method != PreviousMethod)
         {
             if (Method?.Graph.Project != PreviousMethod?.Graph.Project)
             {
                 GraphChangedSubscription?.Dispose();
-                Creator = null;
 
                 if (Method != null)
                     GraphChangedSubscription = Method.Graph.Project.GraphChanged.Where(x => x.Graph == Method?.Graph).AcceptThenSample(TimeSpan.FromSeconds(1)).Delay(TimeSpan.FromSeconds(1)).Subscribe(x => InvokeAsync(() => OnGraphChanged(x.Graph)));
@@ -81,7 +77,6 @@ else
 
             PreviousMethod = Method;
             CodeCs = null; // we don't want to leave the code from the previous method visible
-            CodeMsil = null;
 
             if (Method != null)
                 OnGraphChanged(Method.Graph);
@@ -96,31 +91,33 @@ else
         {
             var temp = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             var assemblyPath = Method.Graph.Project.Build(Core.BuildOptions.Debug with { OutputPath = temp });
-            Creator = Method.Graph.Project.NodeClassTypeCreator;
 
-            try
+            // Get the generated C# code from the project
+            CodeCs = Method.Graph.Project.GetGeneratedCSharpCode(Method);
+
+            if (CodeCs != null)
             {
-                Creator!.GetBodyAsCsAndMsilCode(assemblyPath, Method, out CodeCs, out CodeMsil);
-
-                CodeCs = $"// Pseudo code for debugging.{System.Environment.NewLine}// This is not the actual code executed, we execute IL directly!{System.Environment.NewLine}{CodeCs}";
-
-                StateHasChanged();
+                CodeCs = $"// Generated code from NodeDev visual programming{System.Environment.NewLine}// This is the actual C# code that gets compiled and executed{System.Environment.NewLine}{System.Environment.NewLine}{CodeCs}";
             }
-            catch (BuildError buildError)
+            else
             {
-                CodeCs = $"/* Error during code generation of node {buildError.Node.Name}: {System.Environment.NewLine}{buildError.Message}{System.Environment.NewLine}";
-                CodeMsil = "";
-
-                if (buildError.InnerException != null)
-                    CodeCs += $"{System.Environment.NewLine}Inner exception:{System.Environment.NewLine}{buildError.InnerException}";
-
-                CodeCs += $"{System.Environment.NewLine}*/";
+                CodeCs = "// Unable to retrieve generated code for this method";
             }
+
+            StateHasChanged();
+        }
+        catch (BuildError buildError)
+        {
+            CodeCs = $"/* Error during code generation of node {buildError.Node.Name}: {System.Environment.NewLine}{buildError.Message}{System.Environment.NewLine}";
+
+            if (buildError.InnerException != null)
+                CodeCs += $"{System.Environment.NewLine}Inner exception:{System.Environment.NewLine}{buildError.InnerException}";
+
+            CodeCs += $"{System.Environment.NewLine}*/";
         }
         catch (Exception ex)
         {
             CodeCs = $"/* Error during code generation: {System.Environment.NewLine}{ex}{System.Environment.NewLine}*/";
-            CodeMsil = "";
         }
     }
 }

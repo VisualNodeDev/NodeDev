@@ -75,6 +75,7 @@ public class Project
 	private System.Diagnostics.Process? _debuggedProcess;
 	private NodeDev.Core.Debugger.BreakpointMappingInfo? _currentBreakpointMappings;
 	private NodeBreakpointInfo? _currentBreakpoint;
+	private string? _lastGeneratedSourceCode;
 
 	/// <summary>
 	/// Gets whether the project is currently being debugged with hard debugging (ICorDebug).
@@ -155,8 +156,9 @@ public class Project
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
 		var result = compiler.Compile();
 		
-		// Store breakpoint mappings for debugger use
+		// Store breakpoint mappings and source code for debugger and viewer use
 		_currentBreakpointMappings = result.BreakpointMappings;
+		_lastGeneratedSourceCode = result.SourceCode;
 
 		// Check if this is an executable (has a Program.Main method)
 		bool isExecutable = HasMainMethod();
@@ -269,6 +271,118 @@ public class Project
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
 		var result = compiler.Compile();
 		return result.Assembly;
+	}
+
+	/// <summary>
+	/// Gets the generated C# source code for a specific method from the last compilation.
+	/// Returns null if no compilation has been performed or if the method cannot be found.
+	/// </summary>
+	public string? GetGeneratedCSharpCode(NodeClassMethod method)
+	{
+		if (_lastGeneratedSourceCode == null)
+			return null;
+
+		// Parse the source code to extract the specific method
+		// The source code is organized as: namespace -> class -> method
+		// We need to find the method declaration and its body
+
+		var lines = _lastGeneratedSourceCode.Split('\n');
+		var methodSignature = $"{method.Name}(";
+		var classFullName = $"{method.Class.Namespace}.{method.Class.Name}";
+
+		// Find the namespace and class
+		bool inCorrectNamespace = false;
+		bool inCorrectClass = false;
+		int braceDepth = 0;
+		int methodStartLine = -1;
+		int methodBraceDepth = -1;
+		var methodLines = new List<string>();
+
+		for (int i = 0; i < lines.Length; i++)
+		{
+			var line = lines[i];
+			var trimmedLine = line.Trim();
+
+			// Track namespace
+			if (trimmedLine.StartsWith($"namespace {method.Class.Namespace}"))
+			{
+				inCorrectNamespace = true;
+				continue;
+			}
+
+			if (!inCorrectNamespace)
+				continue;
+
+			// Track class
+			if (trimmedLine.StartsWith($"public class {method.Class.Name}"))
+			{
+				inCorrectClass = true;
+				braceDepth = 0;
+				continue;
+			}
+
+			if (!inCorrectClass)
+				continue;
+
+			// Track braces to know when we're inside the method
+			if (methodStartLine >= 0)
+			{
+				methodLines.Add(line);
+
+				// Count braces in this line
+				foreach (var ch in line)
+				{
+					if (ch == '{')
+						braceDepth++;
+					else if (ch == '}')
+						braceDepth--;
+				}
+
+				// If we're back to the method's starting brace depth, we've reached the end
+				if (braceDepth <= methodBraceDepth)
+				{
+					break;
+				}
+			}
+			else if (trimmedLine.Contains(methodSignature))
+			{
+				// Found the method signature
+				methodStartLine = i;
+				methodLines.Add(line);
+				methodBraceDepth = braceDepth;
+
+				// Count braces in the signature line
+				foreach (var ch in line)
+				{
+					if (ch == '{')
+						braceDepth++;
+					else if (ch == '}')
+						braceDepth--;
+				}
+			}
+			else
+			{
+				// Count braces to track class depth
+				foreach (var ch in line)
+				{
+					if (ch == '{')
+						braceDepth++;
+					else if (ch == '}')
+						braceDepth--;
+				}
+
+				// If we've left the class, stop
+				if (braceDepth < 0)
+				{
+					break;
+				}
+			}
+		}
+
+		if (methodLines.Count == 0)
+			return null;
+
+		return string.Join('\n', methodLines);
 	}
 
 	#endregion
