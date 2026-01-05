@@ -32,8 +32,9 @@ public static class ManagedDebuggerCallbackFactory
 				Console.WriteLine(">>> BREAKPOINT HIT <<<");
 				
 				// Notify engine about breakpoint hit
-				// We'll need to extract more specific breakpoint info from the event
-				// For now, just notify that a breakpoint was hit
+				// The engine will figure out which breakpoint was hit based on context
+				engine.NotifyBreakpointHit();
+				
 				engine.OnDebugCallback(new DebugCallbackEventArgs("BreakpointHit", "A breakpoint was hit"));
 			}
 			

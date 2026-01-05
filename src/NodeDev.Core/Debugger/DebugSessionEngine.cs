@@ -662,6 +662,29 @@ public class DebugSessionEngine : IDisposable
 	}
 
 	/// <summary>
+	/// Notifies that a breakpoint was hit (when we don't have the specific breakpoint object).
+	/// This will raise the BreakpointHit event with the first active breakpoint's information.
+	/// </summary>
+	internal void NotifyBreakpointHit()
+	{
+		if (_breakpointMappings != null && _activeBreakpoints.Count > 0)
+		{
+			// Find the first active breakpoint that has a valid entry
+			var activeNodeId = _activeBreakpoints.Keys.FirstOrDefault(id => _activeBreakpoints[id] != null);
+			if (activeNodeId != null)
+			{
+				var bpInfo = _breakpointMappings.Breakpoints.FirstOrDefault(b => b.NodeId == activeNodeId);
+				if (bpInfo != null)
+				{
+					BreakpointHit?.Invoke(this, bpInfo);
+					OnDebugCallback(new DebugCallbackEventArgs("BreakpointHit", 
+						$"Breakpoint hit: Node '{bpInfo.NodeName}' in {bpInfo.ClassName}.{bpInfo.MethodName}"));
+				}
+			}
+		}
+	}
+
+	/// <summary>
 	/// Invokes the DebugCallback event.
 	/// </summary>
 	internal void OnDebugCallback(DebugCallbackEventArgs args)
