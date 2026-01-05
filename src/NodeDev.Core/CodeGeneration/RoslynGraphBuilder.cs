@@ -95,21 +95,11 @@ public class RoslynGraphBuilder
 		// Build the execution flow starting from entry
 		var chunks = _graph.GetChunks(entryOutput, allowDeadEnd: false);
 		
-		// Calculate starting line number for breakpoint tracking
-		// Line numbers are approximately: 
-		// - using statements (4 lines)
-		// - namespace declaration (1 line)
-		// - class declaration (1 line)
-		// - method signature (1 line)
-		// - opening brace (1 line)
-		// - variable declarations (N lines)
-		int startingLineNumber = 8 + variableDeclarations.Sum(v => CountStatementLines(v));
-		
 		// Get full class name for breakpoint info
 		string fullClassName = $"{_graph.SelfClass.Namespace}.{_graph.SelfClass.Name}";
 		
 		var bodyStatements = _context.IsDebug && _graph.Nodes.Values.Any(n => n.HasBreakpoint)
-			? BuildStatementsWithBreakpointTracking(chunks, fullClassName, method.Name, startingLineNumber)
+			? BuildStatementsWithBreakpointTracking(chunks, fullClassName, method.Name)
 			: BuildStatements(chunks);
 
 		// Combine variable declarations with body statements
@@ -188,7 +178,7 @@ public class RoslynGraphBuilder
 	/// Builds statements from node path chunks, tracking line numbers for breakpoints.
 	/// Returns the statements and populates breakpoint info in the context.
 	/// </summary>
-	internal List<StatementSyntax> BuildStatementsWithBreakpointTracking(Graph.NodePathChunks chunks, string className, string methodName, int startingLineNumber)
+	internal List<StatementSyntax> BuildStatementsWithBreakpointTracking(Graph.NodePathChunks chunks, string className, string methodName)
 	{
 		var statements = new List<StatementSyntax>();
 		string virtualFileName = $"NodeDev_{className}_{methodName}.g.cs";

@@ -473,17 +473,24 @@ public class DebugSessionEngine : IDisposable
 				return false;
 			}
 			
-			// Try to map the source line to an IL offset
-			uint ilOffset = TryGetILOffsetForSourceLine(code, bpInfo.LineNumber, bpInfo.SourceFile, bpInfo);
+			// Check if we have the exact IL offset from the PDB
+			if (!bpInfo.ILOffset.HasValue)
+			{
+				OnDebugCallback(new DebugCallbackEventArgs("BreakpointError", 
+					$"No PDB offset available for {bpInfo.SourceFile}:{bpInfo.LineNumber}. Cannot set breakpoint."));
+				return false;
+			}
 			
-			OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
-				$"Setting breakpoint at {bpInfo.SourceFile}:{bpInfo.LineNumber}, IL offset {ilOffset}"));
+			uint ilOffset = (uint)bpInfo.ILOffset.Value;
 			
 			// Create breakpoint at the specific IL offset
 			var breakpoint = code.CreateBreakpoint((int)ilOffset);
 			breakpoint.Activate(true);
 			
 			_activeBreakpoints[bpInfo.NodeId] = breakpoint;
+			
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
+				$"Setting breakpoint at {bpInfo.SourceFile}:{bpInfo.LineNumber}, IL offset {ilOffset}"));
 			
 			OnDebugCallback(new DebugCallbackEventArgs("BreakpointSet", 
 				$"Set breakpoint for node {bpInfo.NodeName} at line {bpInfo.LineNumber}"));
@@ -496,81 +503,6 @@ public class DebugSessionEngine : IDisposable
 				$"Failed to set breakpoint: {ex.Message}"));
 			return false;
 		}
-	}
-	
-	/// <summary>
-	/// Try to map a source line number to an IL offset using sequence points from the PDB
-	/// </summary>
-	private uint TryGetILOffsetForSourceLine(CorDebugCode code, int lineNumber, string sourceFile, NodeBreakpointInfo bpInfo)
-	{
-		try
-		{
-			// First, check if we have the exact IL offset from the PDB
-			if (bpInfo.ILOffset.HasValue)
-			{
-				OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
-					$"Using PDB-resolved IL offset: {bpInfo.ILOffset.Value}"));
-				return (uint)bpInfo.ILOffset.Value;
-			}
-			
-			// Fallback to heuristic if PDB reading failed
-			OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
-				$"No PDB offset available for {sourceFile}:{lineNumber}, using heuristic"));
-			
-			return FallbackILOffsetEstimate(code, lineNumber);
-		}
-		catch (Exception ex)
-		{
-			OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
-				$"Error mapping line to IL offset: {ex.Message}. Using fallback."));
-			return FallbackILOffsetEstimate(code, lineNumber);
-		}
-	}
-	
-	/// <summary>
-	/// Improved IL offset estimation using virtual line numbers
-	/// </summary>
-	private uint FallbackILOffsetEstimate(CorDebugCode code, int lineNumber)
-	{
-		int codeSize = (int)code.Size;
-		
-		// For virtual line numbers (10000+), map to position in function
-		// Virtual line 10000 = 1st node (index 0), 11000 = 2nd node (index 1), 12000 = 3rd node (index 2), etc.
-		if (lineNumber >= 10000)
-		{
-			// Calculate node index (0-based)
-			int nodeIndex = (lineNumber - 10000) / 1000;
-			
-			// Estimate IL offset based on node position
-			// Skip prolog (first ~10 bytes), reserve epilog (last ~5 bytes)
-			int prologSize = 10;
-			int epilogSize = 5;
-			int availableSpace = Math.Max(1, codeSize - prologSize - epilogSize);
-			
-			// Distribute the available space evenly across nodes
-			// Assume we might have up to 10 nodes in a typical method
-			int assumedMaxNodes = Math.Max(nodeIndex + 1, 10);
-			int bytesPerNode = Math.Max(1, availableSpace / assumedMaxNodes);
-			
-			// Calculate estimated offset
-			int estimatedOffset = prologSize + (nodeIndex * bytesPerNode);
-			
-			// Clamp to valid range, ensuring we stay well within code bounds
-			estimatedOffset = Math.Max(prologSize, Math.Min(estimatedOffset, codeSize - epilogSize - 1));
-			
-			OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
-				$"Virtual line {lineNumber} (node #{nodeIndex}) -> IL offset {estimatedOffset} (code size: {codeSize}, per-node: {bytesPerNode})"));
-			
-			return (uint)estimatedOffset;
-		}
-		
-		// For regular line numbers (shouldn't happen with new system), use old heuristic
-		if (lineNumber <= 5)
-			return 0u;
-		else if (lineNumber <= 10)
-			return (uint)Math.Max(0, Math.Min(20, codeSize - 1));
-		else
-			return (uint)Math.Max(0, Math.Min(40, codeSize - 1));
 	}
 	
 	/// <summary>
