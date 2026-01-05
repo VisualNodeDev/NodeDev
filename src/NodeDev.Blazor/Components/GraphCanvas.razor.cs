@@ -539,7 +539,19 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 			var node = Diagram.Nodes.Where(x => x.Selected).OfType<GraphNodeModel>().FirstOrDefault();
 			if (node != null && !node.Node.CanBeInlined)
 			{
-				node.Node.ToggleBreakpoint();
+				// If debugging, use Project API to dynamically set/remove breakpoint
+				if (Graph.Project.IsHardDebugging)
+				{
+					if (node.Node.HasBreakpoint)
+						Graph.Project.RemoveBreakpointForNode(node.Node.Id);
+					else
+						Graph.Project.SetBreakpointForNode(node.Node.Id);
+				}
+				else
+				{
+					// Not debugging - just toggle decoration
+					node.Node.ToggleBreakpoint();
+				}
 				node.Refresh();
 			}
 		}
@@ -584,7 +596,19 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		var node = Diagram.Nodes.Where(x => x.Selected).OfType<GraphNodeModel>().FirstOrDefault();
 		if (node != null && !node.Node.CanBeInlined)
 		{
-			node.Node.ToggleBreakpoint();
+			// If debugging, use Project API to dynamically set/remove breakpoint
+			if (Graph.Project.IsHardDebugging)
+			{
+				if (node.Node.HasBreakpoint)
+					Graph.Project.RemoveBreakpointForNode(node.Node.Id);
+				else
+					Graph.Project.SetBreakpointForNode(node.Node.Id);
+			}
+			else
+			{
+				// Not debugging - just toggle decoration
+				node.Node.ToggleBreakpoint();
+			}
 			node.Refresh();
 		}
 	}

@@ -25,9 +25,43 @@ public static class ManagedDebuggerCallbackFactory
 
 			// 1. Notify your engine/UI logic
 			var description = GetEventDescription(e);
+			
+			// Handle breakpoint hits specially
 			if (eventKind == CorDebugManagedCallbackKind.Breakpoint)
 			{
 				Console.WriteLine(">>> BREAKPOINT HIT <<<");
+				
+				// Notify engine about breakpoint hit
+				// The engine will figure out which breakpoint was hit based on context
+				engine.NotifyBreakpointHit();
+				
+				engine.OnDebugCallback(new DebugCallbackEventArgs("BreakpointHit", "A breakpoint was hit"));
+			}
+			
+			// Handle module load to set breakpoints
+			if (eventKind == CorDebugManagedCallbackKind.LoadModule)
+			{
+				try
+				{
+					// Cache the module for later breakpoint setting
+					// The event object should have a Module property for LoadModule events
+					var moduleProperty = e.GetType().GetProperty("Module");
+					if (moduleProperty != null)
+					{
+						var module = moduleProperty.GetValue(e) as CorDebugModule;
+						if (module != null)
+						{
+							engine.CacheLoadedModule(module);
+						}
+					}
+					
+					// Try to set breakpoints when a module loads
+					engine.TrySetBreakpointsForLoadedModules();
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"Error setting breakpoints on module load: {ex.Message}");
+				}
 			}
 
 			engine.OnDebugCallback(new DebugCallbackEventArgs(eventKind.ToString(), description));

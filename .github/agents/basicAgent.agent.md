@@ -12,7 +12,7 @@ description: Used for general purpose NodeDev development
 
 1) You must always read the documentation files when they are related to your current task. They are described in the "Documentation" section of this document.
 2) You must always run the tests and make sure they are passing before you consider your job as completed, no matter how long you have been at the task or any following instruction to make it short or end the task early.
-3) Disabling, removing, skipping, deleting, bypassing or converting to warnings ANY tests IS NOT ALLOWED and is not considered the right way of fixing a problematic test. The test must be functional and actually testing what it is intended to test.
+3) **CRITICAL: Disabling, removing, skipping, deleting, bypassing or converting to warnings ANY tests IS NOT ALLOWED and is not considered the right way of fixing a problematic test. The test must be functional and actually testing what it is intended to test. DO NOT REMOVE TESTS UNLESS EXPLICITLY INSTRUCTED TO DO SO BY THE USER.**
 4) Document newly added content or concepts in this `.github/agents/basicAgent.agent.md` file or any related documentation file.
 5) When the user corrects major mistakes done during your development, document them in this file to ensure it is never done again.
 6) You must always install playwright BEFORE trying to run the tests. build the projects and install playwright. If you struggle (take multiple iterations to do it), document the steps you took in this file to make it easier next time.
@@ -192,10 +192,40 @@ The debugging infrastructure is located in `src/NodeDev.Core/Debugger/` and prov
 - **DebugSessionEngine**: Main debugging engine with process launch, attach, and callback handling
 - **ManagedDebuggerCallbacks**: Implementation of ICorDebugManagedCallback interfaces via ClrDebug
 - **DebugEngineException**: Custom exception type for debugging errors
+- **NodeBreakpointInfo**: Maps nodes to their generated source code locations for breakpoint resolution
+- **BreakpointMappingInfo**: Collection of all breakpoint information for a compiled project
 
 **Dependencies:**
 - `ClrDebug` (v0.3.4): C# wrappers for the unmanaged ICorDebug API
 - `Microsoft.Diagnostics.DbgShim` (v9.0.652701): Native dbgshim library for all platforms
+
+### Breakpoint System
+NodeDev supports setting breakpoints on nodes during debugging. The system tracks node-to-source-line mappings during compilation:
+
+**Infrastructure:**
+1. **Node Marking**: Nodes are marked with `BreakpointDecoration` (only non-inlinable nodes support breakpoints)
+2. **Line Tracking**: `RoslynGraphBuilder.BuildStatementsWithBreakpointTracking()` tracks which source line each node generates
+3. **Compilation**: `RoslynNodeClassCompiler` collects all breakpoint mappings into `BreakpointMappingInfo`
+4. **Storage**: Project stores breakpoint mappings after build for use during debugging
+5. **Debug Engine**: `DebugSessionEngine` receives breakpoint mappings and attempts to set breakpoints after modules load
+
+**Implementation:**
+- ✅ Node breakpoint marking and persistence
+- ✅ #line directives with virtual line numbers for stable mapping
+- ✅ PDB sequence point reading for accurate IL offset resolution
+- ✅ Breakpoint mapping storage in compilation results
+- ✅ Debug engine infrastructure for breakpoint management
+- ✅ Actual ICorDebug breakpoint setting with `ICorDebugFunction.CreateBreakpoint()`
+- ✅ Execution pauses at breakpoints and resumes with Continue()
+
+**How It Works:**
+1. UI allows toggling breakpoints on nodes (F9 or toolbar button)
+2. Breakpoints persist across save/load
+3. Compilation adds #line directives with virtual line numbers (10000, 11000, 12000...)
+4. PDB sequence points are read to map virtual lines to exact IL offsets
+5. Debug engine creates actual ICorDebug breakpoints at precise locations
+6. Execution pauses when breakpoints are hit
+7. User can resume with Continue()
 
 ### ScriptRunner
 NodeDev includes a separate console application called **ScriptRunner** that serves as the target process for debugging. This architecture supports "Hard Debugging" via the ICorDebug API.

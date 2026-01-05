@@ -51,6 +51,7 @@ public class Project
 	internal Subject<string> ConsoleOutputSubject { get; } = new();
 	internal Subject<DebugCallbackEventArgs> DebugCallbackSubject { get; } = new();
 	internal Subject<bool> HardDebugStateChangedSubject { get; } = new();
+	internal Subject<NodeBreakpointInfo?> CurrentBreakpointSubject { get; } = new();
 
 	public IObservable<(Graph Graph, bool RequireUIRefresh)> GraphChanged => GraphChangedSubject.AsObservable();
 
@@ -66,10 +67,14 @@ public class Project
 
 	public IObservable<bool> HardDebugStateChanged => HardDebugStateChangedSubject.AsObservable();
 
+	public IObservable<NodeBreakpointInfo?> CurrentBreakpointChanged => CurrentBreakpointSubject.AsObservable();
+
 	public bool IsLiveDebuggingEnabled { get; private set; }
 
 	private DebugSessionEngine? _debugEngine;
 	private System.Diagnostics.Process? _debuggedProcess;
+	private NodeDev.Core.Debugger.BreakpointMappingInfo? _currentBreakpointMappings;
+	private NodeBreakpointInfo? _currentBreakpoint;
 
 	/// <summary>
 	/// Gets whether the project is currently being debugged with hard debugging (ICorDebug).
@@ -80,6 +85,16 @@ public class Project
 	/// Gets the process ID of the currently debugged process, or null if not debugging.
 	/// </summary>
 	public int? DebuggedProcessId => _debuggedProcess?.Id;
+
+	/// <summary>
+	/// Gets the current breakpoint that execution is paused at, or null if not paused at a breakpoint.
+	/// </summary>
+	public NodeBreakpointInfo? CurrentBreakpoint => _currentBreakpoint;
+
+	/// <summary>
+	/// Gets whether execution is currently paused at a breakpoint.
+	/// </summary>
+	public bool IsPausedAtBreakpoint => _currentBreakpoint != null;
 
 	public Project(Guid id, string? nodeDevVersion = null)
 	{
@@ -139,6 +154,9 @@ public class Project
 		// Use Roslyn compilation
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
 		var result = compiler.Compile();
+		
+		// Store breakpoint mappings for debugger use
+		_currentBreakpointMappings = result.BreakpointMappings;
 
 		// Check if this is an executable (has a Program.Main method)
 		bool isExecutable = HasMainMethod();
@@ -151,6 +169,42 @@ public class Project
 		// Write the PE and PDB to files
 		File.WriteAllBytes(filePath, result.PEBytes);
 		File.WriteAllBytes(pdbPath, result.PDBBytes);
+		
+		// Read IL offsets from PDB for breakpoints
+		if (_currentBreakpointMappings != null && _currentBreakpointMappings.Breakpoints.Count > 0)
+		{
+			try
+			{
+				// For each unique class/method combination, read IL offsets
+				var methodGroups = _currentBreakpointMappings.Breakpoints
+					.GroupBy(bp => (bp.ClassName, bp.MethodName));
+					
+				foreach (var group in methodGroups)
+				{
+					var offsets = Debugger.PdbSequencePointReader.ReadILOffsetsForVirtualLines(
+						filePath,
+						group.Key.ClassName,
+						group.Key.MethodName,
+						group.ToList()
+					);
+					
+					// Update breakpoint info with IL offsets
+					foreach (var bp in group)
+					{
+						var key = $"{bp.SourceFile}:{bp.LineNumber}";
+						if (offsets.TryGetValue(key, out var offset))
+						{
+							bp.ILOffset = offset;
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				// Log error but don't fail the build
+				Console.WriteLine($"Warning: Failed to read IL offsets from PDB: {ex.Message}");
+			}
+		}
 
 		if (isExecutable)
 		{
@@ -450,6 +504,17 @@ public class Project
 			try
 			{
 				_debugEngine.Initialize();
+				
+				// Set breakpoint mappings from the build
+				_debugEngine.SetBreakpointMappings(_currentBreakpointMappings);
+				
+				// Set the delegate to check if a node should have a breakpoint
+				// This allows filtering breakpoints based on current node state
+				_debugEngine.ShouldSetBreakpointForNode = (nodeId) =>
+				{
+					var node = FindNodeById(nodeId);
+					return node?.HasBreakpoint ?? false;
+				};
 			}
 			catch (Exception ex)
 			{
@@ -462,6 +527,14 @@ public class Project
 			_debugEngine.DebugCallback += (sender, args) =>
 			{
 				DebugCallbackSubject.OnNext(args);
+			};
+			
+			// Subscribe to breakpoint hits
+			_debugEngine.BreakpointHit += (sender, bpInfo) =>
+			{
+				_currentBreakpoint = bpInfo;
+				CurrentBreakpointSubject.OnNext(bpInfo);
+				ConsoleOutputSubject.OnNext($"Breakpoint hit: {bpInfo.NodeName} in {bpInfo.ClassName}.{bpInfo.MethodName}" + Environment.NewLine);
 			};
 
 			// Use the process ID directly
@@ -598,6 +671,99 @@ public class Project
 			_debugEngine = null;
 			_debuggedProcess = null;
 		}
+	}
+	
+	/// <summary>
+	/// Continues execution after a breakpoint or other pause event.
+	/// Only available when hard debugging is active and execution is paused.
+	/// </summary>
+	public void ContinueExecution()
+	{
+		if (!IsHardDebugging)
+			throw new InvalidOperationException("Cannot continue execution when not debugging.");
+		
+		try
+		{
+			// Clear current breakpoint before continuing
+			_currentBreakpoint = null;
+			CurrentBreakpointSubject.OnNext(null);
+			
+			_debugEngine?.Continue();
+		}
+		catch (Exception ex)
+		{
+			ConsoleOutputSubject.OnNext($"Failed to continue execution: {ex.Message}" + Environment.NewLine);
+			throw;
+		}
+	}
+	
+	/// <summary>
+	/// Dynamically sets a breakpoint on a specific node during an active debug session.
+	/// This allows adding breakpoints after the process has started.
+	/// </summary>
+	/// <param name="nodeId">The ID of the node to set a breakpoint on.</param>
+	/// <returns>True if the breakpoint was set successfully, false otherwise.</returns>
+	public bool SetBreakpointForNode(string nodeId)
+	{
+		if (!IsHardDebugging)
+			throw new InvalidOperationException("Cannot set breakpoints when not debugging.");
+			
+		if (_debugEngine == null)
+			return false;
+			
+		// Find the node and ensure it has a breakpoint decoration
+		var node = FindNodeById(nodeId);
+		if (node == null)
+			return false;
+			
+		// Set the breakpoint decoration if not already set
+		if (!node.HasBreakpoint)
+			node.ToggleBreakpoint();
+		
+		// Tell the debug engine to set the breakpoint
+		return _debugEngine.SetBreakpointForNode(nodeId);
+	}
+	
+	/// <summary>
+	/// Dynamically removes a breakpoint from a specific node during an active debug session.
+	/// </summary>
+	/// <param name="nodeId">The ID of the node to remove the breakpoint from.</param>
+	/// <returns>True if the breakpoint was removed successfully, false if it wasn't set.</returns>
+	public bool RemoveBreakpointForNode(string nodeId)
+	{
+		if (!IsHardDebugging)
+			throw new InvalidOperationException("Cannot remove breakpoints when not debugging.");
+			
+		if (_debugEngine == null)
+			return false;
+			
+		// Find the node and remove the breakpoint decoration
+		var node = FindNodeById(nodeId);
+		if (node != null && node.HasBreakpoint)
+			node.ToggleBreakpoint();
+		
+		// Tell the debug engine to remove the breakpoint
+		return _debugEngine.RemoveBreakpointForNode(nodeId);
+	}
+	
+	/// <summary>
+	/// Finds a node by its ID across all classes in the project.
+	/// </summary>
+	/// <param name="nodeId">The ID of the node to find.</param>
+	/// <returns>The node if found, null otherwise.</returns>
+	private Node? FindNodeById(string nodeId)
+	{
+		foreach (var nodeClass in Classes)
+		{
+			// Check methods
+			foreach (var method in nodeClass.Methods)
+			{
+				if (method.Graph?.Nodes.TryGetValue(nodeId, out var node) == true)
+					return node;
+			}
+		}
+		
+		return null;
 	}
 
 	#endregion

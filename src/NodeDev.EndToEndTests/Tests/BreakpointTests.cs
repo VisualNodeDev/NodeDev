@@ -229,4 +229,65 @@ public class BreakpointTests : E2ETestBase
 		var indicatorCount = await returnNode.Locator(".breakpoint-indicator").CountAsync();
 		Assert.Equal(0, indicatorCount);
 	}
+
+	[Fact]
+	public async Task BreakpointPausesExecutionAndShowsStatusMessage()
+	{
+		// Load default project and open Main method
+		await HomePage.CreateNewProject();
+		await HomePage.OpenProjectExplorerProjectTab();
+		await HomePage.HasClass("Program");
+		await HomePage.ClickClass("Program");
+		await HomePage.OpenMethod("Main");
+
+		// Select the Return node and add breakpoint
+		var returnNode = HomePage.GetGraphNode("Return");
+		await returnNode.WaitForVisible();
+		var returnNodeTitle = returnNode.Locator(".title");
+		await returnNodeTitle.ClickAsync(new() { Force = true });
+		await Task.Delay(200);
+		await Page.Keyboard.PressAsync("F9");
+		await Task.Delay(300);
+
+		// Verify breakpoint was added
+		await HomePage.VerifyNodeHasBreakpoint("Return");
+
+		// Build the project first
+		var buildButton = Page.Locator("[data-test-id='build-project']");
+		await buildButton.ClickAsync();
+		await Task.Delay(2000); // Wait for build to complete
+
+		// Verify no breakpoint status message before running
+		await HomePage.VerifyNoBreakpointStatusMessage();
+
+		// Run with debug - this should hit the breakpoint and pause
+		await HomePage.RunWithDebug();
+		
+		// Wait a bit for the process to start and hit breakpoint
+		await Task.Delay(3000);
+
+		// Take screenshot showing paused state
+		await HomePage.TakeScreenshot("/tmp/paused-at-breakpoint.png");
+
+		// Verify the breakpoint status message appears
+		await HomePage.VerifyBreakpointStatusMessage("Return");
+
+		// Verify Continue button is enabled when paused
+		await HomePage.VerifyContinueButtonEnabled(shouldBeEnabled: true);
+
+		// Click Continue to resume execution
+		await HomePage.ClickContinueButton();
+		await Task.Delay(1000);
+
+		// Take screenshot after continue
+		await HomePage.TakeScreenshot("/tmp/after-continue.png");
+
+		// After continue, the breakpoint message should disappear (program completes)
+		// Wait a bit for program to complete
+		await Task.Delay(2000);
+
+		// The status message should eventually disappear when program ends
+		// (or show debugging status without breakpoint)
+	}
+
 }

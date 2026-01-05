@@ -14,6 +14,7 @@
     <PackageReference Include="Microsoft.Diagnostics.DbgShim" Version="9.0.652701" />
     <PackageReference Include="NuGet.Versioning" Version="7.0.1" />
     <PackageReference Include="System.Reactive" Version="7.0.0-preview.1" />
+    <PackageReference Include="System.Reflection.Metadata" Version="9.0.0" />
     <PackageReference Include="snakex64.Dis2Msil" Version="1.0.0" />
   </ItemGroup>
 

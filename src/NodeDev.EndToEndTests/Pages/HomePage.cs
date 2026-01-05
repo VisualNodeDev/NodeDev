@@ -148,6 +148,12 @@ public class HomePage
 		return _user.Locator($"[data-test-id='graph-node'][data-test-node-name='{nodeName}']");
 	}
 
+	public IReadOnlyList<ILocator> GetGraphNodes(string nodeName)
+	{
+		var locator = _user.Locator($"[data-test-id='graph-node'][data-test-node-name='{nodeName}']");
+		return locator.AllAsync().Result;
+	}
+
 	public async Task<bool> HasGraphNode(string nodeName)
 	{
 		var node = GetGraphNode(nodeName);
@@ -228,24 +234,28 @@ public class HomePage
 		return ((float)box.X, (float)box.Y);
 	}
 
-	public ILocator GetGraphPort(string nodeName, string portName, bool isInput)
+	public ILocator GetGraphPort(string nodeName, string portName, bool isInput, int nodeIndex = 0)
 	{
-		var node = GetGraphNode(nodeName);
+		var nodes = GetGraphNodes(nodeName);
+		if (nodeIndex >= nodes.Count)
+			throw new Exception($"Node index {nodeIndex} out of range for node '{nodeName}' (found {nodes.Count} nodes)");
+		
+		var node = nodes[nodeIndex];
 		var portType = isInput ? "input" : "output";
 		// Look for the port by its name within the node's ports
 		return node.Locator($".col.{portType}").Filter(new() { HasText = portName }).Locator(".diagram-port").First;
 	}
 
-	public async Task ConnectPorts(string sourceNodeName, string sourcePortName, string targetNodeName, string targetPortName)
+	public async Task ConnectPorts(string sourceNodeName, string sourcePortName, string targetNodeName, string targetPortName, int sourceIndex = 0, int targetIndex = 0)
 	{
-		Console.WriteLine($"Connecting ports: {sourceNodeName}.{sourcePortName} -> {targetNodeName}.{targetPortName}");
+		Console.WriteLine($"Connecting ports: {sourceNodeName}[{sourceIndex}].{sourcePortName} -> {targetNodeName}[{targetIndex}].{targetPortName}");
 
 		// Get source port (output)
-		var sourcePort = GetGraphPort(sourceNodeName, sourcePortName, isInput: false);
+		var sourcePort = GetGraphPort(sourceNodeName, sourcePortName, isInput: false, nodeIndex: sourceIndex);
 		await sourcePort.WaitForVisible();
 
 		// Get target port (input)
-		var targetPort = GetGraphPort(targetNodeName, targetPortName, isInput: true);
+		var targetPort = GetGraphPort(targetNodeName, targetPortName, isInput: true, nodeIndex: targetIndex);
 		await targetPort.WaitForVisible();
 
 		// Get positions
@@ -784,19 +794,89 @@ public class HomePage
 		Console.WriteLine("Clicked toggle breakpoint button");
 	}
 
-	public async Task VerifyNodeHasBreakpoint(string nodeName)
+	public async Task RunWithDebug()
 	{
-		var node = GetGraphNode(nodeName);
+		var runWithDebugButton = _user.Locator("[data-test-id='run-with-debug']");
+		await runWithDebugButton.WaitForVisible();
+		await runWithDebugButton.ClickAsync();
+		Console.WriteLine("Clicked run with debug button");
+	}
+
+	public async Task ClickContinueButton()
+	{
+		var continueButton = _user.Locator("[data-test-id='resume-debug']");
+		await continueButton.WaitForVisible();
+		await continueButton.ClickAsync();
+		Console.WriteLine("Clicked continue button");
+	}
+
+	public async Task VerifyBreakpointStatusMessage(string expectedNodeName)
+	{
+		var statusText = _user.Locator("[data-test-id='breakpoint-status-text']");
+		
+		try
+		{
+			await statusText.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+			var text = await statusText.TextContentAsync();
+			if (!text.Contains(expectedNodeName))
+			{
+				throw new Exception($"Breakpoint status message does not contain expected node name '{expectedNodeName}'. Actual: '{text}'");
+			}
+			Console.WriteLine($"Verified breakpoint status message contains: {expectedNodeName}");
+		}
+		catch (TimeoutException)
+		{
+			throw new Exception("Breakpoint status message did not appear");
+		}
+	}
+
+	public async Task VerifyNoBreakpointStatusMessage()
+	{
+		var statusText = _user.Locator("[data-test-id='breakpoint-status-text']");
+		var count = await statusText.CountAsync();
+		
+		if (count > 0)
+		{
+			var text = await statusText.TextContentAsync();
+			throw new Exception($"Breakpoint status message is visible when it shouldn't be. Message: '{text}'");
+		}
+		
+		Console.WriteLine("Verified no breakpoint status message is visible");
+	}
+
+	public async Task VerifyContinueButtonEnabled(bool shouldBeEnabled)
+	{
+		var continueButton = _user.Locator("[data-test-id='resume-debug']");
+		await continueButton.WaitForVisible();
+		
+		var isDisabled = await continueButton.IsDisabledAsync();
+		var isEnabled = !isDisabled;
+		
+		if (isEnabled != shouldBeEnabled)
+		{
+			throw new Exception($"Continue button should be {(shouldBeEnabled ? "enabled" : "disabled")} but is {(isEnabled ? "enabled" : "disabled")}");
+		}
+		
+		Console.WriteLine($"Verified continue button is {(shouldBeEnabled ? "enabled" : "disabled")}");
+	}
+
+	public async Task VerifyNodeHasBreakpoint(string nodeName, int nodeIndex = 0)
+	{
+		var nodes = GetGraphNodes(nodeName);
+		if (nodeIndex >= nodes.Count)
+			throw new Exception($"Node index {nodeIndex} out of range for node '{nodeName}' (found {nodes.Count} nodes)");
+		
+		var node = nodes[nodeIndex];
 		var breakpointIndicator = node.Locator(".breakpoint-indicator");
 		
 		try
 		{
 			await breakpointIndicator.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
-			Console.WriteLine($"Verified node '{nodeName}' has breakpoint indicator");
+			Console.WriteLine($"Verified node '{nodeName}'[{nodeIndex}] has breakpoint indicator");
 		}
 		catch (TimeoutException)
 		{
-			throw new Exception($"Node '{nodeName}' does not have a breakpoint indicator");
+			throw new Exception($"Node '{nodeName}'[{nodeIndex}] does not have a breakpoint indicator");
 		}
 	}
 

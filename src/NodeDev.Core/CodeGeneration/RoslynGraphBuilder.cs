@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.Connections;
+using NodeDev.Core.Debugger;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
@@ -30,6 +31,11 @@ public class RoslynGraphBuilder
 		_graph = graph;
 		_context = context;
 	}
+	
+	/// <summary>
+	/// Gets the breakpoint mappings collected during code generation.
+	/// </summary>
+	public List<NodeBreakpointInfo> GetBreakpointMappings() => _context.BreakpointMappings;
 
 	/// <summary>
 	/// Builds a complete method syntax from the graph
@@ -88,7 +94,15 @@ public class RoslynGraphBuilder
 
 		// Build the execution flow starting from entry
 		var chunks = _graph.GetChunks(entryOutput, allowDeadEnd: false);
-		var bodyStatements = BuildStatements(chunks);
+		
+		// Get full class name for breakpoint info
+		string fullClassName = $"{_graph.SelfClass.Namespace}.{_graph.SelfClass.Name}";
+		
+		// In debug builds, always track line numbers for all nodes (not just those with breakpoints)
+		// This allows breakpoints to be set dynamically during debugging
+		var bodyStatements = _context.IsDebug
+			? BuildStatementsWithBreakpointTracking(chunks, fullClassName, method.Name)
+			: BuildStatements(chunks);
 
 		// Combine variable declarations with body statements
 		var allStatements = variableDeclarations.Cast<StatementSyntax>()
@@ -133,8 +147,10 @@ public class RoslynGraphBuilder
 
 		foreach (var chunk in chunks.Chunks)
 		{
+			var node = chunk.Input.Parent;
+			
 			// Resolve inputs first
-			foreach (var input in chunk.Input.Parent.Inputs)
+			foreach (var input in node.Inputs)
 			{
 				ResolveInputConnection(input);
 			}
@@ -146,18 +162,107 @@ public class RoslynGraphBuilder
 			try
 			{
 				// Generate the statement for this node
-				var statement = chunk.Input.Parent.GenerateRoslynStatement(chunk.SubChunk, _context);
+				var statement = node.GenerateRoslynStatement(chunk.SubChunk, _context);
 
 				// Add the main statement
 				statements.Add(statement);
 			}
 			catch (Exception ex) when (ex is not BuildError)
 			{
-				throw new BuildError($"Failed to generate statement for node type {chunk.Input.Parent.GetType().Name}: {ex.Message}", chunk.Input.Parent, ex);
+				throw new BuildError($"Failed to generate statement for node type {node.GetType().Name}: {ex.Message}", node, ex);
 			}
 		}
 
 		return statements;
+	}
+	
+	/// <summary>
+	/// Builds statements from node path chunks, tracking line numbers for breakpoints.
+	/// Returns the statements and populates breakpoint info in the context.
+	/// </summary>
+	internal List<StatementSyntax> BuildStatementsWithBreakpointTracking(Graph.NodePathChunks chunks, string className, string methodName)
+	{
+		var statements = new List<StatementSyntax>();
+		string virtualFileName = $"NodeDev_{className}_{methodName}.g.cs";
+		int nodeExecutionOrder = 0; // Track execution order of ALL nodes
+
+		foreach (var chunk in chunks.Chunks)
+		{
+			var node = chunk.Input.Parent;
+			
+			// Resolve inputs first
+			foreach (var input in node.Inputs)
+			{
+				ResolveInputConnection(input);
+			}
+
+			// Get auxiliary statements generated during input resolution (like inline variable declarations)
+			// These need to be added BEFORE the main statement
+			var auxiliaryStatements = _context.GetAndClearAuxiliaryStatements();
+			statements.AddRange(auxiliaryStatements);
+
+			try
+			{
+				// Generate the statement for this node
+				var statement = node.GenerateRoslynStatement(chunk.SubChunk, _context);
+
+				// In debug builds, ALWAYS add #line directive for every node (not just those with breakpoints)
+				// This allows breakpoints to be set dynamically during debugging
+				// Create a #line directive that maps this statement to a unique virtual line
+				// The virtual line encodes the node's execution order: 10000 + (order * 1000)
+				int nodeVirtualLine = 10000 + (nodeExecutionOrder * 1000);
+				
+				// Format: #line 10000 "virtual_file.cs"
+				var lineDirective = SF.Trivia(
+					SF.LineDirectiveTrivia(
+						SF.Token(SyntaxKind.HashToken),
+						SF.Token(SyntaxKind.LineKeyword),
+						SF.Literal(nodeVirtualLine),
+						SF.Literal($"\"{virtualFileName}\"", virtualFileName), // Quoted filename
+						SF.Token(SyntaxKind.EndOfDirectiveToken),
+						true
+					)
+				);
+				
+				// Add the #line directive before the statement
+				statement = statement.WithLeadingTrivia(lineDirective);
+				
+				// Record the mapping for this node (regardless of whether it currently has a breakpoint)
+				// This allows breakpoints to be added dynamically after build
+				_context.BreakpointMappings.Add(new NodeDev.Core.Debugger.NodeBreakpointInfo
+				{
+					NodeId = node.Id,
+					NodeName = node.Name,
+					ClassName = className,
+					MethodName = methodName,
+					LineNumber = nodeVirtualLine,
+					SourceFile = virtualFileName
+				});
+
+				// Add the main statement
+				statements.Add(statement);
+				
+				// Increment execution order for next node
+				nodeExecutionOrder++;
+			}
+			catch (Exception ex) when (ex is not BuildError)
+			{
+				throw new BuildError($"Failed to generate statement for node type {node.GetType().Name}: {ex.Message}", node, ex);
+			}
+		}
+
+		return statements;
+	}
+	
+	/// <summary>
+	/// Counts the number of lines a statement will take when normalized.
+	/// This is a rough estimate used for line number tracking.
+	/// </summary>
+	private static int CountStatementLines(StatementSyntax statement)
+	{
+		// Count the number of line breaks in the statement text
+		var text = statement.NormalizeWhitespace().ToFullString();
+		return text.Split('\n').Length;
 	}
 
 	/// <summary>
