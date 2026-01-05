@@ -1,14 +1,14 @@
 @if (IsShowing)
 {
 	<MudPaper Class="w100 pa-1 overflow-y-scroll d-flex flex-column relative" Style="height: 200px" data-test-id="consolePanel">
-		<MudIconButton Icon="@MudBlazor.Icons.Material.Filled.ArrowDropDown" Class="absolute" Style="right: 0px; top: 0px" Size="Size.Small" OnClick="@(() => IsShowing = false)"></MudIconButton>
-		<MudIconButton Icon="@(AutoScrollEnabled ? MudBlazor.Icons.Material.Filled.Lock : MudBlazor.Icons.Material.Filled.LockOpen)" 
-					   Class="absolute" 
-					   Style="right: 40px; top: 0px" 
-					   Size="Size.Small" 
-					   Title="@(AutoScrollEnabled ? "Auto-scroll enabled" : "Auto-scroll disabled")"
-					   OnClick="@(() => AutoScrollEnabled = !AutoScrollEnabled)"
-					   data-test-id="autoScrollToggle"></MudIconButton>
+		<div class="d-flex" style="position: absolute; right: 0px; top: 0px; z-index: 10;">
+			<MudIconButton Icon="@(AutoScrollEnabled ? MudBlazor.Icons.Material.Filled.Lock : MudBlazor.Icons.Material.Filled.LockOpen)" 
+						   Size="Size.Small" 
+						   Title="@(AutoScrollEnabled ? "Auto-scroll enabled" : "Auto-scroll disabled")"
+						   OnClick="@(() => AutoScrollEnabled = !AutoScrollEnabled)"
+						   data-test-id="autoScrollToggle"></MudIconButton>
+			<MudIconButton Icon="@MudBlazor.Icons.Material.Filled.ArrowDropDown" Size="Size.Small" OnClick="@(() => IsShowing = false)"></MudIconButton>
+		</div>
 
 		<MudTabs Elevation="0" Rounded="false" Class="w100 h100 consoleTabs">
 			<MudTabPanel Text="Console Output" Class="consoleOutputTab">

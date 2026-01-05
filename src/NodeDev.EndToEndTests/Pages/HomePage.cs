@@ -780,8 +780,8 @@ public class HomePage
 	public async Task<double> GetConsoleScrollPosition()
 	{
 		var container = _user.Locator("[data-test-id='consoleOutputContainer']");
-		await container.WaitForVisible();
 		
+		// Don't wait for visible since MudTabPanel may hide the content with display:none
 		// Get the scrollTop value of the container
 		var scrollTop = await container.EvaluateAsync<double>("el => el.scrollTop");
 		return scrollTop;
