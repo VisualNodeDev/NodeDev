@@ -70,8 +70,9 @@ else
         });
         
         // Subscribe to current breakpoint changes to refresh UI
-        CurrentBreakpointSubscription = Project.CurrentBreakpointChanged.Subscribe(_ =>
+        CurrentBreakpointSubscription = Project.CurrentBreakpointChanged.Subscribe(breakpoint =>
         {
+            Console.WriteLine($"[ProjectToolbar] CurrentBreakpoint changed: {(breakpoint != null ? $"{breakpoint.NodeName}" : "null")}");
             InvokeAsync(StateHasChanged);
         });
     }

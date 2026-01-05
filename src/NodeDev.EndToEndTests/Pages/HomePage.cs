@@ -784,6 +784,72 @@ public class HomePage
 		Console.WriteLine("Clicked toggle breakpoint button");
 	}
 
+	public async Task RunWithDebug()
+	{
+		var runWithDebugButton = _user.Locator("[data-test-id='run-with-debug']");
+		await runWithDebugButton.WaitForVisible();
+		await runWithDebugButton.ClickAsync();
+		Console.WriteLine("Clicked run with debug button");
+	}
+
+	public async Task ClickContinueButton()
+	{
+		var continueButton = _user.Locator("[data-test-id='resume-debug']");
+		await continueButton.WaitForVisible();
+		await continueButton.ClickAsync();
+		Console.WriteLine("Clicked continue button");
+	}
+
+	public async Task VerifyBreakpointStatusMessage(string expectedNodeName)
+	{
+		var statusText = _user.Locator("[data-test-id='breakpoint-status-text']");
+		
+		try
+		{
+			await statusText.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+			var text = await statusText.TextContentAsync();
+			if (!text.Contains(expectedNodeName))
+			{
+				throw new Exception($"Breakpoint status message does not contain expected node name '{expectedNodeName}'. Actual: '{text}'");
+			}
+			Console.WriteLine($"Verified breakpoint status message contains: {expectedNodeName}");
+		}
+		catch (TimeoutException)
+		{
+			throw new Exception("Breakpoint status message did not appear");
+		}
+	}
+
+	public async Task VerifyNoBreakpointStatusMessage()
+	{
+		var statusText = _user.Locator("[data-test-id='breakpoint-status-text']");
+		var count = await statusText.CountAsync();
+		
+		if (count > 0)
+		{
+			var text = await statusText.TextContentAsync();
+			throw new Exception($"Breakpoint status message is visible when it shouldn't be. Message: '{text}'");
+		}
+		
+		Console.WriteLine("Verified no breakpoint status message is visible");
+	}
+
+	public async Task VerifyContinueButtonEnabled(bool shouldBeEnabled)
+	{
+		var continueButton = _user.Locator("[data-test-id='resume-debug']");
+		await continueButton.WaitForVisible();
+		
+		var isDisabled = await continueButton.IsDisabledAsync();
+		var isEnabled = !isDisabled;
+		
+		if (isEnabled != shouldBeEnabled)
+		{
+			throw new Exception($"Continue button should be {(shouldBeEnabled ? "enabled" : "disabled")} but is {(isEnabled ? "enabled" : "disabled")}");
+		}
+		
+		Console.WriteLine($"Verified continue button is {(shouldBeEnabled ? "enabled" : "disabled")}");
+	}
+
 	public async Task VerifyNodeHasBreakpoint(string nodeName)
 	{
 		var node = GetGraphNode(nodeName);
