@@ -24,6 +24,9 @@ public class AdvancedNodeOperationsTests : E2ETestBase
 			await HomePage.SearchForNodes("Branch");
 			await HomePage.AddNodeFromSearch("Branch");
 			
+			// Wait a bit longer for node to appear on canvas
+			await Task.Delay(500);
+			
 			var hasBranchNode = await HomePage.HasGraphNode("Branch");
 			Assert.True(hasBranchNode, "Branch node should be visible on canvas");
 			

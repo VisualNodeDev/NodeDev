@@ -358,6 +358,9 @@ public class HomePage
 		{
 			await nodeResult.First.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
 			await nodeResult.First.ClickAsync();
+			
+			// Wait for node to be added to canvas
+			await Task.Delay(100);
 		}
 		catch (TimeoutException)
 		{
@@ -926,6 +929,18 @@ public class HomePage
 	{
 		var node = GetGraphNode(nodeName);
 		var breakpointIndicator = node.Locator(".breakpoint-indicator");
+		
+		// Wait for the indicator to disappear if it exists
+		try
+		{
+			await breakpointIndicator.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 2000 });
+		}
+		catch
+		{
+			// If it was never there, that's fine too
+		}
+		
+		// Verify it's gone
 		var count = await breakpointIndicator.CountAsync();
 		
 		if (count > 0)
