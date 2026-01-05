@@ -155,6 +155,42 @@ public class Project
 		// Write the PE and PDB to files
 		File.WriteAllBytes(filePath, result.PEBytes);
 		File.WriteAllBytes(pdbPath, result.PDBBytes);
+		
+		// Read IL offsets from PDB for breakpoints
+		if (_currentBreakpointMappings != null && _currentBreakpointMappings.Breakpoints.Count > 0)
+		{
+			try
+			{
+				// For each unique class/method combination, read IL offsets
+				var methodGroups = _currentBreakpointMappings.Breakpoints
+					.GroupBy(bp => (bp.ClassName, bp.MethodName));
+					
+				foreach (var group in methodGroups)
+				{
+					var offsets = Debugger.PdbSequencePointReader.ReadILOffsetsForVirtualLines(
+						filePath,
+						group.Key.ClassName,
+						group.Key.MethodName,
+						group.ToList()
+					);
+					
+					// Update breakpoint info with IL offsets
+					foreach (var bp in group)
+					{
+						var key = $"{bp.SourceFile}:{bp.LineNumber}";
+						if (offsets.TryGetValue(key, out var offset))
+						{
+							bp.ILOffset = offset;
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				// Log error but don't fail the build
+				Console.WriteLine($"Warning: Failed to read IL offsets from PDB: {ex.Message}");
+			}
+		}
 
 		if (isExecutable)
 		{

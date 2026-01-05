@@ -191,7 +191,6 @@ public class RoslynGraphBuilder
 	internal List<StatementSyntax> BuildStatementsWithBreakpointTracking(Graph.NodePathChunks chunks, string className, string methodName, int startingLineNumber)
 	{
 		var statements = new List<StatementSyntax>();
-		int virtualLineNumber = 10000; // Start at a high number to avoid conflicts
 		string virtualFileName = $"NodeDev_{className}_{methodName}.g.cs";
 		int nodeExecutionOrder = 0; // Track execution order of ALL nodes
 

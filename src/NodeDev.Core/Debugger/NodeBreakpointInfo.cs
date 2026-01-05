@@ -38,6 +38,12 @@ public class NodeBreakpointInfo
 	/// For virtual files, this is a generated name like "NodeDev_ClassName_MethodName.g.cs".
 	/// </summary>
 	public string SourceFile { get; init; } = string.Empty;
+	
+	/// <summary>
+	/// The exact IL offset for this breakpoint, read from the PDB file.
+	/// Null if not yet resolved from PDB.
+	/// </summary>
+	public int? ILOffset { get; set; }
 }
 
 /// <summary>

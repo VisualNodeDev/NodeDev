@@ -474,7 +474,7 @@ public class DebugSessionEngine : IDisposable
 			}
 			
 			// Try to map the source line to an IL offset
-			uint ilOffset = TryGetILOffsetForSourceLine(code, bpInfo.LineNumber, bpInfo.SourceFile);
+			uint ilOffset = TryGetILOffsetForSourceLine(code, bpInfo.LineNumber, bpInfo.SourceFile, bpInfo);
 			
 			OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
 				$"Setting breakpoint at {bpInfo.SourceFile}:{bpInfo.LineNumber}, IL offset {ilOffset}"));
@@ -501,16 +501,21 @@ public class DebugSessionEngine : IDisposable
 	/// <summary>
 	/// Try to map a source line number to an IL offset using sequence points from the PDB
 	/// </summary>
-	private uint TryGetILOffsetForSourceLine(CorDebugCode code, int lineNumber, string sourceFile)
+	private uint TryGetILOffsetForSourceLine(CorDebugCode code, int lineNumber, string sourceFile, NodeBreakpointInfo bpInfo)
 	{
 		try
 		{
-			// TODO: Implement proper PDB sequence point reading
-			// This requires ISymUnmanagedReader COM interface which isn't fully exposed in ClrDebug 0.3.4
-			// For now, use the improved heuristic with virtual line numbers
+			// First, check if we have the exact IL offset from the PDB
+			if (bpInfo.ILOffset.HasValue)
+			{
+				OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
+					$"Using PDB-resolved IL offset: {bpInfo.ILOffset.Value}"));
+				return (uint)bpInfo.ILOffset.Value;
+			}
 			
-			OnDebugCallback(new DebugCallbackEventArgs("BreakpointDebug", 
-				$"Mapping {sourceFile}:{lineNumber} to IL offset (using heuristic)"));
+			// Fallback to heuristic if PDB reading failed
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointWarning", 
+				$"No PDB offset available for {sourceFile}:{lineNumber}, using heuristic"));
 			
 			return FallbackILOffsetEstimate(code, lineNumber);
 		}
