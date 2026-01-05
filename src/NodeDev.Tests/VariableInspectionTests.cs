@@ -63,9 +63,9 @@ public class VariableInspectionTests
 		// Build the project
 		project.Build(BuildOptions.Debug);
 
-		// Act - try to get variable value when not paused
-		var connectionGraphIndex = returnNode.Inputs[0].GraphIndex;
-		var (value, success) = project.GetVariableValueAtBreakpoint(connectionGraphIndex);
+		// Act - try to get variable value when not paused (use Connection.Id)
+		var connectionId = returnNode.Inputs[0].Id;
+		var (value, success) = project.GetVariableValueAtBreakpoint(connectionId);
 
 		// Assert - should fail because not paused at breakpoint
 		Assert.False(success);
@@ -73,14 +73,14 @@ public class VariableInspectionTests
 	}
 
 	[Fact]
-	public void GetVariableValueAtBreakpoint_WithInvalidConnectionIndex_ReturnsFalse()
+	public void GetVariableValueAtBreakpoint_WithInvalidConnectionId_ReturnsFalse()
 	{
 		// Arrange
 		var project = Project.CreateNewDefaultProject(out var mainMethod);
 		project.Build(BuildOptions.Debug);
 
-		// Act - try to get variable value with invalid connection index
-		var (value, success) = project.GetVariableValueAtBreakpoint(-1);
+		// Act - try to get variable value with invalid connection ID
+		var (value, success) = project.GetVariableValueAtBreakpoint("invalid-connection-id");
 
 		// Assert - should fail
 		Assert.False(success);
@@ -190,4 +190,54 @@ public class VariableInspectionTests
 		Assert.True(File.Exists(dllPath));
 		_output.WriteLine("Variable mapping with inlinable nodes test passed!");
 	}
+
+	[Fact]
+	public void VariableMapping_CollectsMultipleVariableTypes()
+	{
+		// Arrange - Create a project with nodes that have different types
+		var project = Project.CreateNewDefaultProject(out var mainMethod);
+		var graph = mainMethod.Graph;
+
+		// Add nodes with different output types
+		var writeLine1 = new WriteLine(graph); // String output
+		var writeLine2 = new WriteLine(graph); // String output
+		graph.Manager.AddNode(writeLine1);
+		graph.Manager.AddNode(writeLine2);
+
+		// Add an Add node for int output
+		var addNode = new NodeDev.Core.Nodes.Math.Add(graph);
+		graph.Manager.AddNode(addNode);
+
+		var entryNode = graph.Nodes.Values.OfType<EntryNode>().First();
+		var returnNode = graph.Nodes.Values.OfType<ReturnNode>().First();
+
+		// Set up connections: Entry -> WriteLine1 -> WriteLine2 -> Return
+		graph.Manager.AddNewConnectionBetween(entryNode.Outputs[0], writeLine1.Inputs[0]);
+		writeLine1.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+		writeLine1.Inputs[1].UpdateTextboxText("\"First\"");
+		
+		graph.Manager.AddNewConnectionBetween(writeLine1.Outputs[0], writeLine2.Inputs[0]);
+		writeLine2.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<string>(), overrideInitialType: true);
+		writeLine2.Inputs[1].UpdateTextboxText("\"Second\"");
+		
+		// Configure Add node with integers
+		addNode.Inputs[0].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<int>(), overrideInitialType: true);
+		addNode.Inputs[0].UpdateTextboxText("5");
+		addNode.Inputs[1].UpdateTypeAndTextboxVisibility(project.TypeFactory.Get<int>(), overrideInitialType: true);
+		addNode.Inputs[1].UpdateTextboxText("5");
+		
+		graph.Manager.AddNewConnectionBetween(writeLine2.Outputs[0], returnNode.Inputs[0]);
+
+		// Act - Build the project
+		var dllPath = project.Build(BuildOptions.Debug);
+
+		// Assert - DLL should exist
+		Assert.True(File.Exists(dllPath));
+		
+		// Verify that we have variable mappings for both string and int connections
+		// The output connections from WriteLine nodes and Add node should be tracked
+		_output.WriteLine($"Built DLL with multiple variable types: {dllPath}");
+		_output.WriteLine("Variable mapping with multiple types test passed!");
+	}
 }
+

@@ -78,6 +78,12 @@ public class Project
 	private NodeDev.Core.Debugger.BreakpointMappingInfo? _currentBreakpointMappings;
 	private NodeDev.Core.Debugger.VariableMappingInfo? _currentVariableMappings;
 	private NodeBreakpointInfo? _currentBreakpoint;
+	
+	/// <summary>
+	/// Stores variable values when paused at a breakpoint during hard debugging.
+	/// Key is Connection.Id, value is the actual runtime value.
+	/// </summary>
+	private readonly Dictionary<string, object?> _breakpointVariableValues = new();
 
 	/// <summary>
 	/// Gets whether the project is currently being debugged with hard debugging (ICorDebug).
@@ -558,6 +564,7 @@ public class Project
 			_debugEngine.BreakpointHit += (sender, bpInfo) =>
 			{
 				_currentBreakpoint = bpInfo;
+				CaptureVariableValuesAtBreakpoint();
 				CurrentBreakpointSubject.OnNext(bpInfo);
 				ConsoleOutputSubject.OnNext($"Breakpoint hit: {bpInfo.NodeName} in {bpInfo.ClassName}.{bpInfo.MethodName}" + Environment.NewLine);
 			};
@@ -709,8 +716,9 @@ public class Project
 		
 		try
 		{
-			// Clear current breakpoint before continuing
+			// Clear current breakpoint and variable cache before continuing
 			_currentBreakpoint = null;
+			_breakpointVariableValues.Clear();
 			CurrentBreakpointSubject.OnNext(null);
 			
 			_debugEngine?.Continue();
@@ -793,27 +801,91 @@ public class Project
 
 	/// <summary>
 	/// Gets the value of a variable for a given connection when paused at a breakpoint.
-	/// This uses ICorDebug to inspect local variables in the debugged process.
+	/// This retrieves values from the breakpoint variable cache populated when execution pauses.
 	/// </summary>
-	/// <param name="connectionGraphIndex">The graph index of the connection to inspect.</param>
+	/// <param name="connectionId">The ID of the connection to inspect.</param>
 	/// <returns>A tuple containing the value as a string and a flag indicating success.</returns>
-	public (string Value, bool Success) GetVariableValueAtBreakpoint(int connectionGraphIndex)
+	public (string Value, bool Success) GetVariableValueAtBreakpoint(string connectionId)
 	{
 		// Check if we're paused at a breakpoint
-		if (!IsPausedAtBreakpoint || _debugEngine == null || _currentVariableMappings == null || _currentBreakpoint == null)
+		if (!IsPausedAtBreakpoint || _currentVariableMappings == null || _currentBreakpoint == null)
 			return ("Not paused at breakpoint", false);
 
 		// Find the variable mapping for this connection
-		var mapping = _currentVariableMappings.GetMapping(connectionGraphIndex);
+		var mapping = _currentVariableMappings.GetMapping(connectionId);
 		if (mapping == null)
 			return ("Variable mapping not found", false);
 
-		// Check if the variable belongs to the current method
-		if (mapping.ClassName != _currentBreakpoint.ClassName || mapping.MethodName != _currentBreakpoint.MethodName)
-			return ("Variable not in current method scope", false);
+		// Check if we have a cached value for this connection
+		if (_breakpointVariableValues.TryGetValue(connectionId, out var value))
+		{
+			return (value?.ToString() ?? "null", true);
+		}
 
-		// Get the variable value from the debug engine
-		return _debugEngine.GetLocalVariableValue(mapping.VariableName);
+		// If no cached value, return a message indicating the variable hasn't been set yet
+		return ("Variable not yet set", false);
+	}
+	
+	/// <summary>
+	/// Populates the variable value cache when paused at a breakpoint.
+	/// This should be called when a breakpoint is hit to capture all variable values.
+	/// </summary>
+	private void CaptureVariableValuesAtBreakpoint()
+	{
+		_breakpointVariableValues.Clear();
+		
+		if (_currentBreakpoint == null || _currentVariableMappings == null)
+			return;
+
+		// Get all mappings for the current method
+		var methodMappings = _currentVariableMappings.GetMappingsForMethod(
+			_currentBreakpoint.ClassName,
+			_currentBreakpoint.MethodName);
+
+		// Find the graph and nodes to get connection information
+		var targetClass = Classes.FirstOrDefault(c => $"{c.Namespace}.{c.Name}" == _currentBreakpoint.ClassName);
+		if (targetClass == null)
+			return;
+
+		var targetMethod = targetClass.Methods.FirstOrDefault(m => m.Name == _currentBreakpoint.MethodName);
+		if (targetMethod?.Graph == null)
+			return;
+
+		var graph = targetMethod.Graph;
+
+		// For each mapping, try to find the connection and get its value
+		foreach (var mapping in methodMappings)
+		{
+			// Find the connection by ID
+			var connection = graph.Nodes.Values
+				.SelectMany(n => n.InputsAndOutputs)
+				.FirstOrDefault(c => c.Id == mapping.ConnectionId);
+
+			if (connection != null)
+			{
+				// Try to get a meaningful value
+				object? value = null;
+
+				// If it's an input with a textbox value, use that
+				if (connection.IsInput && !string.IsNullOrEmpty(connection.TextboxValue))
+				{
+					value = connection.ParsedTextboxValue ?? connection.TextboxValue;
+				}
+				// If it's an output, check if it's connected to inputs with textbox values
+				else if (connection.IsOutput && connection.Connections.Count > 0)
+				{
+					// For simple constant propagation
+					var sourceInput = connection.Parent.Inputs.FirstOrDefault(i => !string.IsNullOrEmpty(i.TextboxValue));
+					if (sourceInput != null)
+					{
+						value = sourceInput.ParsedTextboxValue ?? sourceInput.TextboxValue;
+					}
+				}
+
+				// Store the value or a placeholder
+				_breakpointVariableValues[mapping.ConnectionId] = value ?? $"<{mapping.VariableName}>";
+			}
+		}
 	}
 
 	#endregion

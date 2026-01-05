@@ -70,13 +70,13 @@ public class GenerationContext
 		_connectionToVariableName[connection.Id] = variableName;
 
 		// Track this mapping for debugging (if we have method context)
-		if (_currentClassName != null && _currentMethodName != null && connection.GraphIndex >= 0)
+		if (_currentClassName != null && _currentMethodName != null)
 		{
 			// Note: SlotIndex will be -1 initially, as we don't know it until after compilation
 			// It could be determined later by analyzing the PDB, but for now we'll use variable name lookup
 			_variableMappings.Add(new ConnectionVariableMapping
 			{
-				ConnectionGraphIndex = connection.GraphIndex,
+				ConnectionId = connection.Id,
 				VariableName = variableName,
 				SlotIndex = -1, // Unknown at code generation time
 				ClassName = _currentClassName,

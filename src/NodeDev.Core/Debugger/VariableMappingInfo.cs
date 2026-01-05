@@ -7,9 +7,9 @@ namespace NodeDev.Core.Debugger;
 public class ConnectionVariableMapping
 {
 	/// <summary>
-	/// The unique identifier of the connection (GraphIndex).
+	/// The unique identifier of the connection (Connection.Id).
 	/// </summary>
-	public required int ConnectionGraphIndex { get; init; }
+	public required string ConnectionId { get; init; }
 
 	/// <summary>
 	/// The name of the local variable in the generated code.
@@ -35,7 +35,7 @@ public class ConnectionVariableMapping
 
 /// <summary>
 /// Collection of all variable mappings for a compiled project.
-/// Allows lookup of variable information by connection graph index.
+/// Allows lookup of variable information by connection ID.
 /// </summary>
 public class VariableMappingInfo
 {
@@ -45,13 +45,13 @@ public class VariableMappingInfo
 	public List<ConnectionVariableMapping> Mappings { get; init; } = new();
 
 	/// <summary>
-	/// Gets the variable mapping for a specific connection graph index.
+	/// Gets the variable mapping for a specific connection ID.
 	/// </summary>
-	/// <param name="connectionGraphIndex">The graph index of the connection.</param>
+	/// <param name="connectionId">The ID of the connection.</param>
 	/// <returns>The mapping if found, null otherwise.</returns>
-	public ConnectionVariableMapping? GetMapping(int connectionGraphIndex)
+	public ConnectionVariableMapping? GetMapping(string connectionId)
 	{
-		return Mappings.FirstOrDefault(m => m.ConnectionGraphIndex == connectionGraphIndex);
+		return Mappings.FirstOrDefault(m => m.ConnectionId == connectionId);
 	}
 
 	/// <summary>

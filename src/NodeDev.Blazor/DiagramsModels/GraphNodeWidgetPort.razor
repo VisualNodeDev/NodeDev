@@ -36,9 +36,9 @@
 	private string GetDebugValue(GraphPortModel port)
 	{
 		// Check if we're paused at a breakpoint in hard debugging mode
-		if (GraphCanvas.Graph.Project.IsPausedAtBreakpoint && port.Connection.GraphIndex >= 0)
+		if (GraphCanvas.Graph.Project.IsPausedAtBreakpoint)
 		{
-			var (value, success) = GraphCanvas.Graph.Project.GetVariableValueAtBreakpoint(port.Connection.GraphIndex);
+			var (value, success) = GraphCanvas.Graph.Project.GetVariableValueAtBreakpoint(port.Connection.Id);
 			if (success)
 				return value;
 			// If not successful (e.g., variable not in current scope), fall through to show type
