@@ -30,8 +30,7 @@ public class HomePage
 
 		await SearchNewProjectButton.ClickAsync();
 
-		// Wait for project explorer to be visible instead of fixed delay
-		await SearchProjectExplorer.WaitForVisible();
+		await Task.Delay(100);
 	}
 
 	public async Task HasClass(string name)
@@ -46,20 +45,16 @@ public class HomePage
 
 	public async Task OpenProjectExplorerProjectTab()
 	{
-		var projectTab = SearchProjectExplorerTabsHeader.GetByText("PROJECT");
-		await projectTab.ClickAsync();
+		await SearchProjectExplorerTabsHeader.GetByText("PROJECT").ClickAsync();
 
-		// Wait for project explorer content to be visible
-		await SearchProjectExplorerClasses.First.WaitForVisible();
+		await Task.Delay(100);
 	}
 
 	public async Task OpenProjectExplorerClassTab()
 	{
-		var classTab = SearchProjectExplorerTabsHeader.GetByText("CLASS");
-		await classTab.ClickAsync();
+		await SearchProjectExplorerTabsHeader.GetByText("CLASS").ClickAsync();
 
-		// Wait for class explorer content to be visible
-		await SearchClassExplorer.WaitForVisible();
+		await Task.Delay(100);
 	}
 
 	public async Task<ILocator> FindMethodByName(string name)
@@ -84,8 +79,7 @@ public class HomePage
 		await locator.WaitForVisible();
 		await locator.ClickAsync();
 
-		// Wait for graph canvas to be visible instead of fixed delay
-		await SearchGraphCanvas.WaitForVisible();
+		await Task.Delay(100); // Wait for method to open - reduced from 200ms
 	}
 
 	public async Task SaveProject()
@@ -196,10 +190,9 @@ public class HomePage
 		// Perform manual drag with proper event sequence for Blazor.Diagrams
 		// 1. Move mouse to starting position
 		await _user.Mouse.MoveAsync(sourceX, sourceY);
-
 		// 2. Press mouse button down (pointerdown event)
 		await _user.Mouse.DownAsync();
-		await Task.Delay(50); // Minimal delay for event propagation
+		await Task.Delay(50); // Single delay for event propagation
 
 		// 3. Move mouse to target position with multiple steps (pointermove events)
 		await _user.Mouse.MoveAsync(targetX, targetY, new() { Steps = 15 });
@@ -207,8 +200,8 @@ public class HomePage
 		// 4. Release mouse button (pointerup event)
 		await _user.Mouse.UpAsync();
 
-		// Wait for the UI to update after drag - reduced from 300ms
-		await Task.Delay(100);
+		// Wait for the UI to update after drag
+		await Task.Delay(200); // Reduced from 300ms
 	}
 
 	public async Task SetNodeInputValue(string nodeName, string inputName, string value)
@@ -280,10 +273,10 @@ public class HomePage
 		// Perform drag from source port to target port using same approach as node dragging
 		await _user.Mouse.MoveAsync(sourceX, sourceY);
 		await _user.Mouse.DownAsync();
-		await Task.Delay(50); // Minimal delay for event propagation
+		await Task.Delay(50); // Single delay for event propagation
 		await _user.Mouse.MoveAsync(targetX, targetY, new() { Steps = 20 });
 		await _user.Mouse.UpAsync();
-		await Task.Delay(100); // Wait for connection to be established - reduced from 200ms
+		await Task.Delay(150); // Wait for connection to be established - reduced from 200ms
 	}
 
 	public async Task DeleteConnection(string sourceNodeName, string sourcePortName, string targetNodeName, string targetPortName)
@@ -314,11 +307,11 @@ public class HomePage
 
 		// Click on the connection to select it
 		await _user.Mouse.ClickAsync(midX, midY);
-		await Task.Delay(50); // Minimal delay for selection
+		await Task.Delay(100);
 
 		// Press Delete key to remove the connection
 		await _user.Keyboard.PressAsync("Delete");
-		await Task.Delay(50); // Minimal delay for deletion
+		await Task.Delay(100);
 	}
 
 	public async Task TakeScreenshot(string fileName)
@@ -339,9 +332,8 @@ public class HomePage
 			var searchInput = _user.Locator("[data-test-id='node-search-input']");
 			await searchInput.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
 			await searchInput.FillAsync(nodeType);
-			// Wait for first search result to appear instead of fixed delay
-			var firstResult = _user.Locator("[data-test-id='node-search-result']").First;
-			await firstResult.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 2000 });
+			// Wait for search results to update
+			await Task.Delay(300);
 		}
 		else
 		{
@@ -358,9 +350,6 @@ public class HomePage
 		{
 			await nodeResult.First.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
 			await nodeResult.First.ClickAsync();
-			
-			// Wait for node to be added to canvas
-			await Task.Delay(100);
 		}
 		catch (TimeoutException)
 		{
@@ -389,7 +378,7 @@ public class HomePage
 					var connection = connections.Nth(i);
 					await connection.ClickAsync(new() { Force = true, Timeout = 1000 });
 					await _user.Keyboard.PressAsync("Delete");
-					await Task.Delay(50); // Minimal delay for deletion
+					await Task.Delay(100);
 				}
 				catch
 				{
@@ -429,7 +418,7 @@ public class HomePage
 		var canvas = GetGraphCanvas();
 		await canvas.HoverAsync();
 		await _user.Mouse.WheelAsync(0, -100); // Scroll up to zoom in
-		await Task.Delay(50); // Minimal delay for zoom to apply
+		await Task.Delay(100); // Reduced from 200ms
 		Console.WriteLine("Zoomed in on canvas");
 	}
 
@@ -438,7 +427,7 @@ public class HomePage
 		var canvas = GetGraphCanvas();
 		await canvas.HoverAsync();
 		await _user.Mouse.WheelAsync(0, 100); // Scroll down to zoom out
-		await Task.Delay(50); // Minimal delay for zoom to apply
+		await Task.Delay(100); // Reduced from 200ms
 		Console.WriteLine("Zoomed out on canvas");
 	}
 
@@ -455,7 +444,7 @@ public class HomePage
 			await _user.Mouse.DownAsync(new() { Button = MouseButton.Middle });
 			await _user.Mouse.MoveAsync(startX + deltaX, startY + deltaY, new() { Steps = 10 });
 			await _user.Mouse.UpAsync(new() { Button = MouseButton.Middle });
-			await Task.Delay(50); // Minimal delay for pan to apply
+			await Task.Delay(50); // Reduced from 100ms
 		}
 		Console.WriteLine($"Panned canvas by ({deltaX}, {deltaY})");
 	}
@@ -473,7 +462,7 @@ public class HomePage
 			// Simulate with keyboard shortcut
 			await _user.Keyboard.PressAsync("Control+0");
 		}
-		await Task.Delay(100); // Minimal delay for reset to apply
+		await Task.Delay(100); // Reduced from 200ms
 		Console.WriteLine("Reset canvas view");
 	}
 
@@ -489,13 +478,10 @@ public class HomePage
 
 		await createClassButton.ClickAsync();
 		var nameInput = _user.Locator("[data-test-id='class-name-input']");
-		await nameInput.WaitForVisible();
 		await nameInput.FillAsync(className);
 		var confirmButton = _user.Locator("[data-test-id='confirm-create-class']");
 		await confirmButton.ClickAsync();
-		
-		// Wait for the new class to appear in the list
-		await SearchProjectExplorerClasses.GetByText(className, new() { Exact = true }).WaitForVisible();
+		await Task.Delay(200);
 	}
 
 	public async Task RenameClass(string oldName, string newName)
@@ -542,14 +528,10 @@ public class HomePage
 
 		await createMethodButton.ClickAsync();
 		var nameInput = _user.Locator("[data-test-id='method-name-input']");
-		await nameInput.WaitForVisible();
 		await nameInput.FillAsync(methodName);
 		var confirmButton = _user.Locator("[data-test-id='confirm-create-method']");
 		await confirmButton.ClickAsync();
-		
-		// Wait for the new method to appear in the list
-		var methodLocator = SearchClassExplorer.Locator($"[data-test-id='Method'][data-test-method='{methodName}']");
-		await methodLocator.WaitForVisible();
+		await Task.Delay(200);
 	}
 
 	public async Task RenameMethod(string oldName, string newName)
@@ -569,10 +551,7 @@ public class HomePage
 
 		var confirmButton = _user.Locator("[data-test-id='confirm-rename']");
 		await confirmButton.ClickAsync();
-		
-		// Wait for the method to appear with the new name
-		var methodLocator = SearchClassExplorer.Locator($"[data-test-id='Method'][data-test-method='{newName}']");
-		await methodLocator.WaitForVisible();
+		await Task.Delay(500); // Wait for rename to complete
 	}
 
 	public async Task DeleteMethod(string methodName)
@@ -598,9 +577,7 @@ public class HomePage
 			// No confirmation dialog appeared, continue
 		}
 
-		// Wait for the method to disappear from the list
-		var methodLocator = SearchClassExplorer.Locator($"[data-test-id='Method'][data-test-method='{methodName}']");
-		await methodLocator.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 5000 });
+		await Task.Delay(500); // Wait for deletion to complete
 	}
 
 	public async Task<bool> MethodExists(string methodName)
@@ -628,8 +605,7 @@ public class HomePage
 			if (await editButton.CountAsync() > 0)
 			{
 				await editButton.ClickAsync();
-				// Wait for add parameter button to appear
-				await addParamButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 2000 });
+				await Task.Delay(200);
 			}
 			else
 			{
@@ -643,7 +619,7 @@ public class HomePage
 			await addParamButton.ClickAsync();
 			// The actual implementation in EditMethodMenu just adds a parameter directly
 			// No dialog is opened, so we don't need to fill in name/type
-			await Task.Delay(100); // Minimal delay for parameter addition
+			await Task.Delay(200);
 		}
 		else
 		{
@@ -667,8 +643,7 @@ public class HomePage
 		{
 			await confirmButton.ClickAsync();
 		}
-		// Wait for snackbar or completion indicator
-		await Task.Delay(200);
+		await Task.Delay(500);
 	}
 
 	public async Task BuildProject()
@@ -680,17 +655,7 @@ public class HomePage
 		}
 
 		await buildButton.ClickAsync();
-		// Wait for build to complete - look for success indicator or snackbar
-		var snackbar = SearchSnackBarContainer;
-		try
-		{
-			await snackbar.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
-		}
-		catch
-		{
-			// If no snackbar appears, use minimal delay
-			await Task.Delay(500);
-		}
+		await Task.Delay(1000);
 	}
 
 	public async Task RunProject()
@@ -702,8 +667,7 @@ public class HomePage
 		}
 
 		await runButton.ClickAsync();
-		// Wait for console panel to appear
-		await Task.Delay(200);
+		await Task.Delay(500);
 	}
 
 	// UI Responsiveness
@@ -746,7 +710,7 @@ public class HomePage
 			await node.ClickAsync(new() { Force = true });
 		}
 		await _user.Keyboard.PressAsync("Delete");
-		await Task.Delay(100); // Minimal delay for deletion
+		await Task.Delay(200);
 		Console.WriteLine($"Deleted node '{nodeName}'");
 	}
 
@@ -759,17 +723,7 @@ public class HomePage
 	public async Task SaveProjectWithKeyboard()
 	{
 		await _user.Keyboard.PressAsync("Control+S");
-		// Wait for save to complete - look for snackbar
-		var snackbar = SearchSnackBarContainer;
-		try
-		{
-			await snackbar.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 2000 });
-		}
-		catch
-		{
-			// If no snackbar, use minimal delay
-			await Task.Delay(200);
-		}
+		await Task.Delay(500);
 		Console.WriteLine("Saved project with Ctrl+S");
 	}
 
@@ -804,12 +758,8 @@ public class HomePage
 		var consolePanel = _user.Locator("[data-test-id='consolePanel']");
 		await consolePanel.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeoutMs });
 
-		// Wait for console output to appear
-		var consoleLines = _user.Locator("[data-test-id='consoleLine']");
-		await consoleLines.First.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
-		
-		// Give a small delay for final output
-		await Task.Delay(500);
+		// Wait a bit for the process to complete
+		await Task.Delay(2000);
 		Console.WriteLine("✓ Project execution completed");
 	}
 
@@ -929,18 +879,6 @@ public class HomePage
 	{
 		var node = GetGraphNode(nodeName);
 		var breakpointIndicator = node.Locator(".breakpoint-indicator");
-		
-		// Wait for the indicator to disappear if it exists
-		try
-		{
-			await breakpointIndicator.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 2000 });
-		}
-		catch
-		{
-			// If it was never there, that's fine too
-		}
-		
-		// Verify it's gone
 		var count = await breakpointIndicator.CountAsync();
 		
 		if (count > 0)

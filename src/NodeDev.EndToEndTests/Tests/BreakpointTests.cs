@@ -30,13 +30,15 @@ public class BreakpointTests : E2ETestBase
 
 		// Click the toggle breakpoint button
 		await HomePage.ClickToggleBreakpointButton();
-		
-		// Verify breakpoint was added (VerifyNodeHasBreakpoint waits for the indicator)
+		await Task.Delay(150); // Wait for UI update - reduced from 300ms
+
+		// Verify breakpoint was added
 		await HomePage.VerifyNodeHasBreakpoint("Return");
 
 		// Click the toggle breakpoint button again to remove
 		await HomePage.ClickToggleBreakpointButton();
-		
+		await Task.Delay(150); // Wait for UI update - reduced from 300ms
+
 		// Verify breakpoint was removed
 		await HomePage.VerifyNodeHasNoBreakpoint("Return");
 	}
@@ -61,13 +63,15 @@ public class BreakpointTests : E2ETestBase
 
 		// Press F9 to add breakpoint
 		await Page.Keyboard.PressAsync("F9");
-		
-		// Verify breakpoint was added (VerifyNodeHasBreakpoint waits for the indicator)
+		await Task.Delay(150); // Wait for UI update - reduced from 300ms
+
+		// Verify breakpoint was added
 		await HomePage.VerifyNodeHasBreakpoint("Return");
 
 		// Press F9 again to remove breakpoint
 		await Page.Keyboard.PressAsync("F9");
-		
+		await Task.Delay(150); // Wait for UI update - reduced from 300ms
+
 		// Verify breakpoint was removed
 		await HomePage.VerifyNodeHasNoBreakpoint("Return");
 	}
@@ -87,10 +91,11 @@ public class BreakpointTests : E2ETestBase
 		await returnNode.WaitForVisible();
 		var returnNodeTitle = returnNode.Locator(".title");
 		await returnNodeTitle.ClickAsync(new() { Force = true });
-		
+		await Task.Delay(200);
 		await Page.Keyboard.PressAsync("F9");
+		await Task.Delay(300);
 
-		// Verify breakpoint was added (VerifyNodeHasBreakpoint waits for the indicator)
+		// Verify breakpoint was added
 		await HomePage.VerifyNodeHasBreakpoint("Return");
 
 		// Click on Entry node to change selection (use title click)
@@ -98,12 +103,14 @@ public class BreakpointTests : E2ETestBase
 		await entryNode.WaitForVisible();
 		var entryNodeTitle = entryNode.Locator(".title");
 		await entryNodeTitle.ClickAsync(new() { Force = true });
+		await Task.Delay(200);
 
 		// Verify breakpoint is still on Return node
 		await HomePage.VerifyNodeHasBreakpoint("Return");
 
 		// Click back on Return node
 		await returnNodeTitle.ClickAsync(new() { Force = true });
+		await Task.Delay(200);
 
 		// Verify breakpoint is still there
 		await HomePage.VerifyNodeHasBreakpoint("Return");
@@ -155,14 +162,19 @@ public class BreakpointTests : E2ETestBase
 		await HomePage.ClickClass("Program");
 		await HomePage.OpenMethod("Main");
 
+		// Wait for nodes to load
+		await Task.Delay(500);
+
 		// Add breakpoint to Return node
 		var returnNode = HomePage.GetGraphNode("Return");
 		await returnNode.WaitForVisible();
 		var returnNodeTitle = returnNode.Locator(".title");
 		await returnNodeTitle.ClickAsync(new() { Force = true });
+		await Task.Delay(300);
 		await HomePage.ClickToggleBreakpointButton();
+		await Task.Delay(500);
 		
-		// Verify Return has breakpoint (VerifyNodeHasBreakpoint waits for the indicator)
+		// Verify Return has breakpoint
 		await HomePage.VerifyNodeHasBreakpoint("Return");
 
 		// Take a screenshot showing the breakpoint on Return
@@ -191,8 +203,9 @@ public class BreakpointTests : E2ETestBase
 		await returnNode.WaitForVisible();
 		var returnNodeTitle = returnNode.Locator(".title");
 		await returnNodeTitle.ClickAsync(new() { Force = true });
-		
+		await Task.Delay(200);
 		await Page.Keyboard.PressAsync("F9");
+		await Task.Delay(300);
 
 		// Take screenshot with breakpoint
 		await HomePage.TakeScreenshot("/tmp/with-breakpoint.png");
@@ -207,6 +220,7 @@ public class BreakpointTests : E2ETestBase
 
 		// Remove breakpoint and verify indicator disappears
 		await Page.Keyboard.PressAsync("F9");
+		await Task.Delay(300);
 
 		// Take screenshot after removing breakpoint
 		await HomePage.TakeScreenshot("/tmp/after-removing-breakpoint.png");
@@ -231,27 +245,17 @@ public class BreakpointTests : E2ETestBase
 		await returnNode.WaitForVisible();
 		var returnNodeTitle = returnNode.Locator(".title");
 		await returnNodeTitle.ClickAsync(new() { Force = true });
-		
+		await Task.Delay(100); // Reduced from 200ms
 		await Page.Keyboard.PressAsync("F9");
+		await Task.Delay(150); // Reduced from 300ms
 
-		// Verify breakpoint was added (VerifyNodeHasBreakpoint waits for the indicator)
+		// Verify breakpoint was added
 		await HomePage.VerifyNodeHasBreakpoint("Return");
 
 		// Build the project first
 		var buildButton = Page.Locator("[data-test-id='build-project']");
 		await buildButton.ClickAsync();
-		
-		// Wait for build to complete - look for snackbar or use shorter delay
-		var snackbar = Page.Locator("#mud-snackbar-container");
-		try
-		{
-			await snackbar.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible, Timeout = 5000 });
-			await Task.Delay(500); // Short delay after snackbar appears
-		}
-		catch
-		{
-			await Task.Delay(1000); // Fallback delay if no snackbar
-		}
+		await Task.Delay(1500); // Wait for build to complete - reduced from 2000ms
 
 		// Verify no breakpoint status message before running
 		await HomePage.VerifyNoBreakpointStatusMessage();
@@ -259,8 +263,8 @@ public class BreakpointTests : E2ETestBase
 		// Run with debug - this should hit the breakpoint and pause
 		await HomePage.RunWithDebug();
 		
-		// Wait for the process to hit the breakpoint - reduced from 3000ms
-		await Task.Delay(1500);
+		// Wait a bit for the process to start and hit breakpoint
+		await Task.Delay(2000); // Reduced from 3000ms
 
 		// Take screenshot showing paused state
 		await HomePage.TakeScreenshot("/tmp/paused-at-breakpoint.png");
@@ -278,8 +282,9 @@ public class BreakpointTests : E2ETestBase
 		// Take screenshot after continue
 		await HomePage.TakeScreenshot("/tmp/after-continue.png");
 
-		// After continue, wait for program to complete - reduced from 2000ms
-		await Task.Delay(1000);
+		// After continue, the breakpoint message should disappear (program completes)
+		// Wait a bit for program to complete
+		await Task.Delay(2000);
 
 		// The status message should eventually disappear when program ends
 		// (or show debugging status without breakpoint)

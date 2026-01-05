@@ -100,7 +100,7 @@ public class NodeManipulationTests : E2ETestBase
 		await HomePage.ClickClass("Program");
 		await HomePage.OpenMethod("Main");
 
-		// Wait for nodes to be visible
+		// Wait for nodes to be visible before trying to delete connection
 		var entryNode = HomePage.GetGraphNode("Entry");
 		var returnNode = HomePage.GetGraphNode("Return");
 		await entryNode.WaitForVisible();

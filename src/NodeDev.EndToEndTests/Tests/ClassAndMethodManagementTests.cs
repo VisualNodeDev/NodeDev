@@ -46,10 +46,25 @@ public class ClassAndMethodManagementTests : E2ETestBase
 		{
 			await HomePage.RenameClass("Program", "RenamedProgram");
 			
-			// RenameClass now waits for the renamed element to appear
-			// Verify the rename was successful
-			var renamedExists = await HomePage.ClassExists("RenamedProgram");
-			var originalStillExists = await HomePage.ClassExists("Program");
+			// Wait for UI to update with retry logic
+			await Task.Delay(1000);
+			
+			// Try multiple times to find the renamed class
+			var renamedExists = false;
+			var originalStillExists = false;
+			for (int i = 0; i < 10; i++)
+			{
+				renamedExists = await HomePage.ClassExists("RenamedProgram");
+				originalStillExists = await HomePage.ClassExists("Program");
+				
+				if (renamedExists && !originalStillExists) 
+				{
+					// Success!
+					break;
+				}
+				
+				await Task.Delay(500);
+			}
 			
 			// Log what we found for debugging
 			Console.WriteLine($"After rename: RenamedProgram exists={renamedExists}, Program still exists={originalStillExists}");
@@ -103,9 +118,17 @@ public class ClassAndMethodManagementTests : E2ETestBase
 		{
 			await HomePage.RenameMethod("Main", "RenamedMain");
 			
-			// RenameMethod now waits for the renamed element to appear
-			// Verify the rename was successful
-			var exists = await HomePage.MethodExists("RenamedMain");
+			// Wait for UI to update with retry logic
+			await Task.Delay(1000);
+			
+			// Try multiple times to find the renamed method
+			var exists = false;
+			for (int i = 0; i < 5; i++)
+			{
+				exists = await HomePage.MethodExists("RenamedMain");
+				if (exists) break;
+				await Task.Delay(1000);
+			}
 			
 			Assert.True(exists, "Method 'RenamedMain' not found after rename");
 			
@@ -134,8 +157,11 @@ public class ClassAndMethodManagementTests : E2ETestBase
 			await HomePage.CreateMethod("MethodToDelete");
 			await HomePage.HasMethodByName("MethodToDelete");
 			
-			// Now delete it - DeleteMethod now waits for the element to disappear
+			// Now delete it
 			await HomePage.DeleteMethod("MethodToDelete");
+			
+			// Wait for deletion
+			await Task.Delay(1000);
 			
 			var exists = await HomePage.MethodExists("MethodToDelete");
 			Assert.False(exists, "Method 'MethodToDelete' should have been deleted");

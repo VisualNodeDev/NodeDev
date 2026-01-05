@@ -60,7 +60,9 @@ public class ProjectManagementTests : E2ETestBase
 		await HomePage.SetProjectNameAs("ModifiedProject");
 		await HomePage.AcceptSaveAs();
 		
-		// SnackBarHasByText now waits for snackbar
+		// Wait for save to complete
+		await Task.Delay(500);
+		
 		await HomePage.SnackBarHasByText("Project saved");
 		await HomePage.TakeScreenshot("/tmp/modified-project-saved.png");
 	}
@@ -75,6 +77,7 @@ public class ProjectManagementTests : E2ETestBase
 			await HomePage.ExportProject();
 			
 			// Check for success (no error message)
+			await Task.Delay(200);
 			var hasError = await HomePage.HasErrorMessage();
 			Assert.False(hasError, "Export failed - error message present");
 			
@@ -96,8 +99,8 @@ public class ProjectManagementTests : E2ETestBase
 		{
 			await HomePage.BuildProject();
 			
-			// BuildProject now waits for completion via snackbar
 			// Check for build success (no build errors)
+			await Task.Delay(500);
 			var buildError = Page.Locator("[data-test-id='build-error']");
 			var hasError = await buildError.CountAsync() > 0;
 			Assert.False(hasError, "Build failed - error indicator present");
@@ -120,8 +123,8 @@ public class ProjectManagementTests : E2ETestBase
 		{
 			await HomePage.RunProject();
 			
-			// RunProject now includes minimal delay
 			// Verify execution started (no immediate error)
+			await Task.Delay(500);
 			var runtimeError = Page.Locator("[data-test-id='runtime-error']");
 			var hasError = await runtimeError.CountAsync() > 0;
 			Assert.False(hasError, "Project execution failed - error indicator present");
