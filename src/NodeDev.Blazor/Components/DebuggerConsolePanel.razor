@@ -1,7 +1,7 @@
 <MudPaper Class="w100 pa-1 overflow-y-scroll d-flex flex-column relative" Style="@GetPanelStyle()" data-test-id="consolePanel">
 	<MudIconButton Icon="@(IsShowing ? MudBlazor.Icons.Material.Filled.ArrowDropDown : MudBlazor.Icons.Material.Filled.ArrowDropUp)" 
 				   Class="absolute" 
-				   Style="right: 0px; top: 0px; z-index: 100000" 
+				   Style="@GetButtonStyle()" 
 				   Size="Size.Small" 
 				   OnClick="@(() => IsShowing = !IsShowing)"
 				   data-test-id="@(IsShowing ? "collapseConsoleButton" : "showConsoleButton")"></MudIconButton>
