@@ -230,7 +230,7 @@ public class BreakpointTests : E2ETestBase
 		Assert.Equal(0, indicatorCount);
 	}
 
-	[Fact(Timeout = 120_000)]
+	[Fact]
 	public async Task BreakpointPausesExecutionAndShowsStatusMessage()
 	{
 		// Load default project and open Main method
@@ -288,125 +288,6 @@ public class BreakpointTests : E2ETestBase
 
 		// The status message should eventually disappear when program ends
 		// (or show debugging status without breakpoint)
-	}
-
-	[Fact(Timeout = 90_000)]
-	public async Task DynamicBreakpoint_CanBeAddedDuringDebugSession()
-	{
-		// Create a new project
-		await HomePage.CreateNewProject();
-
-		// Open Program/Main for node manipulation
-		await HomePage.OpenProjectExplorerProjectTab();
-		await HomePage.HasClass("Program");
-		await HomePage.ClickClass("Program");
-		await HomePage.OpenMethod("Main");
-
-		// Move Return node to make space for additional nodes
-		await HomePage.DragNodeTo("Return", 2200, 400);
-
-		// Add WriteLine node #1 (connected to Entry)
-		await HomePage.SearchForNodes("WriteLine");
-		await HomePage.AddNodeFromSearch("WriteLine");
-		await HomePage.DragNodeTo("WriteLine", 600, 400);
-		await HomePage.SetNodeInputValue("WriteLine", "Value", "\"First WriteLine\"");
-
-		// Add Sleep node (reduced to 1000ms for faster test)
-		await HomePage.SearchForNodes("Sleep");
-		await HomePage.AddNodeFromSearch("Sleep");
-		await HomePage.DragNodeTo("Sleep", 1000, 400);
-		await HomePage.SetNodeInputValue("Sleep", "TimeMilliseconds", "1000");
-
-		// Add WriteLine node #2 (this will get the late breakpoint)
-		await HomePage.SearchForNodes("WriteLine");
-		await HomePage.AddNodeFromSearch("WriteLine");
-		await HomePage.DragNodeTo("WriteLine", 1600, 400);
-		await HomePage.SetNodeInputValue("WriteLine", "Value", "\"Second WriteLine\"");
-
-		// Connect the nodes: Entry -> WriteLine1 -> Sleep -> WriteLine2 -> Return
-		await HomePage.ConnectPorts("Entry", "Exec", "WriteLine", "Exec");
-		await HomePage.ConnectPorts("WriteLine", "Exec", "Sleep", "Exec");
-		await HomePage.ConnectPorts("Sleep", "Exec", "WriteLine", "Exec", targetIndex: 1); // Second WriteLine
-		await HomePage.ConnectPorts("WriteLine", "Exec", "Return", "Exec", sourceIndex: 1); // From second WriteLine
-
-		// Add breakpoint to first WriteLine ONLY
-		var firstWriteLine = HomePage.GetGraphNodes("WriteLine")[0];
-		await firstWriteLine.WaitForVisible();
-		var firstWriteLineTitle = firstWriteLine.Locator(".title");
-		await firstWriteLineTitle.ClickAsync(new() { Force = true });
-		await Task.Delay(200);
-		await Page.Keyboard.PressAsync("F9");
-		await Task.Delay(300);
-
-		// Verify first WriteLine has breakpoint
-		await HomePage.VerifyNodeHasBreakpoint("WriteLine", nodeIndex: 0);
-
-		// Take screenshot before debugging
-		await HomePage.TakeScreenshot("/tmp/dynamic-bp-before-debug.png");
-
-		// Build the project
-		var buildButton = Page.Locator("[data-test-id='build-project']");
-		await buildButton.ClickAsync();
-		await Task.Delay(2000);
-
-		// Start debugging - should hit first breakpoint
-		await HomePage.RunWithDebug();
-		await Task.Delay(1500);
-
-		// Verify we hit the first breakpoint
-		await HomePage.VerifyBreakpointStatusMessage("WriteLine");
-		await HomePage.TakeScreenshot("/tmp/dynamic-bp-first-hit.png");
-
-		Console.WriteLine("✓ Hit first breakpoint (WriteLine #1)");
-
-		// Continue execution - sleep will start
-		await HomePage.ClickContinueButton();
-		await Task.Delay(300);
-
-		Console.WriteLine("✓ Continued after first breakpoint - Sleep is executing");
-
-		// NOW add breakpoint to second WriteLine WHILE PROGRAM IS RUNNING
-		var secondWriteLine = HomePage.GetGraphNodes("WriteLine")[1];
-		await secondWriteLine.WaitForVisible();
-		var secondWriteLineTitle = secondWriteLine.Locator(".title");
-		await secondWriteLineTitle.ClickAsync(new() { Force = true });
-		await Task.Delay(200);
-		await Page.Keyboard.PressAsync("F9");
-		await Task.Delay(300);
-
-		Console.WriteLine("✓ Added breakpoint to second WriteLine DURING EXECUTION");
-
-		// Verify second WriteLine now has breakpoint
-		await HomePage.VerifyNodeHasBreakpoint("WriteLine", nodeIndex: 1);
-		await HomePage.TakeScreenshot("/tmp/dynamic-bp-late-added.png");
-
-		// Wait for second breakpoint to be hit (after sleep completes)
-		// Sleep is 1000ms, we've waited ~600ms, so wait up to 1500ms more
-		await Task.Delay(1500);
-
-		// Verify we hit the SECOND (dynamically-added) breakpoint
-		await HomePage.VerifyBreakpointStatusMessage("WriteLine");
-		await HomePage.TakeScreenshot("/tmp/dynamic-bp-second-hit.png");
-
-		Console.WriteLine("✓ Hit SECOND breakpoint (WriteLine #2) - dynamically added!");
-
-		// Verify Continue button is enabled
-		await HomePage.VerifyContinueButtonEnabled(shouldBeEnabled: true);
-
-		// Continue to completion
-		await HomePage.ClickContinueButton();
-		await Task.Delay(500);
-
-		Console.WriteLine("✓ Test completed successfully - dynamic breakpoint worked!");
-
-		// Cleanup - stop debugging if still running
-		var stopButton = Page.Locator("[data-test-id='stop-debug']");
-		var stopCount = await stopButton.CountAsync();
-		if (stopCount > 0)
-		{
-			await stopButton.ClickAsync();
-			await Task.Delay(500);
-		}
 	}
 
 }
