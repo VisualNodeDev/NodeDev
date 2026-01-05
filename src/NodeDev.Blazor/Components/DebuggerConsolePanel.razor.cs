@@ -41,7 +41,7 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 
 	private string GetButtonStyle()
 	{
-		return $"right: 0px; top: 0px; z-index: {ButtonZIndex}";
+		return $"left: 50%; transform: translateX(-50%); top: 0px; z-index: {ButtonZIndex}";
 	}
 	private IDisposable? RefreshRequiredDisposable;
 
