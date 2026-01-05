@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using NodeDev.Core;
 using NodeDev.Core.Debugger;
 using System.Reactive.Subjects;
@@ -11,6 +12,9 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 	[Parameter]
 	public Project Project { get; set; } = null!;
 
+	[Inject]
+	private IJSRuntime JSRuntime { get; set; } = null!;
+
 	private IDisposable? GraphExecutionChangedDisposable;
 	private IDisposable? ConsoleOutputDisposable;
 	private IDisposable? DebugCallbackDisposable;
@@ -22,6 +26,10 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 	private string LastLine = ">";
 
 	private bool IsShowing = false;
+	private bool AutoScrollEnabled = true;
+
+	private ElementReference ConsoleOutputContainer;
+	private ElementReference DebugCallbacksContainer;
 
 	private readonly Subject<object?> RefreshRequiredSubject = new();
 	private IDisposable? RefreshRequiredDisposable;
@@ -30,7 +38,14 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 	{
 		base.OnInitialized();
 
-		RefreshRequiredDisposable = RefreshRequiredSubject.AcceptThenSample(TimeSpan.FromMilliseconds(100)).Subscribe(_ => InvokeAsync(StateHasChanged));
+		RefreshRequiredDisposable = RefreshRequiredSubject.AcceptThenSample(TimeSpan.FromMilliseconds(100)).Subscribe(async _ => 
+		{
+			await InvokeAsync(StateHasChanged);
+			if (AutoScrollEnabled && IsShowing)
+			{
+				await ScrollToBottom();
+			}
+		});
 
 		GraphExecutionChangedDisposable = Project.GraphExecutionChanged.Subscribe(OnGraphExecutionChanged);
 		ConsoleOutputDisposable = Project.ConsoleOutput.Subscribe(OnConsoleOutput);
@@ -95,6 +110,20 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 		}
 
 		RefreshRequiredSubject.OnNext(null);
+	}
+
+	private async Task ScrollToBottom()
+	{
+		try
+		{
+			// For flex-column-reverse, scrolling to top (scrollTop = 0) shows the newest items
+			await JSRuntime.InvokeVoidAsync("eval", "document.querySelector('[data-test-id=\"consoleOutputContainer\"]')?.scrollTo(0, 0)");
+			await JSRuntime.InvokeVoidAsync("eval", "document.querySelector('[data-test-id=\"debugCallbacksContainer\"]')?.scrollTo(0, 0)");
+		}
+		catch
+		{
+			// Ignore JS interop errors (e.g., during disposal or if elements don't exist yet)
+		}
 	}
 
 	public void Dispose()

@@ -757,6 +757,36 @@ public class HomePage
 		return count > 0 && await consolePanel.IsVisibleAsync();
 	}
 
+	public async Task<bool> IsAutoScrollEnabled()
+	{
+		var toggleButton = _user.Locator("[data-test-id='autoScrollToggle']");
+		if (await toggleButton.CountAsync() == 0)
+			return false;
+
+		// Check if the icon is the "Lock" icon (enabled) or "LockOpen" icon (disabled)
+		var icon = await toggleButton.Locator("svg").First.GetAttributeAsync("data-testid");
+		return icon == "LockIcon"; // MudBlazor uses data-testid for icons
+	}
+
+	public async Task ToggleAutoScroll()
+	{
+		var toggleButton = _user.Locator("[data-test-id='autoScrollToggle']");
+		await toggleButton.WaitForVisible();
+		await toggleButton.ClickAsync();
+		await Task.Delay(200);
+		Console.WriteLine("Toggled auto-scroll");
+	}
+
+	public async Task<double> GetConsoleScrollPosition()
+	{
+		var container = _user.Locator("[data-test-id='consoleOutputContainer']");
+		await container.WaitForVisible();
+		
+		// Get the scrollTop value of the container
+		var scrollTop = await container.EvaluateAsync<double>("el => el.scrollTop");
+		return scrollTop;
+	}
+
 	public async Task WaitForProjectToComplete(int timeoutMs = 10000)
 	{
 		// Wait for the console panel to appear and stabilize
@@ -818,7 +848,7 @@ public class HomePage
 		{
 			await statusText.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
 			var text = await statusText.TextContentAsync();
-			if (!text.Contains(expectedNodeName))
+			if (text != null && !text.Contains(expectedNodeName))
 			{
 				throw new Exception($"Breakpoint status message does not contain expected node name '{expectedNodeName}'. Actual: '{text}'");
 			}
