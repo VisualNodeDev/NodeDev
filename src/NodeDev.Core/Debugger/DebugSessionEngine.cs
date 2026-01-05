@@ -27,6 +27,13 @@ public class DebugSessionEngine : IDisposable
 	/// Provides the NodeBreakpointInfo for the node where the breakpoint was hit.
 	/// </summary>
 	public event EventHandler<NodeBreakpointInfo>? BreakpointHit;
+	
+	/// <summary>
+	/// Delegate to check if a node should have a breakpoint set.
+	/// This is called during breakpoint setup to filter which nodes should have breakpoints.
+	/// Returns true if the node should have a breakpoint, false otherwise.
+	/// </summary>
+	public Func<string, bool>? ShouldSetBreakpointForNode { get; set; }
 
 	/// <summary>
 	/// Gets the current debug process, if any.
@@ -361,8 +368,11 @@ public class DebugSessionEngine : IDisposable
 	/// <summary>
 	/// Sets breakpoints in the debugged process based on the breakpoint mappings.
 	/// This should be called after modules are loaded (typically in LoadModule callback).
+	/// In the new design, this method is called during module load but only sets breakpoints
+	/// for nodes that currently have HasBreakpoint set to true (checked via ShouldSetBreakpointForNode delegate).
 	/// </summary>
-	public void TrySetBreakpointsForLoadedModules()
+	/// <param name="nodeFilter">Optional filter to only set breakpoints for specific node IDs. If null, processes all nodes with breakpoints.</param>
+	public void TrySetBreakpointsForLoadedModules(Func<NodeBreakpointInfo, bool>? nodeFilter = null)
 	{
 		if (_breakpointMappings == null || _breakpointMappings.Breakpoints.Count == 0)
 			return;
@@ -375,8 +385,20 @@ public class DebugSessionEngine : IDisposable
 			// Get all app domains
 			var appDomains = CurrentProcess.AppDomains.ToArray();
 			
-			// For each breakpoint mapping, try to set a breakpoint
-			foreach (var bpInfo in _breakpointMappings.Breakpoints)
+			// For each breakpoint mapping, check if we should set a breakpoint
+			// Only process nodes that:
+			// 1. Pass the filter (if provided), AND
+			// 2. Should have a breakpoint (checked via ShouldSetBreakpointForNode delegate)
+			var breakpointsToConsider = nodeFilter != null 
+				? _breakpointMappings.Breakpoints.Where(nodeFilter)
+				: _breakpointMappings.Breakpoints;
+			
+			// Further filter by ShouldSetBreakpointForNode delegate
+			var breakpointsToSet = breakpointsToConsider
+				.Where(bp => ShouldSetBreakpointForNode == null || ShouldSetBreakpointForNode(bp.NodeId))
+				.ToList();
+				
+			foreach (var bpInfo in breakpointsToSet)
 			{
 				// Skip if already set
 				if (_activeBreakpoints.ContainsKey(bpInfo.NodeId))
@@ -445,6 +467,65 @@ public class DebugSessionEngine : IDisposable
 		{
 			OnDebugCallback(new DebugCallbackEventArgs("BreakpointError", 
 				$"Failed to set breakpoints: {ex.Message}"));
+		}
+	}
+	
+	/// <summary>
+	/// Dynamically sets a breakpoint for a specific node during an active debug session.
+	/// This can be called after the process has started to add a breakpoint on-the-fly.
+	/// </summary>
+	/// <param name="nodeId">The ID of the node to set a breakpoint on.</param>
+	/// <returns>True if the breakpoint was set successfully, false otherwise.</returns>
+	public bool SetBreakpointForNode(string nodeId)
+	{
+		if (_breakpointMappings == null)
+			return false;
+			
+		// Find the breakpoint info for this node
+		var bpInfo = _breakpointMappings.Breakpoints.FirstOrDefault(bp => bp.NodeId == nodeId);
+		if (bpInfo == null)
+			return false;
+			
+		// If already set, return true
+		if (_activeBreakpoints.ContainsKey(nodeId))
+			return true;
+			
+		// Set breakpoint for just this node
+		TrySetBreakpointsForLoadedModules(bp => bp.NodeId == nodeId);
+		
+		// Check if it was set successfully
+		return _activeBreakpoints.ContainsKey(nodeId);
+	}
+	
+	/// <summary>
+	/// Dynamically removes a breakpoint for a specific node during an active debug session.
+	/// </summary>
+	/// <param name="nodeId">The ID of the node to remove the breakpoint from.</param>
+	/// <returns>True if the breakpoint was removed successfully, false if it wasn't set.</returns>
+	public bool RemoveBreakpointForNode(string nodeId)
+	{
+		if (!_activeBreakpoints.TryGetValue(nodeId, out var breakpoint))
+			return false;
+			
+		try
+		{
+			// Deactivate and dispose the breakpoint
+			if (breakpoint != null)
+			{
+				breakpoint.Activate(false);
+				// Note: ClrDebug breakpoints don't have explicit dispose
+			}
+			
+			_activeBreakpoints.Remove(nodeId);
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointRemoved", 
+				$"Removed breakpoint for node {nodeId}"));
+			return true;
+		}
+		catch (Exception ex)
+		{
+			OnDebugCallback(new DebugCallbackEventArgs("BreakpointError", 
+				$"Failed to remove breakpoint for node {nodeId}: {ex.Message}"));
+			return false;
 		}
 	}
 	
