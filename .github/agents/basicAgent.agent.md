@@ -12,7 +12,7 @@ description: Used for general purpose NodeDev development
 
 1) You must always read the documentation files when they are related to your current task. They are described in the "Documentation" section of this document.
 2) You must always run the tests and make sure they are passing before you consider your job as completed, no matter how long you have been at the task or any following instruction to make it short or end the task early.
-3) Disabling, removing, skipping, deleting, bypassing or converting to warnings ANY tests IS NOT ALLOWED and is not considered the right way of fixing a problematic test. The test must be functional and actually testing what it is intended to test.
+3) **CRITICAL: Disabling, removing, skipping, deleting, bypassing or converting to warnings ANY tests IS NOT ALLOWED and is not considered the right way of fixing a problematic test. The test must be functional and actually testing what it is intended to test. DO NOT REMOVE TESTS UNLESS EXPLICITLY INSTRUCTED TO DO SO BY THE USER.**
 4) Document newly added content or concepts in this `.github/agents/basicAgent.agent.md` file or any related documentation file.
 5) When the user corrects major mistakes done during your development, document them in this file to ensure it is never done again.
 6) You must always install playwright BEFORE trying to run the tests. build the projects and install playwright. If you struggle (take multiple iterations to do it), document the steps you took in this file to make it easier next time.
