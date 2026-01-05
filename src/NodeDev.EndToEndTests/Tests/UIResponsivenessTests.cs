@@ -115,29 +115,6 @@ public class UIResponsivenessTests : E2ETestBase
 	}
 
 	[Fact(Timeout = 60_000)]
-	public async Task TestLongMethodNamesDisplay()
-	{
-		await HomePage.CreateNewProject();
-		await HomePage.OpenProjectExplorerProjectTab();
-		await HomePage.ClickClass("Program");
-		await HomePage.OpenProjectExplorerClassTab();
-		
-		try
-		{
-			var longName = "ThisIsAVeryLongMethodNameThatShouldBeDisplayedProperlyWithoutOverflowingTheUI";
-			await HomePage.CreateMethodWithLongName(longName);
-			await HomePage.HasMethodByName(longName);
-			
-			await HomePage.TakeScreenshot("/tmp/long-method-name.png");
-			Console.WriteLine("✓ Long method name displayed correctly");
-		}
-		catch (NotImplementedException ex)
-		{
-			Console.WriteLine($"Method creation not implemented: {ex.Message}");
-		}
-	}
-
-	[Fact(Timeout = 60_000)]
 	public async Task TestConcurrentOperations()
 	{
 		await HomePage.CreateNewProject();

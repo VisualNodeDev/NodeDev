@@ -10,6 +10,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("NodeDev.Tests")]
 
@@ -269,6 +271,27 @@ public class Project
 		var compiler = new RoslynNodeClassCompiler(this, buildOptions);
 		var result = compiler.Compile();
 		return result.Assembly;
+	}
+
+	/// <summary>
+	/// Gets the generated C# source code for a specific method by building it on-the-fly.
+	/// Uses the RoslynGraphBuilder to generate the method syntax directly.
+	/// </summary>
+	public string? GetGeneratedCSharpCode(NodeClassMethod method)
+	{
+		try
+		{
+			// Build the method syntax using RoslynGraphBuilder
+			var builder = new CodeGeneration.RoslynGraphBuilder(method.Graph, isDebug: true);
+			var methodSyntax = builder.BuildMethod();
+			
+			// Convert the syntax node to a normalized string
+			return methodSyntax.NormalizeWhitespace().ToFullString();
+		}
+		catch (Exception)
+		{
+			return null;
+		}
 	}
 
 	#endregion
