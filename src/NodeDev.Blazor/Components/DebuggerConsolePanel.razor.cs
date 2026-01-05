@@ -22,8 +22,27 @@ public partial class DebuggerConsolePanel : ComponentBase, IDisposable
 	private string LastLine = ">";
 
 	private bool IsShowing = false;
+	
+	private const int ExpandedHeight = 200;
+	private const int CollapsedHeight = 40;
+	private const int ButtonZIndex = 1000;
 
 	private readonly Subject<object?> RefreshRequiredSubject = new();
+
+	private string GetPanelStyle()
+	{
+		return IsShowing ? $"height: {ExpandedHeight}px" : $"height: {CollapsedHeight}px";
+	}
+
+	private string GetTabsStyle()
+	{
+		return IsShowing ? "display: flex" : "display: none";
+	}
+
+	private string GetButtonStyle()
+	{
+		return $"left: 50%; transform: translateX(-50%); top: 0px; z-index: {ButtonZIndex}";
+	}
 	private IDisposable? RefreshRequiredDisposable;
 
 	protected override void OnInitialized()
