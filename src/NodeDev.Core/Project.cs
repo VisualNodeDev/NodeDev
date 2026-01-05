@@ -829,12 +829,13 @@ public class Project
 	/// <summary>
 	/// Populates the variable value cache when paused at a breakpoint.
 	/// This should be called when a breakpoint is hit to capture all variable values.
+	/// Uses ICorDebug to retrieve actual runtime values from the debugged process.
 	/// </summary>
 	private void CaptureVariableValuesAtBreakpoint()
 	{
 		_breakpointVariableValues.Clear();
 		
-		if (_currentBreakpoint == null || _currentVariableMappings == null)
+		if (_currentBreakpoint == null || _currentVariableMappings == null || _debugEngine == null)
 			return;
 
 		// Get all mappings for the current method
@@ -842,48 +843,49 @@ public class Project
 			_currentBreakpoint.ClassName,
 			_currentBreakpoint.MethodName);
 
-		// Find the graph and nodes to get connection information
-		var targetClass = Classes.FirstOrDefault(c => $"{c.Namespace}.{c.Name}" == _currentBreakpoint.ClassName);
-		if (targetClass == null)
-			return;
-
-		var targetMethod = targetClass.Methods.FirstOrDefault(m => m.Name == _currentBreakpoint.MethodName);
-		if (targetMethod?.Graph == null)
-			return;
-
-		var graph = targetMethod.Graph;
-
-		// For each mapping, try to find the connection and get its value
+		// Use ICorDebug to get actual variable values
 		foreach (var mapping in methodMappings)
 		{
-			// Find the connection by ID
-			var connection = graph.Nodes.Values
-				.SelectMany(n => n.InputsAndOutputs)
-				.FirstOrDefault(c => c.Id == mapping.ConnectionId);
-
-			if (connection != null)
+			var (value, success) = _debugEngine.GetLocalVariableValue(mapping.VariableName);
+			if (success)
 			{
-				// Try to get a meaningful value
-				object? value = null;
+				_breakpointVariableValues[mapping.ConnectionId] = value;
+			}
+			else
+			{
+				// If ICorDebug fails, fall back to textbox values for constants
+				var targetClass = Classes.FirstOrDefault(c => $"{c.Namespace}.{c.Name}" == _currentBreakpoint.ClassName);
+				if (targetClass == null)
+					continue;
 
-				// If it's an input with a textbox value, use that
-				if (connection.IsInput && !string.IsNullOrEmpty(connection.TextboxValue))
+				var targetMethod = targetClass.Methods.FirstOrDefault(m => m.Name == _currentBreakpoint.MethodName);
+				if (targetMethod?.Graph == null)
+					continue;
+
+				var graph = targetMethod.Graph;
+
+				// Find the connection by ID
+				var connection = graph.Nodes.Values
+					.SelectMany(n => n.InputsAndOutputs)
+					.FirstOrDefault(c => c.Id == mapping.ConnectionId);
+
+				if (connection != null)
 				{
-					value = connection.ParsedTextboxValue ?? connection.TextboxValue;
-				}
-				// If it's an output, check if it's connected to inputs with textbox values
-				else if (connection.IsOutput && connection.Connections.Count > 0)
-				{
-					// For simple constant propagation
-					var sourceInput = connection.Parent.Inputs.FirstOrDefault(i => !string.IsNullOrEmpty(i.TextboxValue));
-					if (sourceInput != null)
+					// Try to get a meaningful value from textbox
+					object? textboxValue = null;
+
+					// If it's an input with a textbox value, use that
+					if (connection.IsInput && !string.IsNullOrEmpty(connection.TextboxValue))
 					{
-						value = sourceInput.ParsedTextboxValue ?? sourceInput.TextboxValue;
+						textboxValue = connection.ParsedTextboxValue ?? connection.TextboxValue;
+					}
+
+					// Store the textbox value as fallback
+					if (textboxValue != null)
+					{
+						_breakpointVariableValues[mapping.ConnectionId] = textboxValue;
 					}
 				}
-
-				// Store the value or a placeholder
-				_breakpointVariableValues[mapping.ConnectionId] = value ?? $"<{mapping.VariableName}>";
 			}
 		}
 	}
