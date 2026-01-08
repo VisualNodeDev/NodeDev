@@ -24,10 +24,13 @@ public class OverloadSelectionTests : E2ETestBase
 		await HomePage.DragNodeTo("Return", 1200, 400);
 
 		// Add Console.WriteLine node (has multiple overloads)
+		// Search for "Console.WriteLine" to find Console.WriteLine methods
 		await HomePage.SearchForNodes("Console.WriteLine");
-		await HomePage.AddNodeFromSearch("Console.WriteLine");
+		await Task.Delay(500); // Wait for search results to load
+		await HomePage.AddNodeFromSearch("MethodCall");
 
 		// Position the Console.WriteLine node
+		// The node name will be "Console.WriteLine" (without parentheses)
 		await HomePage.DragNodeTo("Console.WriteLine", 700, 300);
 
 		// Take screenshot of initial state
@@ -128,13 +131,9 @@ public class OverloadSelectionTests : E2ETestBase
 
 		// Add Console.WriteLine node
 		await HomePage.SearchForNodes("Console.WriteLine");
-		await HomePage.AddNodeFromSearch("Console.WriteLine");
+		await Task.Delay(500); // Wait for search results to load
+		await HomePage.AddNodeFromSearch("MethodCall");
 		await HomePage.DragNodeTo("Console.WriteLine", 800, 300);
-
-		// Add a DeclareVariable node to provide string input
-		await HomePage.SearchForNodes("DeclareVariable");
-		await HomePage.AddNodeFromSearch("DeclareVariable");
-		await HomePage.DragNodeTo("DeclareVariable", 400, 300);
 
 		await Task.Delay(500);
 		
