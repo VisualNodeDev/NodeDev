@@ -436,6 +436,10 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 		GraphManagerService.SelectNodeOverload(PopupNode, overload);
 
+		// Refresh the node visually after overload selection
+		// The node's ports have changed, so we need to update the UI
+		Refresh(PopupNode);
+
 		CancelPopup();
 	}
 
