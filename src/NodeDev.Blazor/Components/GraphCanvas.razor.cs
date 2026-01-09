@@ -753,7 +753,22 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	public void Refresh(Node node)
 	{
 		var nodeModel = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == node);
+		if (nodeModel == null)
+			return;
 
+		// When overload is selected, the node's connections change
+		// We need to rebuild the ports to reflect the new connections
+		
+		// Remove old ports
+		var oldPorts = nodeModel.Ports.ToList();
+		foreach (var port in oldPorts)
+			nodeModel.RemovePort(port);
+
+		// Add new ports based on updated node connections
+		foreach (var connection in node.InputsAndOutputs)
+			nodeModel.AddPort(new GraphPortModel(nodeModel, connection, node.Inputs.Contains(connection)));
+
+		// Refresh the node model to trigger UI update
 		nodeModel?.Refresh();
 	}
 

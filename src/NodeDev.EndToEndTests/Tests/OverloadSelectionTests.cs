@@ -47,9 +47,14 @@ public class OverloadSelectionTests : E2ETestBase
 		Console.WriteLine($"✓ Found overload icon (count: {overloadIconCount})");
 
 		// Count initial ports before selecting overload
+		// Default Console.WriteLine() has 1 input (Exec) and 1 output (Exec)
 		var initialInputPorts = await writeLineNode.Locator(".col.input").CountAsync();
 		var initialOutputPorts = await writeLineNode.Locator(".col.output").CountAsync();
 		Console.WriteLine($"Initial state - Input ports: {initialInputPorts}, Output ports: {initialOutputPorts}");
+		
+		// Verify we start with no parameter input ports (only Exec)
+		Assert.Equal(1, initialInputPorts); // Only Exec input
+		Console.WriteLine("✓ Initial node has only Exec input (no parameters)");
 
 		// Act - Click the overload icon to open selection dialog
 		await overloadIcon.ClickAsync();
@@ -68,8 +73,22 @@ public class OverloadSelectionTests : E2ETestBase
 		Assert.True(overloadCount >= 2, "Console.WriteLine should have at least 2 overloads");
 		Console.WriteLine($"✓ Found {overloadCount} overloads in selection dialog");
 
-		// Select a different overload (the second one in the list)
-		await overloadItems.Nth(1).ClickAsync();
+		// Select an overload with a parameter (e.g., Console.WriteLine(string value))
+		// Look for an overload that has "string" or "object" in the text
+		var selectedOverload = false;
+		for (int i = 0; i < overloadCount; i++)
+		{
+			var itemText = await overloadItems.Nth(i).TextContentAsync();
+			if (itemText != null && (itemText.Contains("string") || itemText.Contains("object")) && !itemText.Contains(","))
+			{
+				Console.WriteLine($"✓ Selecting overload with parameter: {itemText}");
+				await overloadItems.Nth(i).ClickAsync();
+				selectedOverload = true;
+				break;
+			}
+		}
+		
+		Assert.True(selectedOverload, "Should find an overload with a parameter");
 		await Task.Delay(500); // Wait for selection to be applied and node to refresh
 
 		// Take screenshot after overload selection
@@ -96,10 +115,32 @@ public class OverloadSelectionTests : E2ETestBase
 		Assert.True(execOutputVisible, "Exec output port should be visible (node refreshed)");
 		Console.WriteLine("✓ Exec ports are visible - node visual refresh occurred");
 
-		// Count ports after overload selection
+		// Count ports after overload selection - should have MORE input ports now
 		var finalInputPorts = await writeLineNode.Locator(".col.input").CountAsync();
 		var finalOutputPorts = await writeLineNode.Locator(".col.output").CountAsync();
 		Console.WriteLine($"After overload selection - Input ports: {finalInputPorts}, Output ports: {finalOutputPorts}");
+		
+		// THE KEY TEST: Verify that we now have an additional input port for the parameter
+		Assert.True(finalInputPorts > initialInputPorts, 
+			$"After selecting overload with parameter, should have more input ports. Initial: {initialInputPorts}, Final: {finalInputPorts}");
+		Console.WriteLine($"✓ CRITICAL: New parameter input port appeared! Initial inputs: {initialInputPorts}, Final inputs: {finalInputPorts}");
+		
+		// Try to find the parameter input port (not Exec)
+		var parameterInputs = await writeLineNode.Locator(".col.input").AllAsync();
+		var foundParameterPort = false;
+		foreach (var port in parameterInputs)
+		{
+			var portText = await port.TextContentAsync();
+			if (portText != null && !portText.Contains("Exec"))
+			{
+				foundParameterPort = true;
+				Console.WriteLine($"✓ Found parameter port with label: {portText}");
+				break;
+			}
+		}
+		
+		Assert.True(foundParameterPort, "Should find at least one non-Exec parameter port");
+		Console.WriteLine("✓ Parameter port is visually present and accessible");
 
 		// Verify the overload dialog is closed
 		var dialogStillVisible = await overloadList.IsVisibleAsync();
@@ -114,10 +155,10 @@ public class OverloadSelectionTests : E2ETestBase
 	}
 
 	[Fact(Timeout = 60_000)]
-	public async Task SelectOverload_ShouldAllowConnectingToNewPorts()
+	public async Task SelectOverload_ShouldShowNewParameterPorts()
 	{
-		// This test verifies that after selecting an overload, the new ports can be connected
-		// demonstrating that the visual refresh allows immediate interaction
+		// This test specifically verifies that NEW parameter ports appear visually
+		// after selecting an overload with different parameters
 
 		// Arrange - Create a new project and open Main method
 		await HomePage.CreateNewProject();
@@ -129,61 +170,79 @@ public class OverloadSelectionTests : E2ETestBase
 		// Move Return node to make space
 		await HomePage.DragNodeTo("Return", 1500, 400);
 
-		// Add Console.WriteLine node
+		// Add Console.WriteLine node - default is WriteLine()
 		await HomePage.SearchForNodes("Console.WriteLine");
-		await Task.Delay(500); // Wait for search results to load
+		await Task.Delay(500);
 		await HomePage.AddNodeFromSearch("MethodCall");
-		await HomePage.DragNodeTo("Console.WriteLine", 800, 300);
+		await HomePage.DragNodeTo("Console.WriteLine", 700, 300);
 
 		await Task.Delay(500);
 		
-		// Take screenshot of initial setup
-		await HomePage.TakeScreenshot("/tmp/overload-connect-initial.png");
-		Console.WriteLine("✓ Initial setup screenshot taken");
-
-		// Change Console.WriteLine overload if needed
 		var writeLineNode = HomePage.GetGraphNode("Console.WriteLine");
+		
+		// Count initial ports
+		var initialInputPorts = await writeLineNode.Locator(".col.input").CountAsync();
+		Console.WriteLine($"Initial input ports: {initialInputPorts}");
+		
+		// Take screenshot before
+		await HomePage.TakeScreenshot("/tmp/overload-param-before.png");
+		Console.WriteLine("✓ Screenshot before overload selection");
+
+		// Open overload dialog
 		var overloadIcon = writeLineNode.Locator(".overload-icon");
+		await overloadIcon.ClickAsync();
+		await Task.Delay(300);
+
+		// Select Console.WriteLine(int value) - this has a parameter
+		var overloadItems = Page.Locator(".mud-list .mud-list-item");
+		var selectedOverload = false;
+		var overloadCount = await overloadItems.CountAsync();
 		
-		if (await overloadIcon.CountAsync() > 0)
+		for (int i = 0; i < overloadCount; i++)
 		{
-			await overloadIcon.ClickAsync();
-			await Task.Delay(300);
-
-			// Select first overload
-			var overloadItems = Page.Locator(".mud-list .mud-list-item");
-			await overloadItems.First.ClickAsync();
-			await Task.Delay(500);
-			
-			// Take screenshot after overload selection
-			await HomePage.TakeScreenshot("/tmp/overload-connect-after-selection.png");
-			Console.WriteLine("✓ After overload selection screenshot taken");
+			var itemText = await overloadItems.Nth(i).TextContentAsync();
+			if (itemText != null && itemText.Contains("int") && !itemText.Contains(","))
+			{
+				Console.WriteLine($"✓ Selecting overload: {itemText}");
+				await overloadItems.Nth(i).ClickAsync();
+				selectedOverload = true;
+				break;
+			}
 		}
-
-		// Act - Try to connect Entry to Console.WriteLine (should work if node refreshed properly)
-		await HomePage.ConnectPorts("Entry", "Exec", "Console.WriteLine", "Exec");
-		await Task.Delay(300);
-
-		// Take screenshot after connection
-		await HomePage.TakeScreenshot("/tmp/overload-connect-after-connection.png");
-		Console.WriteLine("✓ After connection screenshot taken");
-
-		// Assert - Verify connection was successful
-		// If the node didn't refresh properly, the connection would fail
-		var execInput = HomePage.GetGraphPort("Console.WriteLine", "Exec", isInput: true);
-		var isConnected = await execInput.IsVisibleAsync();
 		
-		Assert.True(isConnected, "Should be able to connect to Console.WriteLine after overload selection");
-		Console.WriteLine("✓ Successfully connected to node after overload selection");
+		Assert.True(selectedOverload, "Should find Console.WriteLine(int) overload");
+		await Task.Delay(500);
 		
-		// Connect to Return as well
-		await HomePage.ConnectPorts("Console.WriteLine", "Exec", "Return", "Exec");
-		await Task.Delay(300);
+		// Take screenshot after selection
+		await HomePage.TakeScreenshot("/tmp/overload-param-after.png");
+		Console.WriteLine("✓ Screenshot after overload selection");
+
+		// CRITICAL TEST: Count ports again - should have more
+		var finalInputPorts = await writeLineNode.Locator(".col.input").CountAsync();
+		Console.WriteLine($"Final input ports: {finalInputPorts}");
+		
+		Assert.True(finalInputPorts > initialInputPorts, 
+			$"Parameter port should be visible! Initial: {initialInputPorts}, Final: {finalInputPorts}");
+		Console.WriteLine($"✅ SUCCESS: Parameter port appeared! {initialInputPorts} -> {finalInputPorts} input ports");
+		
+		// Verify the int parameter port is actually there
+		var paramPorts = await writeLineNode.Locator(".col.input").AllAsync();
+		var foundIntPort = false;
+		foreach (var port in paramPorts)
+		{
+			var portText = await port.TextContentAsync();
+			if (portText != null && (portText.Contains("value") || portText.Contains("int")))
+			{
+				foundIntPort = true;
+				Console.WriteLine($"✓ Found int parameter port: {portText}");
+				break;
+			}
+		}
+		
+		Assert.True(foundIntPort, "Should find the 'value' or 'int' parameter port");
 		
 		// Take final screenshot
-		await HomePage.TakeScreenshot("/tmp/overload-connect-final.png");
-		Console.WriteLine("✓ Final screenshot with all connections taken");
-
-		Console.WriteLine("✅ Test completed successfully - can connect to ports after overload selection");
+		await HomePage.TakeScreenshot("/tmp/overload-param-final.png");
+		Console.WriteLine("✅ Test completed - new parameter ports are visually present after overload selection");
 	}
 }
