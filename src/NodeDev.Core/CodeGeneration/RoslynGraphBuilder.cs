@@ -38,11 +38,20 @@ public class RoslynGraphBuilder
 	public List<NodeBreakpointInfo> GetBreakpointMappings() => _context.BreakpointMappings;
 
 	/// <summary>
+	/// Gets the variable mappings collected during code generation.
+	/// </summary>
+	public List<ConnectionVariableMapping> GetVariableMappings() => _context.VariableMappings;
+
+	/// <summary>
 	/// Builds a complete method syntax from the graph
 	/// </summary>
 	public MethodDeclarationSyntax BuildMethod()
 	{
 		var method = _graph.SelfMethod;
+
+		// Set the current method in context for variable mapping
+		string fullClassName = $"{_graph.SelfClass.Namespace}.{_graph.SelfClass.Name}";
+		_context.SetCurrentMethod(fullClassName, method.Name);
 
 		// Find the entry node
 		var entryNode = _graph.Nodes.Values.FirstOrDefault(x => x is EntryNode)
@@ -94,9 +103,6 @@ public class RoslynGraphBuilder
 
 		// Build the execution flow starting from entry
 		var chunks = _graph.GetChunks(entryOutput, allowDeadEnd: false);
-		
-		// Get full class name for breakpoint info
-		string fullClassName = $"{_graph.SelfClass.Namespace}.{_graph.SelfClass.Name}";
 		
 		// In debug builds, always track line numbers for all nodes (not just those with breakpoints)
 		// This allows breakpoints to be set dynamically during debugging

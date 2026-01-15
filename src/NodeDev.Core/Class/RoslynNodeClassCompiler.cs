@@ -19,6 +19,7 @@ public class RoslynNodeClassCompiler
 	private readonly Project _project;
 	private readonly BuildOptions _options;
 	private readonly List<NodeBreakpointInfo> _allBreakpoints = new();
+	private readonly List<ConnectionVariableMapping> _allVariableMappings = new();
 
 	public RoslynNodeClassCompiler(Project project, BuildOptions options)
 	{
@@ -31,8 +32,9 @@ public class RoslynNodeClassCompiler
 	/// </summary>
 	public CompilationResult Compile()
 	{
-		// Clear breakpoints from previous compilation
+		// Clear breakpoints and variable mappings from previous compilation
 		_allBreakpoints.Clear();
+		_allVariableMappings.Clear();
 		
 		// Generate the compilation unit (full source code)
 		var compilationUnit = GenerateCompilationUnit();
@@ -112,7 +114,13 @@ public class RoslynNodeClassCompiler
 			SourceFilePath = syntaxTree.FilePath
 		};
 
-		return new CompilationResult(assembly, sourceText, peStream.ToArray(), pdbStream.ToArray(), breakpointMappingInfo);
+		// Create variable mapping info
+		var variableMappingInfo = new VariableMappingInfo
+		{
+			Mappings = _allVariableMappings
+		};
+
+		return new CompilationResult(assembly, sourceText, peStream.ToArray(), pdbStream.ToArray(), breakpointMappingInfo, variableMappingInfo);
 	}
 
 	/// <summary>
@@ -210,8 +218,9 @@ public class RoslynNodeClassCompiler
 		var builder = new RoslynGraphBuilder(method.Graph, _options.BuildExpressionOptions.RaiseNodeExecutedEvents);
 		var methodSyntax = builder.BuildMethod();
 		
-		// Collect breakpoint mappings from the builder's context
+		// Collect breakpoint mappings and variable mappings from the builder's context
 		_allBreakpoints.AddRange(builder.GetBreakpointMappings());
+		_allVariableMappings.AddRange(builder.GetVariableMappings());
 		
 		return methodSyntax;
 	}
@@ -246,7 +255,7 @@ public class RoslynNodeClassCompiler
 	/// <summary>
 	/// Result of a Roslyn compilation
 	/// </summary>
-	public record CompilationResult(Assembly Assembly, string SourceCode, byte[] PEBytes, byte[] PDBBytes, BreakpointMappingInfo BreakpointMappings);
+	public record CompilationResult(Assembly Assembly, string SourceCode, byte[] PEBytes, byte[] PDBBytes, BreakpointMappingInfo BreakpointMappings, VariableMappingInfo VariableMappings);
 
 	/// <summary>
 	/// Exception thrown when compilation fails
