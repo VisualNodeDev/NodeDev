@@ -136,7 +136,7 @@ public class GraphManagerService
 	{
 		var entry = new LambdaEntryNode(Graph) { CallableScopeId = owner.BodyScopeId };
 		Node terminal = owner.Kind == DelegateKind.Func
-			? new LambdaReturnNode(Graph) { CallableScopeId = owner.BodyScopeId }
+			? new LambdaReturnNode(Graph) { CallableScopeId = owner.BodyScopeId, IsImplicit = true }
 			: new LambdaCompleteNode(Graph) { CallableScopeId = owner.BodyScopeId };
 
 		entry.RefreshFromOwner(owner);

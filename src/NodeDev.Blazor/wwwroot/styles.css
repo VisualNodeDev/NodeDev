@@ -311,6 +311,64 @@ g.diagram-link path:not(.selection-helper) {
     transform: translate(1px, -50%);
 }
 
+.lambda-return-boundary {
+    position: absolute;
+    right: -1px;
+    bottom: 18px;
+    width: 190px;
+    box-sizing: border-box;
+    overflow: visible;
+    padding: 0 10px 7px 14px;
+    border: 1px solid rgba(185, 28, 28, 0.45);
+    border-right: 0;
+    border-radius: 8px 0 0 8px;
+    background: rgba(254, 242, 242, 0.94);
+    color: #7f1d1d;
+    font-size: 0.75rem;
+    pointer-events: all;
+}
+
+.lambda-return-title {
+    display: block;
+    margin: -1px -10px 5px -14px;
+    padding: 4px 10px 4px 14px;
+    border-radius: 8px 0 0 0;
+    background: #dc2626;
+    color: white;
+    font-weight: 700;
+}
+
+.lambda-return-port {
+    position: relative;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.lambda-return-port .diagram-port {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    border: 1px solid #d4d4d4;
+    border-radius: 9999px;
+    cursor: pointer;
+    position: relative;
+    margin: 0;
+    pointer-events: all;
+}
+
+.lambda-return-editor {
+    width: 72px;
+    min-width: 0;
+    padding: 3px 6px;
+    border: 1px solid rgba(127, 29, 29, 0.35);
+    border-radius: 4px;
+    background: white;
+    color: #111827;
+    font: inherit;
+}
+
 .lambda-boundary-row .diagram-port {
     width: 18px;
     height: 18px;

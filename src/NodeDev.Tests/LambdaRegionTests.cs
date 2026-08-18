@@ -26,6 +26,7 @@ public class LambdaRegionTests
 
 		Assert.Equal(func.Id, entry.CallableScopeId);
 		Assert.Equal(func.Id, lambdaReturn.CallableScopeId);
+		Assert.True(lambdaReturn.IsImplicit);
 		Assert.Equal("item", Assert.Single(entry.ParameterOutputs).Name);
 		Assert.Equal("Captured prefix", Assert.Single(entry.CaptureOutputs).Name);
 		Assert.Equal(parameter.Type, entry.ParameterOutputs[0].Type);
@@ -159,6 +160,7 @@ public class LambdaRegionTests
 		var returnTrue = Assert.Single(graph.GetNodesInScope(func.BodyScopeId).OfType<LambdaReturnNode>());
 		returnTrue.ResultInput.UpdateTextboxText("1");
 		var returnFalse = new LambdaReturnNode(graph);
+		Assert.False(returnFalse.IsImplicit);
 		returnFalse.ResultInput.UpdateTypeAndTextboxVisibility(graph.Project.TypeFactory.Get<int>(), overrideInitialType: true);
 		returnFalse.ResultInput.UpdateTextboxText("2");
 		graph.Manager.AddNode(returnFalse, func.BodyScopeId);
@@ -286,7 +288,9 @@ public class LambdaRegionTests
 		var restored = Project.Deserialize(serialized);
 		var restoredMethod = restored.Classes.Single().Methods.Single();
 		var restoredFunc = Assert.Single(restoredMethod.Graph.Nodes.Values.OfType<CreateFuncNode>());
+		var restoredReturn = Assert.Single(restoredMethod.Graph.GetNodesInScope(restoredFunc.BodyScopeId).OfType<LambdaReturnNode>());
 		Assert.Equal("captured", Assert.Single(restoredFunc.Captures).Name);
+		Assert.True(restoredReturn.IsImplicit);
 		Assert.All(restoredMethod.Graph.GetNodesInScope(restoredFunc.BodyScopeId), node => Assert.Equal(restoredFunc.Id, node.CallableScopeId));
 
 		var result = new RoslynNodeClassCompiler(restored, BuildOptions.Release).Compile();

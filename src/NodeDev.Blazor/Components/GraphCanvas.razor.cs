@@ -192,10 +192,21 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	private GraphPortModel? FindPort(Connection connection)
 	{
-		return FindNodeModel(connection.Parent)?.Ports
+		var nodePort = FindNodeModel(connection.Parent)?.Ports
+			.OfType<GraphPortModel>()
+			.FirstOrDefault(x => x.Connection == connection);
+		if (nodePort != null)
+			return nodePort;
+
+		return Diagram.Groups
+			.SelectMany(x => x.Ports)
 			.OfType<GraphPortModel>()
 			.FirstOrDefault(x => x.Connection == connection);
 	}
+
+	private LambdaGroupModel? FindLambdaGroup(string? bodyScopeId) => Diagram.Groups
+		.OfType<LambdaGroupModel>()
+		.FirstOrDefault(x => x.DelegateNode.BodyScopeId == bodyScopeId);
 
 	#endregion
 
@@ -417,6 +428,9 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	{
 		if (movableModel is not LambdaGroupModel group)
 			return;
+
+		var groupDecoration = group.DelegateNode.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero));
+		groupDecoration.Position = new((float)group.Position.X, (float)group.Position.Y);
 
 		foreach (var nodeModel in group.GetDescendantNodeModels())
 		{
@@ -754,6 +768,23 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	public void RemoveNode(Node node)
 	{
+		if (node is LambdaReturnNode { IsImplicit: true } boundaryReturn)
+		{
+			var group = FindLambdaGroup(boundaryReturn.CallableScopeId);
+			if (group != null)
+			{
+				foreach (var port in group.Ports
+					.OfType<GraphPortModel>()
+					.Where(x => x.Connection.Parent == boundaryReturn)
+					.ToList())
+				{
+					group.RemovePort(port);
+				}
+				group.Refresh();
+			}
+			return;
+		}
+
 		var nodeModel = FindNodeModel(node);
 		if (nodeModel == null)
 			return;
@@ -832,6 +863,8 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	{
 		if (node is CreateDelegateNode delegateNode)
 			AddLambdaGroupModel(delegateNode);
+		else if (node is LambdaReturnNode { IsImplicit: true } boundaryReturn)
+			AddBoundaryReturnToGroup(boundaryReturn);
 		else
 			AddGraphNodeModel(node);
 
@@ -859,10 +892,11 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 			return;
 
 		var ownerPosition = owner.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero)).Position;
+		var groupPadding = FindLambdaGroup(owner.BodyScopeId)?.Padding ?? LambdaGroupModel.MinimumPadding;
 		var existingNodesInScope = Diagram.Nodes
 			.OfType<GraphNodeModel>()
 			.Count(x => x.Node.CallableScopeId == node.CallableScopeId);
-		var offset = new Vector2(80 + existingNodesInScope * 220, 100);
+		var offset = new Vector2(groupPadding + existingNodesInScope * 220, groupPadding);
 		node.AddDecoration(new NodeDecorationPosition(ownerPosition + offset));
 	}
 
@@ -872,9 +906,30 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		foreach (var capture in node.CaptureInputs)
 			group.AddPort(new GraphPortModel(group, capture, true));
 		group.AddPort(new GraphPortModel(group, node.DelegateOutput, false));
+		if (group.BoundaryReturn is { } boundaryReturn)
+			AddBoundaryReturnPorts(group, boundaryReturn);
 
 		group.Moved += OnLambdaGroupMoved;
 		return group;
+	}
+
+	private void AddBoundaryReturnToGroup(LambdaReturnNode boundaryReturn)
+	{
+		var group = FindLambdaGroup(boundaryReturn.CallableScopeId);
+		if (group == null)
+			return;
+
+		AddBoundaryReturnPorts(group, boundaryReturn);
+		group.Refresh();
+	}
+
+	private static void AddBoundaryReturnPorts(LambdaGroupModel group, LambdaReturnNode boundaryReturn)
+	{
+		foreach (var connection in boundaryReturn.Inputs)
+		{
+			if (group.Ports.OfType<GraphPortModel>().All(x => x.Connection != connection))
+				group.AddPort(new GraphPortModel(group, connection, true));
+		}
 	}
 
 	private void ReparentScopedModels()
@@ -982,6 +1037,12 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 			UpdateNodes();
 			return;
 		}
+		if (node is LambdaReturnNode { IsImplicit: true } boundaryReturn)
+		{
+			var group = FindLambdaGroup(boundaryReturn.CallableScopeId);
+			group?.Refresh();
+			return;
+		}
 
 		var nodeModel = FindNodeModel(node) as GraphNodeModel;
 		if (nodeModel == null)
@@ -1037,11 +1098,11 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	private void InitializeCanvasWithGraphNodes()
 	{
-		foreach (var node in Graph.Nodes.Values.Where(x => x is not CreateDelegateNode))
-			AddGraphNodeModel(node);
-
 		foreach (var delegateNode in Graph.Nodes.Values.OfType<CreateDelegateNode>())
 			AddLambdaGroupModel(delegateNode);
+
+		foreach (var node in Graph.Nodes.Values.Where(x => x is not CreateDelegateNode and not LambdaReturnNode { IsImplicit: true }))
+			AddGraphNodeModel(node);
 
 		ReparentScopedModels();
 

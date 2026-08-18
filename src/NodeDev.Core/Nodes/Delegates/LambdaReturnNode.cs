@@ -1,12 +1,15 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.CodeGeneration;
 using NodeDev.Core.Connections;
+using System.Text.Json;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace NodeDev.Core.Nodes.Delegates;
 
 public sealed class LambdaReturnNode : Flow.FlowNode
 {
+	private sealed record SerializedLambdaReturnPayload(bool IsImplicit);
+
 	public LambdaReturnNode(Graph graph, string? id = null) : base(graph, id)
 	{
 		Name = "Lambda Return";
@@ -17,6 +20,11 @@ public sealed class LambdaReturnNode : Flow.FlowNode
 	public override string TitleColor => "red";
 	public override bool IsFlowNode => true;
 	public override bool BreaksDeadEnd => true;
+	/// <summary>
+	/// Identifies the terminal created with the Func body. The canvas projects this
+	/// terminal onto the lambda boundary; user-added returns remain ordinary nodes.
+	/// </summary>
+	public bool IsImplicit { get; internal set; }
 	public Connection ExecInput => Inputs[0];
 	public Connection ResultInput => Inputs[1];
 
@@ -34,6 +42,16 @@ public sealed class LambdaReturnNode : Flow.FlowNode
 		var owner = Graph.GetOwningLambda(CallableScopeId);
 		if (owner?.Kind == DelegateKind.Func)
 			RefreshFromOwner(owner);
+	}
+
+	protected override string? SerializePayload() =>
+		JsonSerializer.Serialize(new SerializedLambdaReturnPayload(IsImplicit));
+
+	protected override void DeserializePayload(string? payload)
+	{
+		IsImplicit = JsonSerializer.Deserialize<SerializedLambdaReturnPayload>(
+			payload ?? throw new InvalidOperationException("Lambda return payload is missing."))?.IsImplicit
+			?? throw new InvalidOperationException("Unable to deserialize lambda return payload.");
 	}
 
 	internal override StatementSyntax GenerateRoslynStatement(Dictionary<Connection, Graph.NodePathChunks>? subChunks, GenerationContext context)

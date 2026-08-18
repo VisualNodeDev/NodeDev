@@ -60,6 +60,31 @@
 		<PortRenderer @key="delegatePort" Port="delegatePort" Class="lambda-boundary-port" Style="@($"background-color: {delegatePort.PortColor}")" />
 	</div>
 
+	@if (Group.BoundaryReturn is { } boundaryReturn)
+	{
+		var execPort = Group.GetPort(boundaryReturn.ExecInput);
+		var resultPort = Group.GetPort(boundaryReturn.ResultInput);
+		<div class="lambda-return-boundary" data-test-id="lambda-boundary-return">
+			<span class="lambda-return-title">Return</span>
+			<div class="lambda-return-port" data-test-id="lambda-return-exec-port" data-port-name="@boundaryReturn.ExecInput.Name">
+				<PortRenderer @key="execPort" Port="execPort" Class="lambda-boundary-port" Style="@($"background-color: {execPort.PortColor}")" />
+				<span>@boundaryReturn.ExecInput.Name</span>
+			</div>
+			<div class="lambda-return-port lambda-return-result" data-test-id="lambda-return-result-port" data-port-name="@boundaryReturn.ResultInput.Name">
+				<PortRenderer @key="resultPort" Port="resultPort" Class="lambda-boundary-port" Style="@($"background-color: {resultPort.PortColor}")" />
+				<span>@boundaryReturn.ResultInput.Name</span>
+				@if (boundaryReturn.ResultInput.Type.AllowTextboxEdit && resultPort.Links.Count == 0)
+				{
+					<input class="lambda-return-editor"
+						   aria-label="Lambda return result"
+						   value="@boundaryReturn.ResultInput.TextboxValue"
+						   @onchange="x => GraphCanvas.OnTextboxValueChanged(resultPort, x.Value?.ToString())"
+						   @onpointerdown:stopPropagation="true" />
+				}
+			</div>
+		</div>
+	}
+
 	<GroupNodes Group="Group" />
 </div>
 

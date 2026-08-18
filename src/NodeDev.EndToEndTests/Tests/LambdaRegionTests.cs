@@ -26,8 +26,14 @@ public class LambdaRegionTests : E2ETestBase
 
 		var region = Page.Locator("[data-test-id='lambda-region']").Last;
 		await region.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+		var regionBox = await region.BoundingBoxAsync() ?? throw new InvalidOperationException("Lambda region has no bounds.");
+		Assert.True(regionBox.Width >= 590, $"Expected a usable lambda width, but got {regionBox.Width}px.");
+		Assert.True(regionBox.Height >= 410, $"Expected a usable lambda height, but got {regionBox.Height}px.");
 		await region.Locator("[data-test-id='graph-node'][data-test-node-name='Lambda Entry']").WaitForAsync(new() { State = WaitForSelectorState.Visible });
-		await region.Locator("[data-test-id='graph-node'][data-test-node-name='Lambda Return']").WaitForAsync(new() { State = WaitForSelectorState.Visible });
+		await region.Locator("[data-test-id='lambda-boundary-return']").WaitForAsync(new() { State = WaitForSelectorState.Visible });
+		await region.Locator("[data-test-id='lambda-return-exec-port']").WaitForAsync(new() { State = WaitForSelectorState.Visible });
+		await region.Locator("[data-test-id='lambda-return-result-port']").WaitForAsync(new() { State = WaitForSelectorState.Visible });
+		await Assertions.Expect(region.Locator("[data-test-id='graph-node'][data-test-node-name='Lambda Return']")).ToHaveCountAsync(0);
 		await region.Locator("[data-test-id='lambda-delegate-port']").WaitForAsync(new() { State = WaitForSelectorState.Visible });
 
 		await region.Locator("[data-test-id='lambda-add-parameter']").ClickAsync();
@@ -44,9 +50,7 @@ public class LambdaRegionTests : E2ETestBase
 			.Locator(".diagram-port")
 			.First;
 		var resultPort = rebuiltRegion
-			.Locator("[data-test-id='graph-node'][data-test-node-name='Lambda Return']")
-			.Locator(".col.input")
-			.Filter(new() { HasText = "Result" })
+			.Locator("[data-test-id='lambda-return-result-port']")
 			.Locator(".diagram-port")
 			.First;
 		await DragPortToPort(sourcePort, resultPort);

@@ -353,7 +353,11 @@ public class HomePage
 		}
 		catch (TimeoutException)
 		{
-			throw new NotImplementedException($"Node search result not found - [data-test-id='node-search-result'][data-node-type='{nodeType}']. Search may not be open or node type may not exist.");
+			var availableTypes = await _user
+				.Locator("[data-test-id='node-search-result']")
+				.EvaluateAllAsync<string[]>("elements => elements.map(element => element.getAttribute('data-node-type') ?? '')");
+			throw new NotImplementedException(
+				$"Node search result '{nodeType}' was not found. Available results: {string.Join(", ", availableTypes)}");
 		}
 	}
 

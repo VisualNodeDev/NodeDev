@@ -554,6 +554,8 @@ public class Graph(NodeClassMethod selfMethod)
 			{
 				if (bodyNodes.OfType<LambdaCompleteNode>().Any())
 					throw new InvalidOperationException($"Func delegate '{owner.SignatureDisplayName}' contains an Action completion node.");
+				if (bodyNodes.OfType<LambdaReturnNode>().Count(x => x.IsImplicit) > 1)
+					throw new InvalidOperationException($"Func delegate '{owner.SignatureDisplayName}' contains more than one implicit return node.");
 				if (!bodyNodes.OfType<LambdaReturnNode>().Any())
 					throw new InvalidOperationException($"Func delegate '{owner.SignatureDisplayName}' has no return node.");
 				if (bodyNodes.OfType<LambdaReturnNode>().Any(x => x.ResultInput.Type != owner.ResultType))
