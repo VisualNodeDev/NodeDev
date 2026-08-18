@@ -1,5 +1,6 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
+using NodeDev.Core.Nodes.Delegates;
 using NodeDev.Core.Types;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -34,7 +35,53 @@ namespace NodeDev.Core
 		public record class MethodCallNode(Type Type, IMethodInfo MethodInfo) : NodeSearchResult(Type);
 		public record class GetPropertyOrFieldNode(Type Type, IMemberInfo MemberInfo) : NodeSearchResult(Type);
 		public record class SetPropertyOrFieldNode(Type Type, IMemberInfo MemberInfo) : NodeSearchResult(Type);
+		public record class DelegateCreationNode(Type Type, TypeBase DelegateType) : NodeSearchResult(Type);
+		public record class DelegateInvocationNode(Type Type, TypeBase DelegateType) : NodeSearchResult(Type);
 		public static IEnumerable<NodeSearchResult> Search(Project project, string text, Connection? startConnection)
+			=> SearchCore(project, text, startConnection).Where(x => IsAvailableInScope(x.Type, null, null));
+
+		public static IEnumerable<NodeSearchResult> Search(Graph graph, string text, Connection? startConnection, string? callableScopeId)
+		{
+			var results = SearchCore(graph.Project, text, startConnection);
+			var owner = graph.GetOwningLambda(callableScopeId);
+
+			results = results.Where(result => IsAvailableInScope(result.Type, callableScopeId, owner));
+
+			if (startConnection != null && BclDelegateType.TryDescribe(startConnection.Type, out var kind, out _, out _))
+			{
+				results = results.Select(result =>
+				{
+					if (startConnection.IsInput &&
+						((kind == DelegateKind.Action && result.Type == typeof(CreateActionNode)) ||
+						 (kind == DelegateKind.Func && result.Type == typeof(CreateFuncNode))))
+						return (NodeSearchResult)new DelegateCreationNode(result.Type, startConnection.Type);
+					if (startConnection.IsOutput && result.Type == typeof(InvokeDelegateNode))
+						return new DelegateInvocationNode(result.Type, startConnection.Type);
+					return result;
+				});
+			}
+
+			return results;
+		}
+
+		private static bool IsAvailableInScope(Type nodeType, string? callableScopeId, CreateDelegateNode? owner)
+		{
+			if (nodeType == typeof(LambdaEntryNode))
+				return false;
+			if (callableScopeId == null)
+				return nodeType != typeof(LambdaReturnNode) && nodeType != typeof(LambdaCompleteNode);
+			if (owner == null)
+				return false;
+			if (nodeType == typeof(Nodes.Flow.EntryNode) || nodeType == typeof(Nodes.Flow.ReturnNode))
+				return false;
+			if (nodeType == typeof(LambdaReturnNode))
+				return owner.Kind == DelegateKind.Func;
+			if (nodeType == typeof(LambdaCompleteNode))
+				return owner.Kind == DelegateKind.Action;
+			return true;
+		}
+
+		private static IEnumerable<NodeSearchResult> SearchCore(Project project, string text, Connection? startConnection)
 		{
 			if (startConnection?.Type is UndefinedGenericType)
 				startConnection = null; // we want to list every possible choices

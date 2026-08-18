@@ -36,9 +36,9 @@ namespace NodeDev.Core.Class
 
 		public bool HasReturnValue => ReturnType != Class.TypeFactory.Void;
 
-		public EntryNode? EntryNode => Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
+		public EntryNode? EntryNode => Graph.GetNodesInScope(null).OfType<EntryNode>().FirstOrDefault();
 
-		public IEnumerable<ReturnNode> ReturnNodes => Graph.Nodes.Values.OfType<ReturnNode>();
+		public IEnumerable<ReturnNode> ReturnNodes => Graph.GetNodesInScope(null).OfType<ReturnNode>();
 
 		public GraphManagerService Manager => Graph.Manager;
 
@@ -81,7 +81,7 @@ namespace NodeDev.Core.Class
 					methodCall.OnNewMethodParameter(newParameter);
 			}
 
-			var entry = Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
+			var entry = Graph.GetNodesInScope(null).OfType<EntryNode>().FirstOrDefault();
 			entry?.AddNewParameter(newParameter);
 		}
 

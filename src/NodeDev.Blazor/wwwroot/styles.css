@@ -182,3 +182,142 @@ g.diagram-link path:not(.selection-helper) {
 .debugged-path:hover {
     cursor: pointer;
 }
+
+.diagram-group:has(> .lambda-region) {
+    outline: 2px solid #26878a;
+    border-radius: 12px;
+    background: rgba(64, 186, 189, 0.10);
+}
+
+.diagram-group.selected:has(> .lambda-region) {
+    outline-color: #111827;
+    box-shadow: 0 0 0 2px rgba(64, 186, 189, 0.35);
+}
+
+.lambda-region {
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    pointer-events: none;
+}
+
+.lambda-region-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    min-height: 42px;
+    padding: 6px 8px 6px 14px;
+    border-bottom: 1px solid rgba(38, 135, 138, 0.55);
+    border-radius: 12px 12px 0 0;
+    background: rgba(64, 186, 189, 0.20);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    pointer-events: all;
+}
+
+.lambda-region-title-row,
+.lambda-signature-editor {
+	display: flex;
+	align-items: center;
+	gap: 0.3rem;
+}
+
+.lambda-region-title-row {
+	justify-content: space-between;
+}
+
+.lambda-signature-editor {
+	flex-wrap: wrap;
+	margin-top: 0.25rem;
+	font-size: 0.7rem;
+}
+
+.lambda-signature-chip {
+	display: inline-flex;
+	align-items: center;
+	border: 1px solid rgba(79, 70, 229, 0.35);
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.8);
+	overflow: hidden;
+}
+
+.lambda-signature-chip button,
+.lambda-signature-add {
+	border: 0;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+	padding: 0.12rem 0.35rem;
+}
+
+.lambda-signature-chip button:hover,
+.lambda-signature-add:hover {
+	background: rgba(79, 70, 229, 0.12);
+}
+
+.lambda-capture-chip {
+	border-color: rgba(5, 150, 105, 0.45);
+}
+
+.lambda-result-chip,
+.lambda-signature-add {
+	border: 1px dashed rgba(79, 70, 229, 0.55);
+	border-radius: 999px;
+}
+
+.lambda-chip-remove {
+	font-weight: 700;
+	padding-left: 0.2rem !important;
+}
+
+.lambda-region-signature {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #164e50;
+    font-weight: 700;
+}
+
+.lambda-region-add {
+    flex: none;
+}
+
+.lambda-boundary-row {
+    position: absolute;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.88);
+    color: #164e50;
+    font-size: 0.78rem;
+    pointer-events: all;
+}
+
+.lambda-capture-row {
+    left: 0;
+    transform: translateX(-1px);
+}
+
+.lambda-delegate-row {
+    right: 0;
+    top: 50%;
+    transform: translate(1px, -50%);
+}
+
+.lambda-boundary-row .diagram-port {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #d4d4d4;
+    border-radius: 9999px;
+    cursor: pointer;
+    position: relative;
+    margin: 0;
+    pointer-events: all;
+}

@@ -1,5 +1,7 @@
 ﻿using NodeDev.Core.Connections;
 using NodeDev.Core.Nodes;
+using NodeDev.Core.Nodes.Delegates;
+using NodeDev.Core.Nodes.Flow;
 using NodeDev.Core.Types;
 
 namespace NodeDev.Core.ManagerServices;
@@ -28,8 +30,19 @@ public class GraphManagerService
 	/// <param name="populateNode"></param>
 	/// <returns></returns>
 	public Node AddNode(NodeProvider.NodeSearchResult searchResult, Action<Node> populateNode)
+		=> AddNode(searchResult, populateNode, callableScopeId: null);
+
+	public Node AddNode(NodeProvider.NodeSearchResult searchResult, Action<Node> populateNode, string? callableScopeId)
 	{
 		var node = (Node)Activator.CreateInstance(searchResult.Type, [Graph, null])!;
+		node.CallableScopeId = callableScopeId;
+
+		if (searchResult is NodeProvider.DelegateCreationNode delegateCreation && node is CreateDelegateNode createDelegate)
+			createDelegate.InitializeFromDelegateType(delegateCreation.DelegateType);
+		else if (searchResult is NodeProvider.DelegateInvocationNode delegateInvocation && node is InvokeDelegateNode invokeDelegate)
+			invokeDelegate.InitializeFromDelegateType(delegateInvocation.DelegateType);
+
+		ValidateNodePlacement(node);
 		populateNode(node);
 
 		// add it to the nodes and the UI
@@ -42,11 +55,28 @@ public class GraphManagerService
 		else if (searchResult is NodeProvider.SetPropertyOrFieldNode setPropertyOrField && node is SetPropertyOrField setPropertyOrFieldNode)
 			setPropertyOrFieldNode.SetMemberTarget(setPropertyOrField.MemberInfo);
 
+		if (node is CreateDelegateNode delegateNode)
+			CreateDefaultDelegateBody(delegateNode);
+
 		return node;
+	}
+
+	public void AddNode(Node node, string? callableScopeId)
+	{
+		node.CallableScopeId = callableScopeId;
+		ValidateNodePlacement(node);
+		AddNode(node);
+	}
+
+	public void AddDelegateNode(CreateDelegateNode node, string? callableScopeId)
+	{
+		AddNode(node, callableScopeId);
+		CreateDefaultDelegateBody(node);
 	}
 
 	public void AddNode(Node node)
 	{
+		ValidateNodePlacement(node);
 		((IDictionary<string, Node>)Graph.Nodes)[node.Id] = node;
 
 		GraphCanvas.AddNode(node);
@@ -55,16 +85,156 @@ public class GraphManagerService
 
 	public void RemoveNode(Node node)
 	{
-		Graph._Nodes.Remove(node.Id);
+		var removalOrder = GetRecursiveRemovalOrder(node);
+		var disconnectedPairs = new HashSet<(string, string)>();
 
-		GraphCanvas.RemoveNode(node);
+		foreach (var removedNode in removalOrder)
+		{
+			foreach (var connection in removedNode.InputsAndOutputs)
+			{
+				foreach (var other in connection.Connections.ToList())
+				{
+					var pair = string.CompareOrdinal(connection.Id, other.Id) < 0 ? (connection.Id, other.Id) : (other.Id, connection.Id);
+					if (disconnectedPairs.Add(pair))
+						DisconnectConnectionBetween(connection, other);
+				}
+			}
+		}
+
+		foreach (var removedNode in removalOrder)
+		{
+			Graph._Nodes.Remove(removedNode.Id);
+			GraphCanvas.RemoveNode(removedNode);
+		}
 
 		Graph.RaiseGraphChanged(false);
+	}
+
+	private List<Node> GetRecursiveRemovalOrder(Node root)
+	{
+		var result = new List<Node>();
+		var visited = new HashSet<Node>();
+
+		void Visit(Node node)
+		{
+			if (!visited.Add(node))
+				return;
+			if (node is CreateDelegateNode owner)
+			{
+				foreach (var child in Graph.GetNodesInScope(owner.BodyScopeId).ToList())
+					Visit(child);
+			}
+			result.Add(node);
+		}
+
+		Visit(root);
+		return result;
+	}
+
+	private void CreateDefaultDelegateBody(CreateDelegateNode owner)
+	{
+		var entry = new LambdaEntryNode(Graph) { CallableScopeId = owner.BodyScopeId };
+		Node terminal = owner.Kind == DelegateKind.Func
+			? new LambdaReturnNode(Graph) { CallableScopeId = owner.BodyScopeId }
+			: new LambdaCompleteNode(Graph) { CallableScopeId = owner.BodyScopeId };
+
+		entry.RefreshFromOwner(owner);
+		if (terminal is LambdaReturnNode lambdaReturn)
+			lambdaReturn.RefreshFromOwner(owner);
+
+		AddNode(entry);
+		AddNode(terminal);
+		AddNewConnectionBetween(entry.ExecOutput, terminal.Inputs[0]);
+	}
+
+	private void ValidateNodePlacement(Node node)
+	{
+		if ((node is EntryNode || node is ReturnNode) && node.CallableScopeId != null)
+			throw new InvalidOperationException("Method entry and return nodes can only be added to the root method scope.");
+		if (node is LambdaEntryNode or LambdaReturnNode or LambdaCompleteNode)
+		{
+			var owner = Graph.GetOwningLambda(node.CallableScopeId)
+				?? throw new InvalidOperationException("Lambda entry and terminal nodes require a valid owning lambda scope.");
+			if (node is LambdaReturnNode && owner.Kind != DelegateKind.Func)
+				throw new InvalidOperationException("Lambda return nodes can only be added to Func scopes.");
+			if (node is LambdaCompleteNode && owner.Kind != DelegateKind.Action)
+				throw new InvalidOperationException("Lambda completion nodes can only be added to Action scopes.");
+		}
+		else if (node.CallableScopeId != null && Graph.GetOwningLambda(node.CallableScopeId) == null)
+			throw new InvalidOperationException($"Cannot add a node to orphaned callable scope '{node.CallableScopeId}'.");
 	}
 
 	#endregion
 
 	#region Connections
+
+	/// <summary>
+	/// Connects ports normally when they share a scope. When a data value flows from
+	/// an enclosing scope into a lambda, creates and wires the required captures.
+	/// </summary>
+	public void AddNewConnectionBetweenOrCapture(Connection source, Connection destination)
+	{
+		if (source.IsInput)
+			(destination, source) = (source, destination);
+
+		if (source.Parent.CallableScopeId == destination.Parent.CallableScopeId)
+		{
+			AddNewConnectionBetween(source, destination);
+			return;
+		}
+
+		if (!source.IsOutput || !destination.IsInput)
+			throw new InvalidOperationException("Graph connections must connect an output port to an input port.");
+		if (source.Parent.Graph != Graph || destination.Parent.Graph != Graph)
+			throw new InvalidOperationException("Cannot connect ports from another graph.");
+		if (source.Type.IsExec || destination.Type.IsExec)
+			throw new InvalidOperationException("Execution flow cannot be captured across a callable scope boundary.");
+		if (!source.IsAssignableTo(destination, true, true, out _, out _, out _))
+			throw new InvalidOperationException($"Cannot assign '{source.Type.FriendlyName}' to '{destination.Type.FriendlyName}'.");
+
+		var owners = GetAutomaticCaptureRoute(source.Parent.CallableScopeId, destination.Parent.CallableScopeId);
+		var captureName = GetAutomaticCaptureName(source);
+		var scopedSource = source;
+
+		foreach (var owner in owners)
+		{
+			owner.AddCapture(captureName, scopedSource.Type);
+			GraphCanvas.Refresh(owner);
+
+			var captureIndex = owner.Captures.Count - 1;
+			var entry = Graph.GetNodesInScope(owner.BodyScopeId).OfType<LambdaEntryNode>().Single();
+			AddNewConnectionBetween(scopedSource, owner.CaptureInputs[captureIndex]);
+			scopedSource = entry.CaptureOutputs[captureIndex];
+		}
+
+		AddNewConnectionBetween(scopedSource, destination);
+	}
+
+	private List<CreateDelegateNode> GetAutomaticCaptureRoute(string? sourceScopeId, string? destinationScopeId)
+	{
+		var owners = new List<CreateDelegateNode>();
+		var currentScopeId = destinationScopeId;
+
+		while (currentScopeId != sourceScopeId)
+		{
+			var owner = Graph.GetOwningLambda(currentScopeId)
+				?? throw new InvalidOperationException("Automatic captures can only connect a value from an enclosing scope into a nested lambda scope.");
+			owners.Add(owner);
+			currentScopeId = owner.CallableScopeId;
+		}
+
+		owners.Reverse();
+		return owners;
+	}
+
+	private static string GetAutomaticCaptureName(Connection source)
+	{
+		const string capturedPrefix = "Captured ";
+		var name = source.Name;
+		if (name.StartsWith(capturedPrefix, StringComparison.OrdinalIgnoreCase))
+			name = name[capturedPrefix.Length..];
+		return string.IsNullOrWhiteSpace(name) ? "capture" : name;
+	}
 
 	public void MergeRemovedConnectionsWithNewConnections(IEnumerable<Connection> newConnections, IEnumerable<Connection> removedConnections)
 	{
@@ -73,7 +243,7 @@ public class GraphManagerService
 			var newConnection = newConnections.FirstOrDefault(x => x.Parent == removedConnection.Parent && x.Name == removedConnection.Name && x.Type == removedConnection.Type);
 
 			// if we found a new connection, connect them together and remove the old connection
-			foreach (var oldLink in removedConnection.Connections)
+			foreach (var oldLink in removedConnection.Connections.ToList())
 			{
 				DisconnectConnectionBetween(oldLink, removedConnection); // cleanup the old connection
 
@@ -97,6 +267,13 @@ public class GraphManagerService
 		{
 			(destination, source) = (source, destination);
 		}
+
+		if (!source.IsOutput || !destination.IsInput)
+			throw new InvalidOperationException("Graph connections must connect an output port to an input port.");
+		if (source.Parent.Graph != Graph || destination.Parent.Graph != Graph)
+			throw new InvalidOperationException("Cannot connect ports from another graph.");
+		if (source.Parent.CallableScopeId != destination.Parent.CallableScopeId)
+			throw new InvalidOperationException($"Cannot connect '{source.Parent.Name}.{source.Name}' to '{destination.Parent.Name}.{destination.Name}' across a callable scope boundary. Add an explicit lambda capture instead.");
 
 		if (!source._Connections.Contains(destination))
 			source._Connections.Add(destination);
@@ -153,7 +330,7 @@ public class GraphManagerService
 		node.OnBeforeGenericTypeDefined(changedGenerics);
 
 		bool hadAnyChanges = false;
-		foreach (var port in node.InputsAndOutputs) // check if any of the ports have the generic we just solved
+		foreach (var port in node.InputsAndOutputs.ToList()) // check if any of the ports have the generic we just solved
 		{
 			var previousType = useInitialTypes ? port.InitialType : port.Type;
 

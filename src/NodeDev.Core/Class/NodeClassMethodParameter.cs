@@ -44,8 +44,8 @@ namespace NodeDev.Core.Class
 
 		private void RefreshEntryAndReturnNodes()
 		{
-			var entry = Method.Graph.Nodes.Values.OfType<EntryNode>().First();
-			var returnNodes = Method.Graph.Nodes.Values.OfType<ReturnNode>().ToList();
+			var entry = Method.Graph.GetNodesInScope(null).OfType<EntryNode>().First();
+			var returnNodes = Method.Graph.GetNodesInScope(null).OfType<ReturnNode>().ToList();
 
 			entry.Refresh();
 			foreach (var returnNode in returnNodes)
@@ -116,7 +116,7 @@ namespace NodeDev.Core.Class
 					methodCall.OnMethodParameterRenamed(oldName, this);
 			}
 
-			var entry = Method.Graph.Nodes.Values.OfType<EntryNode>().FirstOrDefault();
+			var entry = Method.Graph.GetNodesInScope(null).OfType<EntryNode>().FirstOrDefault();
 			entry?.RenameParameter(this, Method.Parameters.IndexOf(this));
 		}
 

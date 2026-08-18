@@ -77,8 +77,12 @@ namespace NodeDev.Core.Connections
 		{
 			// Find the LinkedExec connection, if any
 			Connection? linkedExec = null;
-			if (linkedExec != null)
-				linkedExec = parent.Graph.Nodes.SelectMany(x => x.Value.InputsAndOutputs).FirstOrDefault(x => x.Id == serializedConnectionObj.LinkedExec);
+			if (serializedConnectionObj.LinkedExec != null)
+			{
+				linkedExec = parent.InputsAndOutputs
+					.Concat(parent.Graph.Nodes.SelectMany(x => x.Value.InputsAndOutputs))
+					.FirstOrDefault(x => x.Id == serializedConnectionObj.LinkedExec);
+			}
 
 			var type = TypeBase.Deserialize(parent.TypeFactory, serializedConnectionObj.SerializedType);
 			var connection = new Connection(serializedConnectionObj.Name, parent, type, serializedConnectionObj.Id, linkedExec);
