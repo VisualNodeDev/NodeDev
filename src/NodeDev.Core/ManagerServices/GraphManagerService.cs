@@ -239,27 +239,29 @@ public class GraphManagerService
 
 	public void MergeRemovedConnectionsWithNewConnections(IEnumerable<Connection> newConnections, IEnumerable<Connection> removedConnections)
 	{
-		foreach (var removedConnection in removedConnections)
-		{
-			var newConnection = newConnections.FirstOrDefault(x => x.Parent == removedConnection.Parent && x.Name == removedConnection.Name && x.Type == removedConnection.Type);
+		var newConnectionsList = newConnections.ToList();
+		var removedConnectionsList = removedConnections.ToList();
+		var reconnections = new List<(Connection OldLink, Connection NewConnection)>();
 
-			// if we found a new connection, connect them together and remove the old connection
+		foreach (var removedConnection in removedConnectionsList)
+		{
+			var newConnection = newConnectionsList.FirstOrDefault(x => x.Parent == removedConnection.Parent && x.Name == removedConnection.Name && x.Type == removedConnection.Type);
+
 			foreach (var oldLink in removedConnection.Connections.ToList())
 			{
 				DisconnectConnectionBetween(oldLink, removedConnection); // cleanup the old connection
 
-				if (newConnection != null)
-				{
-					// Before we re-connect them let's make sure both are inputs or both outputs
-					if (oldLink.IsInput != newConnection.IsInput)
-					{
-						// we can safely reconnect the new connection to the old link
-						// Either newConnection is an input and removedConnection is an output or vice versa
-						AddNewConnectionBetween(oldLink, newConnection);
-					}
-				}
+				// Reconnect only after the canvas has ports for the replacement connection.
+				if (newConnection != null && oldLink.IsInput != newConnection.IsInput)
+					reconnections.Add((oldLink, newConnection));
 			}
 		}
+
+		foreach (var parent in newConnectionsList.Concat(removedConnectionsList).Select(connection => connection.Parent).Distinct())
+			GraphCanvas.Refresh(parent);
+
+		foreach (var (oldLink, newConnection) in reconnections)
+			AddNewConnectionBetween(oldLink, newConnection);
 	}
 
 	public void AddNewConnectionBetween(Connection source, Connection destination)

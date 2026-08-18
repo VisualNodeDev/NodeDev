@@ -10,6 +10,39 @@ namespace NodeDev.Tests;
 public class GraphManagerServiceTests : NodeDevTestsBase
 {
 	[Fact]
+	public void SelectingNewListOverloadRefreshesPortsAndKeepsExecConnected()
+	{
+		var project = Project.CreateNewDefaultProject(out var main);
+		var graphCanvas = Substitute.For<IGraphCanvas>();
+		graphCanvas.Graph.Returns(main.Graph);
+		main.Graph.GraphCanvas = graphCanvas;
+
+		var newNode = new New(main.Graph);
+		main.Graph.Manager.AddNode(newNode);
+		main.Graph.Manager.AddNewConnectionBetween(main.EntryNode!.Outputs[0], newNode.Inputs[0]);
+		main.Graph.Manager.PropagateNewGeneric(
+			newNode,
+			new Dictionary<string, NodeDev.Core.Types.TypeBase>
+			{
+				["T"] = project.TypeFactory.Get<List<string>>()
+			},
+			useInitialTypes: false,
+			initiatingConnection: null,
+			overrideInitialTypes: true);
+
+		var capacityOverload = Assert.Single(
+			newNode.AlternatesOverloads,
+			overload => overload.Parameters.Count == 1 && overload.Parameters[0].Name == "capacity");
+		graphCanvas.ClearReceivedCalls();
+
+		main.Graph.Manager.SelectNodeOverload(newNode, capacityOverload);
+
+		Assert.Contains(main.EntryNode.Outputs[0], newNode.Inputs[0].Connections);
+		Assert.Equal("capacity", newNode.Inputs[1].Name);
+		graphCanvas.Received(1).Refresh(newNode);
+	}
+
+	[Fact]
 	public void AddEnumerableRange_ShouldExposeAllPortsWhenAddedToCanvas()
 	{
 		var project = Project.CreateNewDefaultProject(out var main);

@@ -2,6 +2,7 @@
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Delegates;
 using NodeDev.Core.Types;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -133,7 +134,7 @@ namespace NodeDev.Core
 						!x.IsStatic); // Since we're dragging out of a connection, we're expected to only want to execute instance methods
 
 				// get extensions methods for the realType.BackendType
-				methods = methods.Concat(GetExtensionMethods(startConnection.Type, project.TypeFactory)).Where(x => string.IsNullOrWhiteSpace(text) || x.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
+				methods = methods.Concat(GetExtensionMethods(startConnection.Type, project.TypeFactory, text));
 
 				results = results.Concat(methods.Select(x => new MethodCallNode(typeof(MethodCall), x)));
 
@@ -160,26 +161,249 @@ namespace NodeDev.Core
 			return results;
 		}
 
-		private static readonly Dictionary<Assembly, List<RealMethodInfo>> ExtensionMethodsMethodsPerType = [];
-		private static IEnumerable<IMethodInfo> GetExtensionMethods(TypeBase t, TypeFactory typeFactory)
+		private static readonly ConcurrentDictionary<Assembly, Lazy<List<MethodInfo>>> ExtensionMethodsPerAssembly = [];
+		private static readonly ConcurrentDictionary<(Assembly Assembly, Type ReceiverType), ReceiverExtensionMethodCache> ExtensionMethodsPerReceiver = [];
+		private static readonly ConditionalWeakTable<Type, TypeShape> TypeShapes = new();
+		private static readonly object ExtensionCatalogWarmupLock = new();
+		private static Task? ExtensionCatalogWarmupTask;
+
+		private sealed record ExtensionMethodBinding(MethodInfo? Method);
+
+		private sealed class ReceiverExtensionMethodCache(Type receiverType)
 		{
-			var query = AppDomain.CurrentDomain.GetAssemblies()
-				.Where(x => !x.IsDynamic) // dirty patch to prevent loading types from the generated assemblies
+			private readonly ConcurrentDictionary<MethodInfo, ExtensionMethodBinding> Bindings = [];
+
+			public MethodInfo? GetOrBind(MethodInfo method)
+			{
+				return Bindings.GetOrAdd(method, definition => new(TryCloseExtensionMethod(definition, receiverType))).Method;
+			}
+		}
+
+		private sealed class TypeShape
+		{
+			private readonly Dictionary<Type, Type[]> ImplementationsByGenericDefinition;
+
+			public TypeShape(Type type)
+			{
+				ImplementationsByGenericDefinition = GetTypeAndAncestors(type)
+					.Where(candidate => candidate.IsGenericType)
+					.GroupBy(candidate => candidate.GetGenericTypeDefinition())
+					.ToDictionary(group => group.Key, group => group.ToArray());
+			}
+
+			public IEnumerable<Type> GetImplementations(Type genericDefinition)
+			{
+				return ImplementationsByGenericDefinition.TryGetValue(genericDefinition, out var implementations)
+					? implementations
+					: [];
+			}
+		}
+
+		public static Task WarmExtensionMethodCatalogAsync()
+		{
+			lock (ExtensionCatalogWarmupLock)
+			{
+				return ExtensionCatalogWarmupTask ??= Task.Run(() =>
+				{
+					foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic))
+						_ = GetExtensionMethodsFromAssembly(assembly).Count();
+				});
+			}
+		}
+
+		private static IEnumerable<IMethodInfo> GetExtensionMethods(TypeBase t, TypeFactory typeFactory, string text)
+		{
+			if (t.HasUndefinedGenerics)
+				return [];
+
+			Type receiverType;
+			try
+			{
+				receiverType = t.MakeRealType();
+			}
+			catch
+			{
+				return [];
+			}
+
+			var hasSearchText = !string.IsNullOrWhiteSpace(text);
+			return AppDomain.CurrentDomain.GetAssemblies()
+				.Where(assembly => !assembly.IsDynamic)
 				.SelectMany(assembly =>
 				{
-					if (ExtensionMethodsMethodsPerType.TryGetValue(assembly, out var methods))
-						return methods;
+					var receiverCache = ExtensionMethodsPerReceiver.GetOrAdd((assembly, receiverType), _ => new(receiverType));
+					return GetExtensionMethodsFromAssembly(assembly)
+						.Where(method => !hasSearchText || method.Name.Contains(text, StringComparison.OrdinalIgnoreCase))
+						.Select(receiverCache.GetOrBind);
+				})
+				.Where(method => method != null)
+				.Select(method => (IMethodInfo)new RealMethodInfo(typeFactory, method!, typeFactory.Get(method!.DeclaringType!, null)));
+		}
 
-					return ExtensionMethodsMethodsPerType[assembly] = assembly
-						.GetTypes()
-						.Where(type => !type.IsGenericType)
-						.SelectMany(x => x.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
-						.Where(method => method.IsDefined(typeof(ExtensionAttribute), false) && t.IsAssignableTo(typeFactory.Get(method.GetParameters()[0].ParameterType, null), out _, out _))
-						.Select(x => new RealMethodInfo(typeFactory, x, typeFactory.Get(x.DeclaringType!, null)))
-						.ToList();
-				});
+		private static IEnumerable<MethodInfo> GetExtensionMethodsFromAssembly(Assembly assembly)
+		{
+			return ExtensionMethodsPerAssembly
+				.GetOrAdd(assembly, currentAssembly => new(
+					() => FindExtensionMethodsFromAssembly(currentAssembly),
+					LazyThreadSafetyMode.ExecutionAndPublication))
+				.Value;
+		}
 
-			return query;
+		private static List<MethodInfo> FindExtensionMethodsFromAssembly(Assembly assembly)
+		{
+			try
+			{
+				if (!assembly.IsDefined(typeof(ExtensionAttribute), false))
+					return [];
+			}
+			catch
+			{
+				// If the assembly's custom attributes cannot be inspected, scan its types
+				// and let the per-method checks below decide what is usable.
+			}
+
+			IEnumerable<Type> types;
+			try
+			{
+				types = assembly.GetTypes();
+			}
+			catch (ReflectionTypeLoadException exception)
+			{
+				types = exception.Types.OfType<Type>();
+			}
+			catch
+			{
+				types = [];
+			}
+
+			var methods = new List<MethodInfo>();
+			foreach (var type in types.Where(type => type.IsAbstract && type.IsSealed && !type.IsGenericType))
+			{
+				IEnumerable<MethodInfo> typeMethods;
+				try
+				{
+					typeMethods = type.GetMethods(BindingFlags.Static | BindingFlags.Public);
+				}
+				catch
+				{
+					continue;
+				}
+
+				foreach (var method in typeMethods)
+				{
+					try
+					{
+						if (method.IsDefined(typeof(ExtensionAttribute), false))
+							methods.Add(method);
+					}
+					catch
+					{
+						// Some tooling assemblies contain attributes whose dependency versions
+						// cannot be loaded in the application. They are not usable here anyway.
+					}
+				}
+			}
+
+			return methods;
+		}
+
+		private static MethodInfo? TryCloseExtensionMethod(MethodInfo method, Type receiverType)
+		{
+			ParameterInfo[] parameters;
+			try
+			{
+				parameters = method.GetParameters();
+			}
+			catch
+			{
+				return null;
+			}
+			if (parameters.Length == 0)
+				return null;
+
+			if (!method.IsGenericMethodDefinition)
+				return IsExtensionReceiverCompatible(parameters[0].ParameterType, receiverType) ? method : null;
+
+			var inferredTypes = new Dictionary<Type, Type>();
+			if (!TryInferGenericArguments(parameters[0].ParameterType, receiverType, inferredTypes))
+				return null;
+
+			var genericParameters = method.GetGenericArguments();
+			if (genericParameters.Any(parameter => !inferredTypes.ContainsKey(parameter)))
+				return null;
+
+			try
+			{
+				var closedMethod = method.MakeGenericMethod(genericParameters.Select(parameter => inferredTypes[parameter]).ToArray());
+				return IsExtensionReceiverCompatible(closedMethod.GetParameters()[0].ParameterType, receiverType) ? closedMethod : null;
+			}
+			catch (ArgumentException)
+			{
+				return null;
+			}
+		}
+
+		private static bool TryInferGenericArguments(Type pattern, Type actualType, Dictionary<Type, Type> inferredTypes)
+		{
+			if (pattern.IsByRef)
+				pattern = pattern.GetElementType()!;
+
+			if (pattern.IsGenericMethodParameter)
+			{
+				if (inferredTypes.TryGetValue(pattern, out var inferredType))
+					return inferredType == actualType;
+
+				inferredTypes[pattern] = actualType;
+				return true;
+			}
+
+			if (pattern.IsArray)
+			{
+				return actualType.IsArray &&
+					pattern.GetArrayRank() == actualType.GetArrayRank() &&
+					TryInferGenericArguments(pattern.GetElementType()!, actualType.GetElementType()!, inferredTypes);
+			}
+
+			if (!pattern.IsGenericType)
+				return pattern.IsAssignableFrom(actualType);
+
+			var patternDefinition = pattern.GetGenericTypeDefinition();
+			var matchingTypes = TypeShapes.GetValue(actualType, type => new(type)).GetImplementations(patternDefinition);
+
+			foreach (var matchingType in matchingTypes)
+			{
+				var candidateInferences = new Dictionary<Type, Type>(inferredTypes);
+				var patternArguments = pattern.GetGenericArguments();
+				var actualArguments = matchingType.GetGenericArguments();
+				if (!patternArguments.Zip(actualArguments).All(pair => TryInferGenericArguments(pair.First, pair.Second, candidateInferences)))
+					continue;
+
+				inferredTypes.Clear();
+				foreach (var inference in candidateInferences)
+					inferredTypes[inference.Key] = inference.Value;
+				return true;
+			}
+
+			return false;
+		}
+
+		private static IEnumerable<Type> GetTypeAndAncestors(Type type)
+		{
+			yield return type;
+
+			foreach (var @interface in type.GetInterfaces())
+				yield return @interface;
+
+			for (var baseType = type.BaseType; baseType != null; baseType = baseType.BaseType)
+				yield return baseType;
+		}
+
+		private static bool IsExtensionReceiverCompatible(Type parameterType, Type receiverType)
+		{
+			if (parameterType.IsByRef)
+				parameterType = parameterType.GetElementType()!;
+
+			return parameterType.IsAssignableFrom(receiverType);
 		}
 	}
 }

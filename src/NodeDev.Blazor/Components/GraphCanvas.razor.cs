@@ -48,6 +48,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	protected override void OnInitialized()
 	{
 		base.OnInitialized();
+		_ = NodeProvider.WarmExtensionMethodCatalogAsync();
 
 		Graph.GraphCanvas = this;
 
@@ -781,6 +782,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	public void RemoveLinkFromGraphCanvas(Connection source, Connection destination)
 	{
+		var previousConnectionSuppression = DisableConnectionUpdate;
 		DisableConnectionUpdate = true;
 		try
 		{
@@ -792,12 +794,13 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		}
 		finally
 		{
-			DisableConnectionUpdate = false;
+			DisableConnectionUpdate = previousConnectionSuppression;
 		}
 	}
 
 	public void AddLinkToGraphCanvas(Connection source, Connection destination)
 	{
+		var previousConnectionSuppression = DisableConnectionUpdate;
 		DisableConnectionUpdate = true;
 		try
 		{
@@ -817,7 +820,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		}
 		finally
 		{
-			DisableConnectionUpdate = false;
+			DisableConnectionUpdate = previousConnectionSuppression;
 		}
 	}
 
@@ -906,11 +909,18 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	private void AddNodeLinks(Node node, bool onlyOutputs)
 	{
+		var addedConnections = new HashSet<(string Source, string Target)>();
 		foreach (var connection in onlyOutputs ? node.Outputs : node.InputsAndOutputs) // just process the outputs so we don't connect "input to output" and "output to input" on the same connections
 		{
 			var portModel = FindPort(connection) ?? throw new InvalidOperationException($"No canvas port exists for {node.Name}.{connection.Name}.");
 			foreach (var other in connection.Connections)
 			{
+				var connectionKey = connection.IsOutput
+					? (connection.Id, other.Id)
+					: (other.Id, connection.Id);
+				if (!addedConnections.Add(connectionKey))
+					continue;
+
 				var otherPortModel = FindPort(other) ?? throw new InvalidOperationException($"No canvas port exists for {other.Parent.Name}.{other.Name}.");
 
 				var source = portModel;
@@ -926,10 +936,17 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 				// disable the connection update while adding the link so we can call it ourself and 'force' it to be sure it actually runs
 				// if we don't do that, we'll have to call it again after adding the link and put the 'force' parameter to true, but then
 				// it might be run twice, resulting in all callbacks being called twice!
+				var previousConnectionSuppression = DisableConnectionUpdate;
 				DisableConnectionUpdate = true;
-				var link = Diagram.Links.Add(new LinkModel(source, target));
-
-				DisableConnectionUpdate = false;
+				LinkModel link;
+				try
+				{
+					link = Diagram.Links.Add(new LinkModel(source, target));
+				}
+				finally
+				{
+					DisableConnectionUpdate = previousConnectionSuppression;
+				}
 				OnConnectionAdded(link, true);
 
 				var connectionWithVertices = GetConnectionContainingVertices(source.Connection, target.Connection);
@@ -970,20 +987,48 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		if (nodeModel == null)
 			return;
 
-		// When overload is selected, the node's connections change
-		// We need to rebuild the ports to reflect the new connections
-		
-		// Remove old ports
 		var oldPorts = nodeModel.Ports.ToList();
-		foreach (var port in oldPorts)
-			nodeModel.RemovePort(port);
+		var expectedPorts = node.InputsAndOutputs
+			.Select(connection => (Connection: connection, IsInput: node.Inputs.Contains(connection)))
+			.ToList();
+		var portsAreUnchanged = oldPorts.Count == expectedPorts.Count && expectedPorts.All(expected =>
+			oldPorts.OfType<GraphPortModel>().Any(port =>
+				port.Connection == expected.Connection &&
+				(port.Alignment == PortAlignment.Left) == expected.IsInput));
 
-		// Add new ports based on updated node connections
-		foreach (var connection in node.InputsAndOutputs)
-			nodeModel.AddPort(new GraphPortModel(nodeModel, connection, node.Inputs.Contains(connection)));
+		// Type-only updates keep the same Connection instances. Reusing their ports is
+		// important because existing diagram links are anchored to those port objects.
+		if (portsAreUnchanged)
+		{
+			nodeModel.Refresh();
+			return;
+		}
 
-		// Refresh the node model to trigger UI update
-		nodeModel?.Refresh();
+		Diagram.Batch(() =>
+		{
+			var previousConnectionSuppression = DisableConnectionUpdate;
+			DisableConnectionUpdate = true;
+			try
+			{
+				// Links must be removed before their old ports. The core connections remain
+				// intact and are re-rendered against the replacement ports below.
+				foreach (var link in oldPorts.SelectMany(port => port.Links).Distinct().ToList())
+					Diagram.Links.Remove(link);
+
+				foreach (var port in oldPorts)
+					nodeModel.RemovePort(port);
+
+				foreach (var expectedPort in expectedPorts)
+					nodeModel.AddPort(new GraphPortModel(nodeModel, expectedPort.Connection, expectedPort.IsInput));
+			}
+			finally
+			{
+				DisableConnectionUpdate = previousConnectionSuppression;
+			}
+
+			AddNodeLinks(node, onlyOutputs: false);
+			nodeModel.Refresh();
+		});
 	}
 
 	#endregion
