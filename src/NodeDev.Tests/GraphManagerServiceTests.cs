@@ -10,6 +10,39 @@ namespace NodeDev.Tests;
 public class GraphManagerServiceTests : NodeDevTestsBase
 {
 	[Fact]
+	public void AddEnumerableRange_ShouldExposeAllPortsWhenAddedToCanvas()
+	{
+		var project = Project.CreateNewDefaultProject(out var main);
+		var graphCanvas = Substitute.For<IGraphCanvas>();
+		graphCanvas.Graph.Returns(main.Graph);
+		main.Graph.GraphCanvas = graphCanvas;
+
+		string[]? inputsSeenByCanvas = null;
+		string[]? outputsSeenByCanvas = null;
+		graphCanvas
+			.When(canvas => canvas.AddNode(Arg.Any<Node>()))
+			.Do(call =>
+			{
+				var addedNode = call.Arg<Node>();
+				inputsSeenByCanvas = addedNode.Inputs.Select(connection => connection.Name).ToArray();
+				outputsSeenByCanvas = addedNode.Outputs.Select(connection => connection.Name).ToArray();
+			});
+
+		var rangeSearchResult = Assert.Single(
+			NodeProvider.Search(main.Graph, "Enumerable.Range", null, null)
+				.OfType<NodeProvider.MethodCallNode>());
+
+		var rangeNode = Assert.IsType<MethodCall>(main.Graph.Manager.AddNode(rangeSearchResult, _ => { }));
+
+		Assert.NotNull(inputsSeenByCanvas);
+		Assert.NotNull(outputsSeenByCanvas);
+		Assert.Equal(["Exec", "start", "count"], inputsSeenByCanvas);
+		Assert.Equal(["Exec", "Result"], outputsSeenByCanvas);
+		Assert.Equal(inputsSeenByCanvas, rangeNode.Inputs.Select(connection => connection.Name));
+		Assert.Equal(outputsSeenByCanvas, rangeNode.Outputs.Select(connection => connection.Name));
+	}
+
+	[Fact]
 	public void ConnectTwoExecInOneOutput_ShouldDisconnectFirstExec()
 	{
 		var project = Project.CreateNewDefaultProject(out var main);

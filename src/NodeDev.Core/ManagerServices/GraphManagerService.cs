@@ -45,15 +45,16 @@ public class GraphManagerService
 		ValidateNodePlacement(node);
 		populateNode(node);
 
-		// add it to the nodes and the UI
-		AddNode(node);
-
 		if (searchResult is NodeProvider.MethodCallNode methodCall && node is MethodCall methodCallNode)
 			methodCallNode.SetMethodTarget(methodCall.MethodInfo);
 		else if (searchResult is NodeProvider.GetPropertyOrFieldNode getPropertyOrField && node is GetPropertyOrField getPropertyOrFieldNode)
 			getPropertyOrFieldNode.SetMemberTarget(getPropertyOrField.MemberInfo);
 		else if (searchResult is NodeProvider.SetPropertyOrFieldNode setPropertyOrField && node is SetPropertyOrField setPropertyOrFieldNode)
 			setPropertyOrFieldNode.SetMemberTarget(setPropertyOrField.MemberInfo);
+
+		// Add the node only after search-result-specific initialization has created all
+		// of its connections. UI canvases snapshot those connections in AddNode.
+		AddNode(node);
 
 		if (node is CreateDelegateNode delegateNode)
 			CreateDefaultDelegateBody(delegateNode);
