@@ -55,7 +55,7 @@ public class GraphPortModelTests
 
 		child.SetPosition(520, 250);
 
-		Assert.Equal(710, group.Size.Width);
+		Assert.Equal(520 + 100 + (double)LambdaGroupModel.FuncPadding, group.Size.Width);
 		Assert.Equal(420, group.Size.Height);
 	}
 

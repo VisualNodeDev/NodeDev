@@ -19,7 +19,10 @@
 		<div class="lambda-signature-editor" data-test-id="lambda-signature-editor">
 			@if (Group.DelegateNode is CreateFuncNode)
 			{
-				<button class="lambda-signature-chip lambda-result-chip" @onclick="SelectResultType" @onclick:stopPropagation="true">
+				<button class="lambda-signature-chip lambda-result-chip"
+						title="Returns @Group.DelegateNode.ResultType?.FriendlyName"
+						@onclick="SelectResultType"
+						@onclick:stopPropagation="true">
 					returns @(Group.DelegateNode.ResultType?.FriendlyName ?? "?")
 				</button>
 			}

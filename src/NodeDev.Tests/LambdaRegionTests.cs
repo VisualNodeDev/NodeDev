@@ -10,6 +10,19 @@ namespace NodeDev.Tests;
 public class LambdaRegionTests
 {
 	[Fact]
+	public void CreateFunc_DefaultsResultTypeToBool()
+	{
+		var (_, method, _) = CreateMethod<int>("Run");
+		var graph = method.Graph;
+		var func = AddDelegate<CreateFuncNode>(graph);
+		var lambdaReturn = Assert.Single(graph.GetNodesInScope(func.BodyScopeId).OfType<LambdaReturnNode>());
+
+		Assert.Equal(graph.Project.TypeFactory.Get<bool>(), func.ResultType);
+		Assert.Equal(typeof(Func<bool>), func.DelegateType.MakeRealType());
+		Assert.Equal(func.ResultType, lambdaReturn.ResultInput.Type);
+	}
+
+	[Fact]
 	public void CreateFunc_CreatesScopedEntryAndReturn_AndProjectsSignature()
 	{
 		var (_, method, _) = CreateMethod<int, int>("Run", "value");

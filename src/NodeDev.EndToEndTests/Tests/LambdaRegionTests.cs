@@ -40,13 +40,15 @@ public class LambdaRegionTests : E2ETestBase
 		var rebuiltRegion = Page.Locator("[data-test-id='lambda-region']").Last;
 		await rebuiltRegion.Locator("[data-test-id='lambda-parameter']").WaitForAsync(new() { State = WaitForSelectorState.Visible });
 
-		await HomePage.SearchForNodes("TypeOf");
-		await HomePage.AddNodeFromSearch("TypeOf");
+		// CreateFunc now has a bool result by default, so use a compatible root-scope
+		// output to exercise automatic capture across the lambda boundary.
+		await HomePage.SearchForNodes("And");
+		await HomePage.AddNodeFromSearch("And");
 		var sourcePort = Page
-			.Locator("[data-test-id='graph-node'][data-test-node-name='TypeOf']")
+			.Locator("[data-test-id='graph-node'][data-test-node-name='And']")
 			.Last
 			.Locator(".col.output")
-			.Filter(new() { HasText = "Type" })
+			.Filter(new() { HasText = "c" })
 			.Locator(".diagram-port")
 			.First;
 		var resultPort = rebuiltRegion

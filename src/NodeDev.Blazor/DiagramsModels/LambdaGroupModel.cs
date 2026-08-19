@@ -14,7 +14,7 @@ namespace NodeDev.Blazor.DiagramsModels;
 public sealed class LambdaGroupModel : GroupModel
 {
 	public const byte MinimumPadding = 60;
-	public const byte FuncPadding = 90;
+	public const byte FuncPadding = MinimumPadding;
 	public const double MinimumWidth = 600;
 	public const double MinimumHeight = 420;
 

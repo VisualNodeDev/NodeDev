@@ -227,11 +227,14 @@ g.diagram-link path:not(.selection-helper) {
 
 .lambda-region-title-row {
 	justify-content: space-between;
+	flex: 1 1 auto;
+	min-width: 0;
 }
 
 .lambda-signature-editor {
+	flex: 0 1 auto;
 	flex-wrap: wrap;
-	margin-top: 0.25rem;
+	justify-content: flex-end;
 	font-size: 0.7rem;
 }
 
@@ -245,6 +248,7 @@ g.diagram-link path:not(.selection-helper) {
 }
 
 .lambda-signature-chip button,
+.lambda-result-chip,
 .lambda-signature-add {
 	border: 0;
 	background: transparent;
@@ -266,6 +270,13 @@ g.diagram-link path:not(.selection-helper) {
 .lambda-signature-add {
 	border: 1px dashed rgba(79, 70, 229, 0.55);
 	border-radius: 999px;
+}
+
+.lambda-result-chip {
+	max-width: 180px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .lambda-chip-remove {
@@ -315,7 +326,7 @@ g.diagram-link path:not(.selection-helper) {
     position: absolute;
     right: -1px;
     bottom: 18px;
-    width: 190px;
+    width: 156px;
     box-sizing: border-box;
     overflow: visible;
     padding: 0 10px 7px 14px;
