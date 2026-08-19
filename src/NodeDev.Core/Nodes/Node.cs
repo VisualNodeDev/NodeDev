@@ -18,6 +18,12 @@ namespace NodeDev.Core.Nodes
 
 		public string Id { get; }
 
+		/// <summary>
+		/// Identifies the callable body this node belongs to. Null is the containing
+		/// method body; a delegate body uses its owning CreateDelegateNode id.
+		/// </summary>
+		public string? CallableScopeId { get; internal set; }
+
 		public virtual string Name { get; set; } = "";
 
 		public virtual bool AllowEditingName { get; } = false;
@@ -279,10 +285,26 @@ namespace NodeDev.Core.Nodes
 
 		#region Serialization
 
-		public record SerializedNode(string Type, string Id, string Name, List<Connection.SerializedConnection> Inputs, List<Connection.SerializedConnection> Outputs, Dictionary<string, string> Decorations);
+		public record SerializedNode(
+			string Type,
+			string Id,
+			string Name,
+			List<Connection.SerializedConnection> Inputs,
+			List<Connection.SerializedConnection> Outputs,
+			Dictionary<string, string> Decorations,
+			string? CallableScopeId = null,
+			string? Payload = null);
 		internal SerializedNode Serialize()
 		{
-			var serializedNode = new SerializedNode(GetType().FullName!, Id, Name, Inputs.Select(x => x.Serialize()).ToList(), Outputs.Select(x => x.Serialize()).ToList(), Decorations.ToDictionary(x => x.Key.FullName!, x => x.Value.Serialize()));
+			var serializedNode = new SerializedNode(
+				GetType().FullName!,
+				Id,
+				Name,
+				Inputs.Select(x => x.Serialize()).ToList(),
+				Outputs.Select(x => x.Serialize()).ToList(),
+				Decorations.ToDictionary(x => x.Key.FullName!, x => x.Value.Serialize()),
+				CallableScopeId,
+				SerializePayload());
 
 			return serializedNode;
 		}
@@ -319,6 +341,7 @@ namespace NodeDev.Core.Nodes
 			Outputs.Clear();
 
 			Name = serializedNodeObj.Name;
+			CallableScopeId = serializedNodeObj.CallableScopeId;
 			foreach (var input in serializedNodeObj.Inputs)
 			{
 				var connection = Connection.Deserialize(this, input, true);
@@ -330,7 +353,26 @@ namespace NodeDev.Core.Nodes
 				var connection = Connection.Deserialize(this, output, false);
 				Outputs.Add(connection);
 			}
+
+			DeserializePayload(serializedNodeObj.Payload);
 		}
+
+		/// <summary>
+		/// Serializes semantic node-specific state. UI-only state belongs in
+		/// decorations; callable signatures use this payload hook.
+		/// </summary>
+		protected virtual string? SerializePayload() => null;
+
+		/// <summary>
+		/// Loads semantic node-specific state without reconciling ports. Port and
+		/// cross-node reconciliation is deferred until the whole graph is loaded.
+		/// </summary>
+		protected virtual void DeserializePayload(string? payload) { }
+
+		/// <summary>
+		/// Called by Graph after all nodes and serialized connections exist.
+		/// </summary>
+		internal virtual void FinalizeDeserialization() { }
 
 		#endregion
 	}

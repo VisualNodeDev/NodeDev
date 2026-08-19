@@ -17,7 +17,7 @@ public class MethodCall : NormalFlowNode
 	public class TargetMethodDecoration : INodeDecoration
 	{
 		private record class SavedMethodInfoParameter(string Type);
-		private record class SavedMethodInfo(string Type, string Name, SavedMethodInfoParameter[] ParamTypes);
+		private record class SavedMethodInfo(string Type, string Name, SavedMethodInfoParameter[] ParamTypes, string[]? GenericArguments = null);
 		internal IMethodInfo TargetMethod { get; set; }
 
 		public TargetMethodDecoration(IMethodInfo targetMethod)
@@ -27,7 +27,16 @@ public class MethodCall : NormalFlowNode
 
 		public string Serialize()
 		{
-			return JsonSerializer.Serialize(new SavedMethodInfo(TargetMethod.DeclaringType.SerializeWithFullTypeNameString(), TargetMethod.Name, TargetMethod.GetParameters().Select(p => new SavedMethodInfoParameter(p.ParameterType.SerializeWithFullTypeNameString())).ToArray()));
+			var genericArguments = (TargetMethod as RealMethodInfo)?
+				.GetClosedGenericArguments()?
+				.Select(type => type.SerializeWithFullTypeNameString())
+				.ToArray();
+
+			return JsonSerializer.Serialize(new SavedMethodInfo(
+				TargetMethod.DeclaringType.SerializeWithFullTypeNameString(),
+				TargetMethod.Name,
+				TargetMethod.GetParameters().Select(p => new SavedMethodInfoParameter(p.ParameterType.SerializeWithFullTypeNameString())).ToArray(),
+				genericArguments));
 		}
 
 		public static INodeDecoration Deserialize(TypeFactory typeFactory, string Json)
@@ -35,8 +44,21 @@ public class MethodCall : NormalFlowNode
 			var info = JsonSerializer.Deserialize<SavedMethodInfo>(Json) ?? throw new Exception("Unable to deserialize method info");
 
 			var type = TypeBase.DeserializeFullTypeNameString(typeFactory, info.Type);
-			var parameterTypes = info.ParamTypes.Select(x => TypeBase.DeserializeFullTypeNameString(typeFactory, x.Type));
-			var method = type.GetMethods(info.Name).FirstOrDefault(x => parameterTypes.SequenceEqual(x.GetParameters().Select(y => y.ParameterType)));
+			var parameterTypes = info.ParamTypes.Select(x => TypeBase.DeserializeFullTypeNameString(typeFactory, x.Type)).ToArray();
+			IEnumerable<IMethodInfo> methods = type.GetMethods(info.Name);
+			if (info.GenericArguments != null)
+			{
+				var genericArguments = info.GenericArguments
+					.Select(argument => TypeBase.DeserializeFullTypeNameString(typeFactory, argument))
+					.ToArray();
+
+				methods = methods
+					.OfType<RealMethodInfo>()
+					.Select(method => method.CloseGenericMethod(genericArguments))
+					.OfType<RealMethodInfo>();
+			}
+
+			var method = methods.FirstOrDefault(x => parameterTypes.SequenceEqual(x.GetParameters().Select(y => y.ParameterType)));
 
 			if (method == null)
 				throw new Exception("Unable to find method:" + info.Name);
@@ -60,14 +82,26 @@ public class MethodCall : NormalFlowNode
 	{
 		get
 		{
-			var parentType = TargetMethod?.DeclaringType;
-			if (TargetMethod == null || parentType == null)
-				return [];
-
-			var methods = parentType.GetMethods(TargetMethod.Name);
-
-			return methods.Select(x => x.AlternateOverload()).ToList();
+			return GetTargetMethodOverloads().Select(x => x.AlternateOverload()).ToList();
 		}
+	}
+
+	private IEnumerable<IMethodInfo> GetTargetMethodOverloads()
+	{
+		if (TargetMethod == null)
+			return [];
+
+		IEnumerable<IMethodInfo> methods = TargetMethod.DeclaringType.GetMethods(TargetMethod.Name);
+		var genericArguments = (TargetMethod as RealMethodInfo)?.GetClosedGenericArguments();
+		if (genericArguments != null)
+		{
+			methods = methods
+				.OfType<RealMethodInfo>()
+				.Select(method => method.CloseGenericMethod(genericArguments))
+				.OfType<RealMethodInfo>();
+		}
+
+		return methods;
 	}
 
 	public MethodCall(Graph graph, string? id = null) : base(graph, id)
@@ -85,16 +119,14 @@ public class MethodCall : NormalFlowNode
 	public override void SelectOverload(AlternateOverload overload, out List<Connection> newConnections, out List<Connection> removedConnections)
 	{
 		// find the MethodInfo for the overload
-		var parentType = TargetMethod?.DeclaringType;
-		if (TargetMethod == null || parentType == null)
+		if (TargetMethod == null)
 		{
 			newConnections = [];
 			removedConnections = [];
 			return;
 		}
 
-		var method = parentType
-			.GetMethods(TargetMethod.Name)
+		var method = GetTargetMethodOverloads()
 			.FirstOrDefault(x =>
 				x.GetParameters().Select(y => y.ParameterType).SequenceEqual(overload.Parameters.Select(y => y.ParameterType)) && // check if the types match
 				x.GetParameters().Select(y => y.IsOut).SequenceEqual(overload.Parameters.Select(y => y.IsOut))); // check if the IsOut match

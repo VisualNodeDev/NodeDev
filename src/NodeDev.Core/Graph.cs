@@ -2,6 +2,7 @@
 using NodeDev.Core.Connections;
 using NodeDev.Core.ManagerServices;
 using NodeDev.Core.Nodes;
+using NodeDev.Core.Nodes.Delegates;
 using NodeDev.Core.Nodes.Flow;
 using System.Linq.Expressions;
 
@@ -41,6 +42,38 @@ public class Graph(NodeClassMethod selfMethod)
 	static Graph()
 	{
 		NodeProvider.Initialize();
+	}
+
+	public IEnumerable<Node> GetNodesInScope(string? scopeId) => Nodes.Values.Where(x => x.CallableScopeId == scopeId);
+
+	public CreateDelegateNode? GetOwningLambda(string? scopeId)
+	{
+		if (scopeId == null)
+			return null;
+		return Nodes.TryGetValue(scopeId, out var owner) ? owner as CreateDelegateNode : null;
+	}
+
+	public bool IsRootScope(string? scopeId) => scopeId == null;
+
+	public bool IsScopeAncestorOf(string? ancestorScopeId, string? descendantScopeId)
+	{
+		if (ancestorScopeId == descendantScopeId)
+			return false;
+
+		var currentScopeId = descendantScopeId;
+		var visitedScopes = new HashSet<string>();
+		while (currentScopeId != null && visitedScopes.Add(currentScopeId))
+		{
+			var owner = GetOwningLambda(currentScopeId);
+			if (owner == null)
+				return false;
+
+			currentScopeId = owner.CallableScopeId;
+			if (currentScopeId == ancestorScopeId)
+				return true;
+		}
+
+		return false;
 	}
 
 	public void RaiseGraphChanged(bool requireUIRefresh) => Project.GraphChangedSubject.OnNext((this, requireUIRefresh));
@@ -115,7 +148,11 @@ public class Graph(NodeClassMethod selfMethod)
 	/// if "e" was to be merging with another path, we'd stop at "e" and return it as a merging point.
 	/// </summary>
 	internal NodePathChunks GetChunks(Connection execOutput, bool allowDeadEnd)
+		=> GetChunks(execOutput, allowDeadEnd, execOutput.Parent.CallableScopeId);
+
+	private NodePathChunks GetChunks(Connection execOutput, bool allowDeadEnd, string? expectedScopeId)
 	{
+		ValidateNodeScope(execOutput.Parent, expectedScopeId);
 		var chunks = new List<NodePathChunkPart>();
 
 		var currentInput = execOutput.Connections.FirstOrDefault();
@@ -129,6 +166,7 @@ public class Graph(NodeClassMethod selfMethod)
 
 		while (true)
 		{
+			ValidateNodeScope(currentInput.Parent, expectedScopeId);
 			if (currentInput.Parent.Outputs.Count(x => x.Type.IsExec) <= 1) // we can keep adding to the straight path. It's either a dead end or the path keeps going
 			{
 				if (currentInput.Connections.Count != 1)
@@ -182,7 +220,7 @@ public class Graph(NodeClassMethod selfMethod)
 			else // we have a subchunk
 			{
 				// Get all the chunks of the node (example, both "c" and "d" in the example above)
-				var subChunk = GetChunks(currentInput, currentInput.Parent, allowDeadEnd);
+				var subChunk = GetChunks(currentInput, currentInput.Parent, allowDeadEnd, expectedScopeId);
 
 				if (subChunk.Count == 0)
 					return new NodePathChunks(execOutput, chunks, null, [currentInput]); // we reached a dead end
@@ -233,15 +271,16 @@ public class Graph(NodeClassMethod selfMethod)
 	/// <param name="allowDeadEnd">Does a parent allow dead end here.</param>
 	/// <exception cref="DeadEndNotAllowed"></exception>
 	/// <exception cref="BadMergeException"></exception>
-	private Dictionary<Connection, NodePathChunks> GetChunks(Connection input, Node node, bool allowDeadEnd)
+	private Dictionary<Connection, NodePathChunks> GetChunks(Connection input, Node node, bool allowDeadEnd, string? expectedScopeId)
 	{
+		ValidateNodeScope(node, expectedScopeId);
 		var chunks = new Dictionary<Connection, NodePathChunks>();
 
 		foreach (var output in node.Outputs.Where(x => x.Type.IsExec))
 		{
 			// allowDeadEnd is prioritized over the node's own setting, since we can have a dead end if the parent allows it.
 			// Cases like a "branch" inside a loop can be a dead end, even though branch doesn't allow it, because the loop does.
-			var chunk = GetChunks(output, allowDeadEnd || node.DoesOutputPathAllowDeadEnd(output));
+			var chunk = GetChunks(output, allowDeadEnd || node.DoesOutputPathAllowDeadEnd(output), expectedScopeId);
 			chunks[output] = chunk;
 
 			// Validate if the chunk is a merge and if it is allowed
@@ -281,6 +320,12 @@ public class Graph(NodeClassMethod selfMethod)
 			throw new BadMergeException(chunks.Values.First(x => x.InputMergePoint != null).InputMergePoint!); // we can throw any of the inputs, they all have different merging points
 
 		return chunks;
+	}
+
+	private static void ValidateNodeScope(Node node, string? expectedScopeId)
+	{
+		if (node.CallableScopeId != expectedScopeId)
+			throw new InvalidOperationException($"Execution flow crosses callable scope at node '{node.Name}' ({node.Id}).");
 	}
 
 	#endregion
@@ -438,6 +483,93 @@ public class Graph(NodeClassMethod selfMethod)
 			var noUi = new GraphCanvasNoUI(graph);
 			var manager = new GraphManagerService(noUi);
 			manager.AddNode(node);
+		}
+
+		foreach (var node in graph.Nodes.Values)
+			node.FinalizeDeserialization();
+
+		graph.ValidateCallableScopes();
+	}
+
+	public void ValidateCallableScopes()
+	{
+		foreach (var node in Nodes.Values)
+		{
+			if (node.CallableScopeId != null)
+			{
+				var owner = GetOwningLambda(node.CallableScopeId)
+					?? throw new InvalidOperationException($"Node '{node.Name}' ({node.Id}) belongs to orphaned callable scope '{node.CallableScopeId}'.");
+				if (owner == node)
+					throw new InvalidOperationException($"Delegate node '{node.Name}' cannot belong to its own body scope.");
+			}
+
+			if ((node is EntryNode || node is ReturnNode) && node.CallableScopeId != null)
+				throw new InvalidOperationException($"Method node '{node.Name}' ({node.Id}) cannot be placed inside a lambda scope.");
+			if (node is LambdaEntryNode or LambdaReturnNode or LambdaCompleteNode && node.CallableScopeId == null)
+				throw new InvalidOperationException($"Lambda node '{node.Name}' ({node.Id}) cannot be placed in the root method scope.");
+
+			foreach (var connection in node.InputsAndOutputs)
+			{
+				foreach (var other in connection.Connections)
+				{
+					if (node.CallableScopeId != other.Parent.CallableScopeId)
+						throw new InvalidOperationException($"Connection from '{node.Name}.{connection.Name}' to '{other.Parent.Name}.{other.Name}' crosses a callable scope boundary.");
+				}
+			}
+		}
+
+		foreach (var owner in Nodes.Values.OfType<CreateDelegateNode>())
+		{
+			if (owner.Parameters.Count > BclDelegateType.MaximumParameterCount)
+				throw new InvalidOperationException($"Delegate '{owner.SignatureDisplayName}' has too many parameters.");
+			if (owner.Kind == DelegateKind.Func && owner.ResultType == null)
+				throw new InvalidOperationException($"Func delegate '{owner.Id}' has no result type.");
+
+			var bodyNodes = GetNodesInScope(owner.BodyScopeId).ToList();
+			var entries = bodyNodes.OfType<LambdaEntryNode>().ToList();
+			if (entries.Count != 1)
+				throw new InvalidOperationException($"Delegate '{owner.SignatureDisplayName}' requires exactly one lambda entry, but found {entries.Count}.");
+
+			if (owner.CaptureInputs.Count != owner.Captures.Count || entries[0].CaptureOutputs.Count != owner.Captures.Count)
+				throw new InvalidOperationException($"Delegate '{owner.SignatureDisplayName}' has inconsistent capture ports.");
+			if (entries[0].ParameterOutputs.Count != owner.Parameters.Count)
+				throw new InvalidOperationException($"Delegate '{owner.SignatureDisplayName}' has inconsistent parameter ports.");
+			for (var index = 0; index < owner.Parameters.Count; index++)
+			{
+				var definition = owner.Parameters[index];
+				var output = entries[0].ParameterOutputs[index];
+				if (output.Name != definition.Name || output.Type != definition.Type)
+					throw new InvalidOperationException($"Delegate '{owner.SignatureDisplayName}' parameter '{definition.Name}' disagrees with its lambda entry port.");
+			}
+			for (var index = 0; index < owner.Captures.Count; index++)
+			{
+				var definition = owner.Captures[index];
+				var input = owner.CaptureInputs[index];
+				var output = entries[0].CaptureOutputs[index];
+				if (input.Name != definition.Name || input.Type != definition.Type || output.Name != $"Captured {definition.Name}" || output.Type != definition.Type)
+					throw new InvalidOperationException($"Delegate '{owner.SignatureDisplayName}' capture '{definition.Name}' has inconsistent boundary ports.");
+			}
+
+			if (owner.Kind == DelegateKind.Func)
+			{
+				if (bodyNodes.OfType<LambdaCompleteNode>().Any())
+					throw new InvalidOperationException($"Func delegate '{owner.SignatureDisplayName}' contains an Action completion node.");
+				if (bodyNodes.OfType<LambdaReturnNode>().Count(x => x.IsImplicit) > 1)
+					throw new InvalidOperationException($"Func delegate '{owner.SignatureDisplayName}' contains more than one implicit return node.");
+				if (!bodyNodes.OfType<LambdaReturnNode>().Any())
+					throw new InvalidOperationException($"Func delegate '{owner.SignatureDisplayName}' has no return node.");
+				if (bodyNodes.OfType<LambdaReturnNode>().Any(x => x.ResultInput.Type != owner.ResultType))
+					throw new InvalidOperationException($"Func delegate '{owner.SignatureDisplayName}' contains a return port with the wrong result type.");
+			}
+			else
+			{
+				if (bodyNodes.OfType<LambdaReturnNode>().Any())
+					throw new InvalidOperationException($"Action delegate '{owner.SignatureDisplayName}' contains a Func return node.");
+				if (!bodyNodes.OfType<LambdaCompleteNode>().Any())
+					throw new InvalidOperationException($"Action delegate '{owner.SignatureDisplayName}' has no completion node.");
+			}
+
+			_ = GetChunks(entries[0].ExecOutput, allowDeadEnd: false);
 		}
 	}
 

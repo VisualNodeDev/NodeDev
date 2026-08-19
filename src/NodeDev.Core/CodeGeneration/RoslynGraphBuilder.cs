@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NodeDev.Core.Connections;
 using NodeDev.Core.Debugger;
 using NodeDev.Core.Nodes;
+using NodeDev.Core.Nodes.Delegates;
 using NodeDev.Core.Nodes.Flow;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
@@ -48,14 +49,21 @@ public class RoslynGraphBuilder
 	public MethodDeclarationSyntax BuildMethod()
 	{
 		var method = _graph.SelfMethod;
+		_graph.ValidateCallableScopes();
 
 		// Set the current method in context for variable mapping
 		string fullClassName = $"{_graph.SelfClass.Namespace}.{_graph.SelfClass.Name}";
 		_context.SetCurrentMethod(fullClassName, method.Name);
 
-		// Find the entry node
-		var entryNode = _graph.Nodes.Values.FirstOrDefault(x => x is EntryNode)
-			?? throw new Exception($"No entry node found in graph {method.Name}");
+		// Find the method entry only. Lambda entries and any corrupt method entry in a
+		// child callable scope must not become the containing method's start point.
+		var entryNodes = _graph.Nodes.Values
+			.OfType<EntryNode>()
+			.Where(x => x.CallableScopeId == null)
+			.ToList();
+		if (entryNodes.Count != 1)
+			throw new Exception($"Expected exactly one root entry node in graph {method.Name}, but found {entryNodes.Count}.");
+		var entryNode = entryNodes[0];
 
 		var entryOutput = entryNode.Outputs.FirstOrDefault()
 			?? throw new Exception("Entry node has no output");
@@ -69,37 +77,7 @@ public class RoslynGraphBuilder
 			_context.RegisterVariableName(output, output.Name);
 		}
 
-		// Pre-declare variables for node outputs (similar to old CreateOutputsLocalVariableExpressions)
-		var variableDeclarations = new List<LocalDeclarationStatementSyntax>();
-		foreach (var node in _graph.Nodes.Values)
-		{
-			if (node.CanBeInlined)
-				continue; // inline nodes don't need pre-declared variables
-
-			// Entry node parameters are not pre-declared, they are method parameters
-			if (node is EntryNode)
-				continue;
-
-			foreach (var output in node.Outputs)
-			{
-				if (output.Type.IsExec)
-					continue;
-
-				var varName = _context.GetUniqueName($"{node.Name}_{output.Name}");
-				_context.RegisterVariableName(output, varName);
-
-				// Declare: var <varName> = default(Type);
-				var typeSyntax = RoslynHelpers.GetTypeSyntax(output.Type);
-				var declarator = SF.VariableDeclarator(SF.Identifier(varName))
-					.WithInitializer(SF.EqualsValueClause(
-						SF.DefaultExpression(typeSyntax)));
-
-				variableDeclarations.Add(
-					SF.LocalDeclarationStatement(
-						SF.VariableDeclaration(SF.IdentifierName("var"))
-							.WithVariables(SF.SingletonSeparatedList(declarator))));
-			}
-		}
+		var variableDeclarations = PredeclareOutputLocals(null, entryNode, _context);
 
 		// Build the execution flow starting from entry
 		var chunks = _graph.GetChunks(entryOutput, allowDeadEnd: false);
@@ -145,41 +123,163 @@ public class RoslynGraphBuilder
 	}
 
 	/// <summary>
+	/// Builds an explicitly typed, block-bodied lambda for a delegate creation node.
+	/// Capture snapshots are deliberately queued in the containing context, while
+	/// all body symbols and auxiliary statements live in a lexical child context.
+	/// </summary>
+	internal ExpressionSyntax BuildLambdaExpression(CreateDelegateNode delegateNode)
+	{
+		ValidateNodeScope(delegateNode);
+
+		var delegateType = delegateNode.DelegateType;
+		if (delegateType.HasUndefinedGenerics)
+		{
+			throw new BuildError(
+				$"Delegate signature {delegateType.FriendlyName} contains unresolved generic types.",
+				delegateNode,
+				null);
+		}
+
+		var bodyNodes = _graph.Nodes.Values
+			.Where(x => x.CallableScopeId == delegateNode.BodyScopeId)
+			.ToList();
+		var entries = bodyNodes.OfType<LambdaEntryNode>().ToList();
+		if (entries.Count != 1)
+		{
+			throw new BuildError(
+				$"Delegate {delegateNode.SignatureDisplayName} requires exactly one lambda entry, but found {entries.Count}.",
+				delegateNode,
+				null);
+		}
+
+		if (bodyNodes.OfType<EntryNode>().Any() || bodyNodes.OfType<ReturnNode>().Any())
+		{
+			throw new BuildError(
+				$"Method entry and return nodes are not valid inside {delegateNode.SignatureDisplayName}.",
+				delegateNode,
+				null);
+		}
+
+		if (delegateNode.Kind == DelegateKind.Action && bodyNodes.OfType<LambdaReturnNode>().Any())
+			throw new BuildError("An Action lambda cannot contain a lambda return node.", delegateNode, null);
+		if (delegateNode.Kind == DelegateKind.Func && bodyNodes.OfType<LambdaCompleteNode>().Any())
+			throw new BuildError("A Func lambda cannot contain a lambda completion node.", delegateNode, null);
+
+		var entry = entries[0];
+		var expectedEntryOutputCount = 1 + delegateNode.Parameters.Count + delegateNode.Captures.Count;
+		if (entry.Outputs.Count != expectedEntryOutputCount || !entry.Outputs[0].Type.IsExec)
+		{
+			throw new BuildError(
+				$"Lambda entry ports do not match delegate signature {delegateNode.SignatureDisplayName}.",
+				entry,
+				null);
+		}
+
+		var childContext = _context.CreateChild(delegateNode.BodyScopeId);
+		var lambdaParameters = new List<ParameterSyntax>(delegateNode.Parameters.Count);
+		for (var index = 0; index < delegateNode.Parameters.Count; index++)
+		{
+			var definition = delegateNode.Parameters[index];
+			var parameterName = childContext.GetUniqueName(definition.Name);
+			childContext.RegisterVariableName(entry.Outputs[index + 1], parameterName);
+			lambdaParameters.Add(
+				SF.Parameter(SF.Identifier(parameterName))
+					.WithType(RoslynHelpers.GetTypeSyntax(definition.Type)));
+		}
+
+		for (var index = 0; index < delegateNode.Captures.Count; index++)
+		{
+			var capture = delegateNode.Captures[index];
+			var captureInput = delegateNode.CaptureInputs[index];
+			ResolveInputConnection(captureInput);
+			var outerVariableName = _context.GetVariableName(captureInput)
+				?? throw new BuildError($"Unable to resolve capture {capture.Name}.", delegateNode, null);
+
+			var snapshotName = _context.GetUniqueName($"lambdaCapture_{capture.Name}");
+			var snapshotDeclarator = SF.VariableDeclarator(SF.Identifier(snapshotName))
+				.WithInitializer(SF.EqualsValueClause(SF.IdentifierName(outerVariableName)));
+			_context.AddAuxiliaryStatement(
+				SF.LocalDeclarationStatement(
+					SF.VariableDeclaration(SF.IdentifierName("var"))
+						.WithVariables(SF.SingletonSeparatedList(snapshotDeclarator))));
+
+			var entryOutputIndex = 1 + delegateNode.Parameters.Count + index;
+			childContext.RegisterVariableName(entry.Outputs[entryOutputIndex], snapshotName);
+		}
+
+		var childBuilder = new RoslynGraphBuilder(_graph, childContext);
+		var body = childBuilder.BuildCallableBody(delegateNode.BodyScopeId, entry);
+		var lambda = SF.ParenthesizedLambdaExpression()
+			.WithParameterList(SF.ParameterList(SF.SeparatedList(lambdaParameters)))
+			.WithBlock(body);
+
+		return SF.CastExpression(
+			RoslynHelpers.GetExactDelegateTypeSyntax(delegateType),
+			SF.ParenthesizedExpression(lambda));
+	}
+
+	/// <summary>
+	/// Builds the statements and local declarations for one non-method callable body.
+	/// </summary>
+	internal BlockSyntax BuildCallableBody(string callableScopeId, LambdaEntryNode entryNode)
+	{
+		if (_context.CallableScopeId != callableScopeId || entryNode.CallableScopeId != callableScopeId)
+		{
+			throw new BuildError(
+				$"Lambda entry {entryNode.Name} does not belong to callable scope '{callableScopeId}'.",
+				entryNode,
+				null);
+		}
+
+		var entryOutput = entryNode.Outputs.SingleOrDefault(x => x.Type.IsExec)
+			?? throw new BuildError("Lambda entry has no execution output.", entryNode, null);
+		var variableDeclarations = PredeclareOutputLocals(callableScopeId, entryNode, _context);
+		var chunks = _graph.GetChunks(entryOutput, allowDeadEnd: false);
+		var bodyStatements = BuildStatements(chunks);
+
+		return SF.Block(variableDeclarations.Cast<StatementSyntax>().Concat(bodyStatements));
+	}
+
+	private List<LocalDeclarationStatementSyntax> PredeclareOutputLocals(
+		string? callableScopeId,
+		Node entryNode,
+		GenerationContext context)
+	{
+		var variableDeclarations = new List<LocalDeclarationStatementSyntax>();
+		foreach (var node in _graph.Nodes.Values.Where(x => x.CallableScopeId == callableScopeId))
+		{
+			if (node.CanBeInlined || node == entryNode)
+				continue;
+
+			foreach (var output in node.Outputs.Where(x => !x.Type.IsExec))
+			{
+				var varName = context.GetUniqueName($"{node.Name}_{output.Name}");
+				context.RegisterVariableName(output, varName);
+
+				var declarator = SF.VariableDeclarator(SF.Identifier(varName))
+					.WithInitializer(SF.EqualsValueClause(
+						SF.DefaultExpression(RoslynHelpers.GetTypeSyntax(output.Type))));
+
+				variableDeclarations.Add(
+					SF.LocalDeclarationStatement(
+						SF.VariableDeclaration(SF.IdentifierName("var"))
+							.WithVariables(SF.SingletonSeparatedList(declarator))));
+			}
+		}
+
+		return variableDeclarations;
+	}
+
+	/// <summary>
 	/// Builds statements from node path chunks
 	/// </summary>
 	internal List<StatementSyntax> BuildStatements(Graph.NodePathChunks chunks)
 	{
-		var statements = new List<StatementSyntax>();
-
-		foreach (var chunk in chunks.Chunks)
-		{
-			var node = chunk.Input.Parent;
-			
-			// Resolve inputs first
-			foreach (var input in node.Inputs)
-			{
-				ResolveInputConnection(input);
-			}
-
-			// Get auxiliary statements generated during input resolution (like inline variable declarations)
-			// These need to be added BEFORE the main statement
-			statements.AddRange(_context.GetAndClearAuxiliaryStatements());
-
-			try
-			{
-				// Generate the statement for this node
-				var statement = node.GenerateRoslynStatement(chunk.SubChunk, _context);
-
-				// Add the main statement
-				statements.Add(statement);
-			}
-			catch (Exception ex) when (ex is not BuildError)
-			{
-				throw new BuildError($"Failed to generate statement for node type {node.GetType().Name}: {ex.Message}", node, ex);
-			}
-		}
-
-		return statements;
+		return BuildStatementsCore(
+			chunks,
+			_context.IsDebug,
+			_context.IsDebug ? _context.CurrentClassName : null,
+			_context.IsDebug ? _context.CurrentMethodName : null);
 	}
 	
 	/// <summary>
@@ -188,13 +288,26 @@ public class RoslynGraphBuilder
 	/// </summary>
 	internal List<StatementSyntax> BuildStatementsWithBreakpointTracking(Graph.NodePathChunks chunks, string className, string methodName)
 	{
+		_context.SetCurrentMethod(className, methodName);
+		return BuildStatementsCore(chunks, true, className, methodName);
+	}
+
+	private List<StatementSyntax> BuildStatementsCore(
+		Graph.NodePathChunks chunks,
+		bool trackBreakpoints,
+		string? className,
+		string? methodName)
+	{
 		var statements = new List<StatementSyntax>();
-		string virtualFileName = $"NodeDev_{className}_{methodName}.g.cs";
-		int nodeExecutionOrder = 0; // Track execution order of ALL nodes
+		ValidateNodeScope(chunks.OutputStartPoint.Parent);
+		var virtualFileName = trackBreakpoints
+			? $"NodeDev_{className}_{methodName}.g.cs"
+			: null;
 
 		foreach (var chunk in chunks.Chunks)
 		{
 			var node = chunk.Input.Parent;
+			ValidateNodeScope(node);
 			
 			// Resolve inputs first
 			foreach (var input in node.Inputs)
@@ -209,47 +322,40 @@ public class RoslynGraphBuilder
 
 			try
 			{
+				// Allocate before recursively generating compound statements so parent and
+				// nested nodes share one stable, method-wide sequence.
+				var nodeVirtualLine = trackBreakpoints
+					? _context.AllocateVirtualLine()
+					: 0;
+
 				// Generate the statement for this node
 				var statement = node.GenerateRoslynStatement(chunk.SubChunk, _context);
 
-				// In debug builds, ALWAYS add #line directive for every node (not just those with breakpoints)
-				// This allows breakpoints to be set dynamically during debugging
-				// Create a #line directive that maps this statement to a unique virtual line
-				// The virtual line encodes the node's execution order: 10000 + (order * 1000)
-				int nodeVirtualLine = 10000 + (nodeExecutionOrder * 1000);
-				
-				// Format: #line 10000 "virtual_file.cs"
-				var lineDirective = SF.Trivia(
-					SF.LineDirectiveTrivia(
-						SF.Token(SyntaxKind.HashToken),
-						SF.Token(SyntaxKind.LineKeyword),
-						SF.Literal(nodeVirtualLine),
-						SF.Literal($"\"{virtualFileName}\"", virtualFileName), // Quoted filename
-						SF.Token(SyntaxKind.EndOfDirectiveToken),
-						true
-					)
-				);
-				
-				// Add the #line directive before the statement
-				statement = statement.WithLeadingTrivia(lineDirective);
-				
-				// Record the mapping for this node (regardless of whether it currently has a breakpoint)
-				// This allows breakpoints to be added dynamically after build
-				_context.BreakpointMappings.Add(new NodeDev.Core.Debugger.NodeBreakpointInfo
+				if (trackBreakpoints)
 				{
-					NodeId = node.Id,
-					NodeName = node.Name,
-					ClassName = className,
-					MethodName = methodName,
-					LineNumber = nodeVirtualLine,
-					SourceFile = virtualFileName
-				});
+					var lineDirective = SF.Trivia(
+						SF.LineDirectiveTrivia(
+							SF.Token(SyntaxKind.HashToken),
+							SF.Token(SyntaxKind.LineKeyword),
+							SF.Literal(nodeVirtualLine),
+							SF.Literal($"\"{virtualFileName}\"", virtualFileName!),
+							SF.Token(SyntaxKind.EndOfDirectiveToken),
+							true));
+
+					statement = statement.WithLeadingTrivia(lineDirective);
+					_context.BreakpointMappings.Add(new NodeBreakpointInfo
+					{
+						NodeId = node.Id,
+						NodeName = node.Name,
+						ClassName = className!,
+						MethodName = methodName!,
+						LineNumber = nodeVirtualLine,
+						SourceFile = virtualFileName!
+					});
+				}
 
 				// Add the main statement
 				statements.Add(statement);
-				
-				// Increment execution order for next node
-				nodeExecutionOrder++;
 			}
 			catch (Exception ex) when (ex is not BuildError)
 			{
@@ -259,16 +365,16 @@ public class RoslynGraphBuilder
 
 		return statements;
 	}
-	
-	/// <summary>
-	/// Counts the number of lines a statement will take when normalized.
-	/// This is a rough estimate used for line number tracking.
-	/// </summary>
-	private static int CountStatementLines(StatementSyntax statement)
+
+	private void ValidateNodeScope(Node node)
 	{
-		// Count the number of line breaks in the statement text
-		var text = statement.NormalizeWhitespace().ToFullString();
-		return text.Split('\n').Length;
+		if (node.CallableScopeId != _context.CallableScopeId)
+		{
+			throw new BuildError(
+				$"Node {node.Name} belongs to callable scope '{node.CallableScopeId ?? "method"}' but was reached while building '{_context.CallableScopeId ?? "method"}'.",
+				node,
+				null);
+		}
 	}
 
 	/// <summary>
@@ -276,6 +382,8 @@ public class RoslynGraphBuilder
 	/// </summary>
 	private void ResolveInputConnection(Connection input)
 	{
+		ValidateNodeScope(input.Parent);
+
 		if (input.Type.IsExec)
 			return;
 
@@ -337,6 +445,7 @@ public class RoslynGraphBuilder
 		{
 			var outputConnection = input.Connections[0];
 			var otherNode = outputConnection.Parent;
+			ValidateNodeScope(otherNode);
 
 			if (otherNode.CanBeInlined)
 			{
@@ -415,15 +524,8 @@ public class RoslynGraphBuilder
 
 		var varName = context.GetVariableName(input);
 
-		// If not found, check if it's a method parameter
 		if (varName == null)
-		{
-			var param = _graph.SelfMethod.Parameters.FirstOrDefault(p => p.Name == input.Name);
-			if (param != null)
-				return SF.IdentifierName(param.Name);
-
 			throw new Exception($"Variable name not found for connection {input.Name} of node {input.Parent.Name}");
-		}
 
 		return SF.IdentifierName(varName);
 	}

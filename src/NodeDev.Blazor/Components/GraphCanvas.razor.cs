@@ -1,5 +1,6 @@
 ﻿using Blazor.Diagrams;
 using Blazor.Diagrams.Core.Anchors;
+using Blazor.Diagrams.Core.Behaviors;
 using Blazor.Diagrams.Core.Models;
 using Blazor.Diagrams.Core.Models.Base;
 using Blazor.Diagrams.Core.Routers;
@@ -13,6 +14,7 @@ using NodeDev.Core.Class;
 using NodeDev.Core.Connections;
 using NodeDev.Core.ManagerServices;
 using NodeDev.Core.Nodes;
+using NodeDev.Core.Nodes.Delegates;
 using NodeDev.Core.Types;
 using System.Numerics;
 using System.Reactive.Linq;
@@ -37,6 +39,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	private Vector2 PopupNodePosition;
 	private Connection? PopupNodeConnection;
 	private Node? PopupNode;
+	private string? PopupCallableScopeId;
 
 	private BlazorDiagram Diagram { get; set; } = null!;
 
@@ -45,6 +48,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	protected override void OnInitialized()
 	{
 		base.OnInitialized();
+		_ = NodeProvider.WarmExtensionMethodCatalogAsync();
 
 		Graph.GraphCanvas = this;
 
@@ -65,6 +69,10 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		};
 		Diagram = new BlazorDiagram(options);
 		Diagram.RegisterComponent<GraphNodeModel, GraphNodeWidget>();
+		Diagram.RegisterComponent<LambdaGroupModel, LambdaGroupWidget>();
+		Diagram.Options.Constraints.ShouldDeleteNode = ShouldDeleteNode;
+		Diagram.Options.Constraints.ShouldDeleteGroup = ShouldDeleteGroup;
+		Diagram.GetBehavior<KeyboardShortcutsBehavior>()?.SetShortcut("Delete", false, false, false, DeleteSelection);
 		Diagram.KeyDown += Diagram_KeyDown;
 
 		Diagram.Nodes.Removed += OnNodeRemoved;
@@ -143,13 +151,11 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	public void UpdatePortColor(Connection connection)
 	{
-		var node = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == connection.Parent);
-		if (node == null)
+		var port = FindPort(connection);
+		if (port == null)
 			return;
 
-		var port = node.GetPort(connection);
-
-		var color = GetTypeShapeColor(connection.Type, node.Node.TypeFactory);
+		var color = GetTypeShapeColor(connection.Type, connection.Parent.TypeFactory);
 		foreach (var link in port.Links.Cast<LinkModel>())
 			link.Color = color;
 
@@ -168,6 +174,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 			DisableNodeRemovedUpdate = true;
 
 			Diagram.Links.Clear();
+			Diagram.Groups.Clear();
 			Diagram.Nodes.Clear();
 
 			InitializeCanvasWithGraphNodes();
@@ -177,9 +184,73 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		});
 	}
 
+	private NodeModel? FindNodeModel(Node node)
+	{
+		return (NodeModel?)Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == node)
+			?? Diagram.Groups.OfType<LambdaGroupModel>().FirstOrDefault(x => x.DelegateNode == node);
+	}
+
+	private GraphPortModel? FindPort(Connection connection)
+	{
+		var nodePort = FindNodeModel(connection.Parent)?.Ports
+			.OfType<GraphPortModel>()
+			.FirstOrDefault(x => x.Connection == connection);
+		if (nodePort != null)
+			return nodePort;
+
+		return Diagram.Groups
+			.SelectMany(x => x.Ports)
+			.OfType<GraphPortModel>()
+			.FirstOrDefault(x => x.Connection == connection);
+	}
+
+	private LambdaGroupModel? FindLambdaGroup(string? bodyScopeId) => Diagram.Groups
+		.OfType<LambdaGroupModel>()
+		.FirstOrDefault(x => x.DelegateNode.BodyScopeId == bodyScopeId);
+
 	#endregion
 
 	#region Events from client
+
+	private static ValueTask<bool> ShouldDeleteNode(NodeModel node)
+	{
+		return ValueTask.FromResult(node is not GraphNodeModel { Node: LambdaEntryNode });
+	}
+
+	private ValueTask<bool> ShouldDeleteGroup(GroupModel group)
+	{
+		if (group is not LambdaGroupModel lambdaGroup)
+			return ValueTask.FromResult(true);
+
+		GraphManagerService.RemoveNode(lambdaGroup.DelegateNode);
+		return ValueTask.FromResult(false);
+	}
+
+	private async ValueTask DeleteSelection(global::Blazor.Diagrams.Core.Diagram diagram)
+	{
+		var selectedGroups = Diagram.Groups
+			.OfType<LambdaGroupModel>()
+			.Where(x => x.Selected)
+			.ToHashSet();
+
+		foreach (var group in selectedGroups.Where(x => !HasSelectedLambdaAncestor(x, selectedGroups)).ToArray())
+			GraphManagerService.RemoveNode(group.DelegateNode);
+
+		await KeyboardShortcutsDefaults.DeleteSelection(diagram);
+	}
+
+	private static bool HasSelectedLambdaAncestor(LambdaGroupModel group, HashSet<LambdaGroupModel> selectedGroups)
+	{
+		var parent = group.Group;
+		while (parent != null)
+		{
+			if (parent is LambdaGroupModel lambdaParent && selectedGroups.Contains(lambdaParent))
+				return true;
+			parent = parent.Group;
+		}
+
+		return false;
+	}
 
 	#region Node Removed
 
@@ -190,17 +261,20 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		if (DisableNodeRemovedUpdate)
 			return;
 
-		var node = ((GraphNodeModel)nodeModel).Node;
+		if (nodeModel is not GraphNodeModel graphNodeModel)
+			return;
+
+		var node = graphNodeModel.Node;
 
 		foreach (var input in node.Inputs)
 		{
-			foreach (var connection in input.Connections)
+			foreach (var connection in input.Connections.ToList())
 				GraphManagerService.DisconnectConnectionBetween(input, connection);
 		}
 
 		foreach (var output in node.Outputs)
 		{
-			foreach (var connection in output.Connections)
+			foreach (var connection in output.Connections.ToList())
 				GraphManagerService.DisconnectConnectionBetween(output, connection);
 		}
 
@@ -234,7 +308,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 			(destination, source) = (source, destination);
 		}
 
-		GraphManagerService.AddNewConnectionBetween(source.Connection, destination.Connection);
+		GraphManagerService.AddNewConnectionBetweenOrCapture(source.Connection, destination.Connection);
 	}
 
 	/// <summary>
@@ -350,6 +424,21 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		decoration.Position = new((float)movableModel.Position.X, (float)movableModel.Position.Y);
 	}
 
+	private static void OnLambdaGroupMoved(MovableModel movableModel)
+	{
+		if (movableModel is not LambdaGroupModel group)
+			return;
+
+		var groupDecoration = group.DelegateNode.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero));
+		groupDecoration.Position = new((float)group.Position.X, (float)group.Position.Y);
+
+		foreach (var nodeModel in group.GetDescendantNodeModels())
+		{
+			var decoration = nodeModel.Node.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero));
+			decoration.Position = new((float)nodeModel.Position.X, (float)nodeModel.Position.Y);
+		}
+	}
+
 	#endregion
 
 	#region OnPortDroppedOnCanvas
@@ -360,6 +449,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	{
 		PopupNode = connection.Parent;
 		PopupNodeConnection = connection;
+		PopupCallableScopeId = connection.Parent.CallableScopeId;
 		var screenPosition = Diagram.GetScreenPoint(point.X, point.Y) - Diagram.Container!.NorthWest;
 		PopupX = (int)screenPosition.X;
 		PopupY = (int)screenPosition.Y;
@@ -374,7 +464,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		var node = GraphManagerService.AddNode(searchResult, node =>
 		{
 			node.AddDecoration(new NodeDecorationPosition(new(PopupNodePosition.X, PopupNodePosition.Y)));
-		});
+		}, PopupCallableScopeId);
 
 		Diagram.Batch(() =>
 		{
@@ -449,9 +539,11 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	private bool IsShowingGenericTypeSelection = false;
 	private string? GenericTypeSelectionMenuGeneric;
+	private Action<TypeBase>? PopupTypeSelectedAction;
 
 	public void OnGenericTypeSelectionMenuAsked(GraphNodeModel nodeModel, string undefinedGenericType)
 	{
+		PopupTypeSelectedAction = null;
 		PopupNode = nodeModel.Node;
 		var p = Diagram.GetScreenPoint(nodeModel.Position.X, nodeModel.Position.Y) - Diagram.Container!.NorthWest;
 		PopupX = (int)p.X;
@@ -464,6 +556,13 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	private void OnGenericTypeSelected(TypeBase type)
 	{
+		if (PopupTypeSelectedAction != null)
+		{
+			PopupTypeSelectedAction(type);
+			CancelPopup();
+			return;
+		}
+
 		if (PopupNode == null || GenericTypeSelectionMenuGeneric == null)
 			return;
 
@@ -473,6 +572,20 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		//UpdateNodes(Graph.Nodes.Values.ToList());
 
 		CancelPopup();
+	}
+
+	public void ShowLambdaTypeSelector(LambdaGroupModel group, Action<TypeBase> onTypeSelected)
+	{
+		PopupNode = group.DelegateNode;
+		GenericTypeSelectionMenuGeneric = null;
+		PopupTypeSelectedAction = onTypeSelected;
+		var point = Diagram.GetScreenPoint(group.Position.X + group.Padding, group.Position.Y + 30);
+		if (Diagram.Container != null)
+			point -= Diagram.Container.NorthWest;
+		PopupX = (int)point.X;
+		PopupY = (int)point.Y;
+		IsShowingGenericTypeSelection = true;
+		StateHasChanged();
 	}
 
 	#endregion
@@ -569,9 +682,38 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	public void ShowAddNode()
 	{
+		ShowAddNodeAtScope(null, new Vector2(300, 300));
+	}
+
+	public void ShowAddNodeForScope(LambdaGroupModel group)
+	{
+		var bodyPosition = new Vector2(
+			(float)(group.Position.X + group.Padding),
+			(float)(group.Position.Y + group.Padding + 20));
+		ShowAddNodeAtScope(group.DelegateNode.BodyScopeId, bodyPosition);
+	}
+
+	private void ShowAddNodeAtScope(string? callableScopeId, Vector2 position)
+	{
+		PopupNode = null;
+		PopupNodeConnection = null;
+		PopupCallableScopeId = callableScopeId;
+		PopupNodePosition = position;
+
+		if (Diagram.Container != null)
+		{
+			var screenPosition = Diagram.GetScreenPoint(position.X, position.Y) - Diagram.Container.NorthWest;
+			PopupX = (int)screenPosition.X;
+			PopupY = (int)screenPosition.Y;
+		}
+		else
+		{
+			PopupX = (int)position.X;
+			PopupY = (int)position.Y;
+		}
+
 		IsShowingNodeSelection = true;
-		PopupX = 300;
-		PopupY = 300;
+		StateHasChanged();
 	}
 
 	public void ShowAddNodeDialog()
@@ -589,6 +731,9 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		IsShowingGenericTypeSelection = IsShowingNodeSelection = IsShowingOverloadSelection = false;
 		PopupNode = null;
 		PopupNodeConnection = null;
+		PopupCallableScopeId = null;
+		PopupTypeSelectedAction = null;
+		GenericTypeSelectionMenuGeneric = null;
 	}
 
 	#endregion
@@ -623,10 +768,43 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	public void RemoveNode(Node node)
 	{
-		var nodeModel = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == node);
+		if (node is LambdaReturnNode { IsImplicit: true } boundaryReturn)
+		{
+			var group = FindLambdaGroup(boundaryReturn.CallableScopeId);
+			if (group != null)
+			{
+				foreach (var port in group.Ports
+					.OfType<GraphPortModel>()
+					.Where(x => x.Connection.Parent == boundaryReturn)
+					.ToList())
+				{
+					group.RemovePort(port);
+				}
+				group.Refresh();
+			}
+			return;
+		}
 
-		if (nodeModel != null)
-			Diagram.Nodes.Remove(nodeModel);
+		var nodeModel = FindNodeModel(node);
+		if (nodeModel == null)
+			return;
+
+		var previousNodeSuppression = DisableNodeRemovedUpdate;
+		var previousConnectionSuppression = DisableConnectionUpdate;
+		DisableNodeRemovedUpdate = true;
+		DisableConnectionUpdate = true;
+		try
+		{
+			if (nodeModel is LambdaGroupModel group)
+				Diagram.Groups.Remove(group);
+			else
+				Diagram.Nodes.Remove(nodeModel);
+		}
+		finally
+		{
+			DisableNodeRemovedUpdate = previousNodeSuppression;
+			DisableConnectionUpdate = previousConnectionSuppression;
+		}
 	}
 
 	#endregion
@@ -635,6 +813,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	public void RemoveLinkFromGraphCanvas(Connection source, Connection destination)
 	{
+		var previousConnectionSuppression = DisableConnectionUpdate;
 		DisableConnectionUpdate = true;
 		try
 		{
@@ -646,22 +825,21 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		}
 		finally
 		{
-			DisableConnectionUpdate = false;
+			DisableConnectionUpdate = previousConnectionSuppression;
 		}
 	}
 
 	public void AddLinkToGraphCanvas(Connection source, Connection destination)
 	{
+		var previousConnectionSuppression = DisableConnectionUpdate;
 		DisableConnectionUpdate = true;
 		try
 		{
 			if (source.IsInput)
 				(destination, source) = (source, destination);
 
-			var sourceNode = Diagram.Nodes.OfType<GraphNodeModel>().First(x => x.Node == source.Parent);
-			var destinationNode = Diagram.Nodes.OfType<GraphNodeModel>().First(x => x.Node == destination.Parent);
-			var sourcePort = sourceNode.GetPort(source);
-			var destinationPort = destinationNode.GetPort(destination);
+			var sourcePort = FindPort(source) ?? throw new InvalidOperationException($"No canvas port exists for {source.Parent.Name}.{source.Name}.");
+			var destinationPort = FindPort(destination) ?? throw new InvalidOperationException($"No canvas port exists for {destination.Parent.Name}.{destination.Name}.");
 
 			// Make sure there isn't already an existing identical link
 			if (Diagram.Links.OfType<LinkModel>().Any(x => (x.Source as SinglePortAnchor)?.Port == sourcePort && (x.Target as SinglePortAnchor)?.Port == destinationPort))
@@ -673,7 +851,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		}
 		finally
 		{
-			DisableConnectionUpdate = false;
+			DisableConnectionUpdate = previousConnectionSuppression;
 		}
 	}
 
@@ -683,11 +861,101 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	public void AddNode(Node node)
 	{
+		if (node is CreateDelegateNode delegateNode)
+			AddLambdaGroupModel(delegateNode);
+		else if (node is LambdaReturnNode { IsImplicit: true } boundaryReturn)
+			AddBoundaryReturnToGroup(boundaryReturn);
+		else
+			AddGraphNodeModel(node);
+
+		ReparentScopedModels();
+	}
+
+	private GraphNodeModel AddGraphNodeModel(Node node)
+	{
+		EnsureInitialScopedPosition(node);
 		var nodeModel = Diagram.Nodes.Add(new GraphNodeModel(node));
 		foreach (var connection in node.InputsAndOutputs)
 			nodeModel.AddPort(new GraphPortModel(nodeModel, connection, node.Inputs.Contains(connection)));
 
 		nodeModel.Moved += OnNodeMoved;
+		return nodeModel;
+	}
+
+	private void EnsureInitialScopedPosition(Node node)
+	{
+		if (node.CallableScopeId == null || node.HasDecoration<NodeDecorationPosition>())
+			return;
+
+		var owner = Graph.GetOwningLambda(node.CallableScopeId);
+		if (owner == null)
+			return;
+
+		var ownerPosition = owner.GetOrAddDecoration<NodeDecorationPosition>(() => new(Vector2.Zero)).Position;
+		var groupPadding = FindLambdaGroup(owner.BodyScopeId)?.Padding ?? LambdaGroupModel.MinimumPadding;
+		var existingNodesInScope = Diagram.Nodes
+			.OfType<GraphNodeModel>()
+			.Count(x => x.Node.CallableScopeId == node.CallableScopeId);
+		var offset = new Vector2(groupPadding + existingNodesInScope * 220, groupPadding);
+		node.AddDecoration(new NodeDecorationPosition(ownerPosition + offset));
+	}
+
+	private LambdaGroupModel AddLambdaGroupModel(CreateDelegateNode node)
+	{
+		var group = Diagram.Groups.Add(new LambdaGroupModel(node));
+		foreach (var capture in node.CaptureInputs)
+			group.AddPort(new GraphPortModel(group, capture, true));
+		group.AddPort(new GraphPortModel(group, node.DelegateOutput, false));
+		if (group.BoundaryReturn is { } boundaryReturn)
+			AddBoundaryReturnPorts(group, boundaryReturn);
+
+		group.Moved += OnLambdaGroupMoved;
+		return group;
+	}
+
+	private void AddBoundaryReturnToGroup(LambdaReturnNode boundaryReturn)
+	{
+		var group = FindLambdaGroup(boundaryReturn.CallableScopeId);
+		if (group == null)
+			return;
+
+		AddBoundaryReturnPorts(group, boundaryReturn);
+		group.Refresh();
+	}
+
+	private static void AddBoundaryReturnPorts(LambdaGroupModel group, LambdaReturnNode boundaryReturn)
+	{
+		foreach (var connection in boundaryReturn.Inputs)
+		{
+			if (group.Ports.OfType<GraphPortModel>().All(x => x.Connection != connection))
+				group.AddPort(new GraphPortModel(group, connection, true));
+		}
+	}
+
+	private void ReparentScopedModels()
+	{
+		var groupsByScope = Diagram.Groups
+			.OfType<LambdaGroupModel>()
+			.ToDictionary(x => x.DelegateNode.BodyScopeId);
+
+		foreach (var nodeModel in Diagram.Nodes.OfType<GraphNodeModel>())
+			AttachToScope(nodeModel, nodeModel.Node.CallableScopeId, groupsByScope);
+
+		foreach (var group in Diagram.Groups.OfType<LambdaGroupModel>())
+			AttachToScope(group, group.DelegateNode.CallableScopeId, groupsByScope);
+
+		foreach (var rootGroup in Diagram.Groups.OfType<LambdaGroupModel>().Where(x => x.Group == null))
+			Diagram.SendToBack(rootGroup);
+	}
+
+	private static void AttachToScope(NodeModel model, string? scopeId, IReadOnlyDictionary<string, LambdaGroupModel> groupsByScope)
+	{
+		groupsByScope.TryGetValue(scopeId ?? string.Empty, out var desiredGroup);
+		if (model.Group == desiredGroup)
+			return;
+
+		model.Group?.RemoveChild(model);
+		desiredGroup?.AddChild(model);
 	}
 
 	#endregion
@@ -696,14 +964,19 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	private void AddNodeLinks(Node node, bool onlyOutputs)
 	{
-		var nodeModel = Diagram.Nodes.OfType<GraphNodeModel>().First(x => x.Node == node);
+		var addedConnections = new HashSet<(string Source, string Target)>();
 		foreach (var connection in onlyOutputs ? node.Outputs : node.InputsAndOutputs) // just process the outputs so we don't connect "input to output" and "output to input" on the same connections
 		{
-			var portModel = nodeModel.GetPort(connection);
+			var portModel = FindPort(connection) ?? throw new InvalidOperationException($"No canvas port exists for {node.Name}.{connection.Name}.");
 			foreach (var other in connection.Connections)
 			{
-				var otherNodeModel = Diagram.Nodes.OfType<GraphNodeModel>().First(x => x.Node == other.Parent);
-				var otherPortModel = otherNodeModel.GetPort(other);
+				var connectionKey = connection.IsOutput
+					? (connection.Id, other.Id)
+					: (other.Id, connection.Id);
+				if (!addedConnections.Add(connectionKey))
+					continue;
+
+				var otherPortModel = FindPort(other) ?? throw new InvalidOperationException($"No canvas port exists for {other.Parent.Name}.{other.Name}.");
 
 				var source = portModel;
 				var target = otherPortModel;
@@ -718,10 +991,17 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 				// disable the connection update while adding the link so we can call it ourself and 'force' it to be sure it actually runs
 				// if we don't do that, we'll have to call it again after adding the link and put the 'force' parameter to true, but then
 				// it might be run twice, resulting in all callbacks being called twice!
+				var previousConnectionSuppression = DisableConnectionUpdate;
 				DisableConnectionUpdate = true;
-				var link = Diagram.Links.Add(new LinkModel(source, target));
-
-				DisableConnectionUpdate = false;
+				LinkModel link;
+				try
+				{
+					link = Diagram.Links.Add(new LinkModel(source, target));
+				}
+				finally
+				{
+					DisableConnectionUpdate = previousConnectionSuppression;
+				}
 				OnConnectionAdded(link, true);
 
 				var connectionWithVertices = GetConnectionContainingVertices(source.Connection, target.Connection);
@@ -752,24 +1032,64 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	public void Refresh(Node node)
 	{
-		var nodeModel = Diagram.Nodes.OfType<GraphNodeModel>().FirstOrDefault(x => x.Node == node);
+		if (node is CreateDelegateNode)
+		{
+			UpdateNodes();
+			return;
+		}
+		if (node is LambdaReturnNode { IsImplicit: true } boundaryReturn)
+		{
+			var group = FindLambdaGroup(boundaryReturn.CallableScopeId);
+			group?.Refresh();
+			return;
+		}
+
+		var nodeModel = FindNodeModel(node) as GraphNodeModel;
 		if (nodeModel == null)
 			return;
 
-		// When overload is selected, the node's connections change
-		// We need to rebuild the ports to reflect the new connections
-		
-		// Remove old ports
 		var oldPorts = nodeModel.Ports.ToList();
-		foreach (var port in oldPorts)
-			nodeModel.RemovePort(port);
+		var expectedPorts = node.InputsAndOutputs
+			.Select(connection => (Connection: connection, IsInput: node.Inputs.Contains(connection)))
+			.ToList();
+		var portsAreUnchanged = oldPorts.Count == expectedPorts.Count && expectedPorts.All(expected =>
+			oldPorts.OfType<GraphPortModel>().Any(port =>
+				port.Connection == expected.Connection &&
+				(port.Alignment == PortAlignment.Left) == expected.IsInput));
 
-		// Add new ports based on updated node connections
-		foreach (var connection in node.InputsAndOutputs)
-			nodeModel.AddPort(new GraphPortModel(nodeModel, connection, node.Inputs.Contains(connection)));
+		// Type-only updates keep the same Connection instances. Reusing their ports is
+		// important because existing diagram links are anchored to those port objects.
+		if (portsAreUnchanged)
+		{
+			nodeModel.Refresh();
+			return;
+		}
 
-		// Refresh the node model to trigger UI update
-		nodeModel?.Refresh();
+		Diagram.Batch(() =>
+		{
+			var previousConnectionSuppression = DisableConnectionUpdate;
+			DisableConnectionUpdate = true;
+			try
+			{
+				// Links must be removed before their old ports. The core connections remain
+				// intact and are re-rendered against the replacement ports below.
+				foreach (var link in oldPorts.SelectMany(port => port.Links).Distinct().ToList())
+					Diagram.Links.Remove(link);
+
+				foreach (var port in oldPorts)
+					nodeModel.RemovePort(port);
+
+				foreach (var expectedPort in expectedPorts)
+					nodeModel.AddPort(new GraphPortModel(nodeModel, expectedPort.Connection, expectedPort.IsInput));
+			}
+			finally
+			{
+				DisableConnectionUpdate = previousConnectionSuppression;
+			}
+
+			AddNodeLinks(node, onlyOutputs: false);
+			nodeModel.Refresh();
+		});
 	}
 
 	#endregion
@@ -778,9 +1098,13 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	private void InitializeCanvasWithGraphNodes()
 	{
-		// add the nodes themselves
-		foreach (var node in Graph.Nodes.Values)
-			AddNode(node);
+		foreach (var delegateNode in Graph.Nodes.Values.OfType<CreateDelegateNode>())
+			AddLambdaGroupModel(delegateNode);
+
+		foreach (var node in Graph.Nodes.Values.Where(x => x is not CreateDelegateNode and not LambdaReturnNode { IsImplicit: true }))
+			AddGraphNodeModel(node);
+
+		ReparentScopedModels();
 
 		// add links
 		foreach (var node in Graph.Nodes.Values)

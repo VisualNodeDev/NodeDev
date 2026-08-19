@@ -1,0 +1,115 @@
+@using global::Blazor.Diagrams.Core.Models
+@using NodeDev.Core.Nodes.Delegates
+
+<div class="lambda-region"
+	 data-test-id="lambda-region"
+	 data-lambda-node-id="@Group.DelegateNode.Id"
+	 data-lambda-scope-id="@Group.DelegateNode.BodyScopeId"
+	 data-lambda-signature="@Group.DelegateNode.SignatureDisplayName">
+	<div class="lambda-region-header" @onpointerdown:stopPropagation="true">
+		<div class="lambda-region-title-row">
+			<span class="lambda-region-signature">λ @Group.DelegateNode.SignatureDisplayName</span>
+			<MudIconButton Class="lambda-region-add"
+						   Icon="@Icons.Material.Filled.Add"
+						   Size="Size.Small"
+						   aria-label="Add node to lambda"
+						   data-test-id="lambda-add-node"
+						   OnClick="AddNode" />
+		</div>
+		<div class="lambda-signature-editor" data-test-id="lambda-signature-editor">
+			@if (Group.DelegateNode is CreateFuncNode)
+			{
+				<button class="lambda-signature-chip lambda-result-chip"
+						title="Returns @Group.DelegateNode.ResultType?.FriendlyName"
+						@onclick="SelectResultType"
+						@onclick:stopPropagation="true">
+					returns @(Group.DelegateNode.ResultType?.FriendlyName ?? "?")
+				</button>
+			}
+			@foreach (var parameter in Group.DelegateNode.Parameters)
+			{
+				<div class="lambda-signature-chip" data-test-id="lambda-parameter" @key="parameter.Id">
+					<button @onclick="() => SelectParameterType(parameter)" @onclick:stopPropagation="true">@parameter.Name: @parameter.Type.FriendlyName</button>
+					<button class="lambda-chip-remove" title="Remove parameter" @onclick="() => RemoveParameter(parameter.Id)" @onclick:stopPropagation="true">×</button>
+				</div>
+			}
+			@foreach (var capture in Group.DelegateNode.Captures)
+			{
+				<div class="lambda-signature-chip lambda-capture-chip" data-test-id="lambda-capture" @key="capture.Id">
+					<button @onclick="() => SelectCaptureType(capture)" @onclick:stopPropagation="true">capture @capture.Name: @capture.Type.FriendlyName</button>
+					<button class="lambda-chip-remove" title="Remove capture" @onclick="() => RemoveCapture(capture.Id)" @onclick:stopPropagation="true">×</button>
+				</div>
+			}
+			<button class="lambda-signature-add" data-test-id="lambda-add-parameter" @onclick="AddParameter" @onclick:stopPropagation="true">+ parameter</button>
+		</div>
+	</div>
+
+	@for (var i = 0; i < Group.DelegateNode.CaptureInputs.Count; i++)
+	{
+		var capture = Group.DelegateNode.CaptureInputs[i];
+		var port = Group.GetPort(capture);
+		var top = 86 + i * 30;
+		<div class="lambda-boundary-row lambda-capture-row" style="top: @(top)px" data-test-id="lambda-capture-port" data-port-name="@capture.Name">
+			<PortRenderer @key="port" Port="port" Class="lambda-boundary-port" Style="@($"background-color: {port.PortColor}")" />
+			<span>@capture.Name</span>
+		</div>
+	}
+
+	@{
+		var delegatePort = Group.GetPort(Group.DelegateNode.DelegateOutput);
+	}
+	<div class="lambda-boundary-row lambda-delegate-row" data-test-id="lambda-delegate-port" data-port-name="@Group.DelegateNode.DelegateOutput.Name">
+		<span>@Group.DelegateNode.DelegateOutput.Name</span>
+		<PortRenderer @key="delegatePort" Port="delegatePort" Class="lambda-boundary-port" Style="@($"background-color: {delegatePort.PortColor}")" />
+	</div>
+
+	@if (Group.BoundaryReturn is { } boundaryReturn)
+	{
+		var execPort = Group.GetPort(boundaryReturn.ExecInput);
+		var resultPort = Group.GetPort(boundaryReturn.ResultInput);
+		<div class="lambda-return-boundary" data-test-id="lambda-boundary-return">
+			<span class="lambda-return-title">Return</span>
+			<div class="lambda-return-port" data-test-id="lambda-return-exec-port" data-port-name="@boundaryReturn.ExecInput.Name">
+				<PortRenderer @key="execPort" Port="execPort" Class="lambda-boundary-port" Style="@($"background-color: {execPort.PortColor}")" />
+				<span>@boundaryReturn.ExecInput.Name</span>
+			</div>
+			<div class="lambda-return-port lambda-return-result" data-test-id="lambda-return-result-port" data-port-name="@boundaryReturn.ResultInput.Name">
+				<PortRenderer @key="resultPort" Port="resultPort" Class="lambda-boundary-port" Style="@($"background-color: {resultPort.PortColor}")" />
+				<span>@boundaryReturn.ResultInput.Name</span>
+				@if (boundaryReturn.ResultInput.Type.AllowTextboxEdit && resultPort.Links.Count == 0)
+				{
+					<input class="lambda-return-editor"
+						   aria-label="Lambda return result"
+						   value="@boundaryReturn.ResultInput.TextboxValue"
+						   @onchange="x => GraphCanvas.OnTextboxValueChanged(resultPort, x.Value?.ToString())"
+						   @onpointerdown:stopPropagation="true" />
+				}
+			</div>
+		</div>
+	}
+
+	<GroupNodes Group="Group" />
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public LambdaGroupModel Group { get; set; } = null!;
+
+	[CascadingParameter]
+	public GraphCanvas GraphCanvas { get; set; } = null!;
+
+	private void AddNode() => GraphCanvas.ShowAddNodeForScope(Group);
+
+	private void AddParameter() => Group.DelegateNode.AddParameter();
+	private void RemoveParameter(string id) => Group.DelegateNode.RemoveParameter(id);
+	private void RemoveCapture(string id) => Group.DelegateNode.RemoveCapture(id);
+
+	private void SelectResultType() =>
+		GraphCanvas.ShowLambdaTypeSelector(Group, Group.DelegateNode.SetResultType);
+
+	private void SelectParameterType(LambdaParameterDefinition parameter) =>
+		GraphCanvas.ShowLambdaTypeSelector(Group, type => Group.DelegateNode.UpdateParameter(parameter.Id, parameter.Name, type));
+
+	private void SelectCaptureType(LambdaCaptureDefinition capture) =>
+		GraphCanvas.ShowLambdaTypeSelector(Group, type => Group.DelegateNode.UpdateCapture(capture.Id, capture.Name, type));
+}

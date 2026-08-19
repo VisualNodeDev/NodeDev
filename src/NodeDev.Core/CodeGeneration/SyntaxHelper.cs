@@ -32,4 +32,29 @@ internal static class RoslynHelpers
 		// Parse the type name - handles generics like "List<int>"
 		return SF.ParseTypeName(typeName);
 	}
+
+	/// <summary>
+	/// Creates a globally-qualified syntax node for a supported BCL Action or Func
+	/// type. Lambda casts use this form so a project type named Action or Func cannot
+	/// shadow the intended delegate family.
+	/// </summary>
+	internal static TypeSyntax GetExactDelegateTypeSyntax(TypeBase delegateType)
+	{
+		if (delegateType is not RealType realType)
+			throw new ArgumentException($"Delegate type must be a real BCL type, but was {delegateType.FriendlyName}.", nameof(delegateType));
+
+		var backendType = realType.BackendType;
+		var typeName = backendType.Name.Split('`')[0];
+		if (backendType.Namespace != "System" || (typeName != nameof(Action) && typeName != "Func"))
+			throw new ArgumentException($"Unsupported delegate type {delegateType.FriendlyName}.", nameof(delegateType));
+
+		SimpleNameSyntax simpleName = realType.Generics.Length == 0
+			? SF.IdentifierName(typeName)
+			: SF.GenericName(SF.Identifier(typeName))
+				.WithTypeArgumentList(
+					SF.TypeArgumentList(
+						SF.SeparatedList(realType.Generics.Select(GetTypeSyntax))));
+
+		return SF.QualifiedName(SF.ParseName("global::System"), simpleName);
+	}
 }

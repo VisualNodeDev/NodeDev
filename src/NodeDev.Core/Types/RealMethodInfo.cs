@@ -33,8 +33,35 @@ public class RealMethodInfo : IMethodInfo
 		DeclaringRealType = declaringType;
 	}
 
+	internal TypeBase[]? GetClosedGenericArguments()
+	{
+		if (!Method.IsGenericMethod || Method.IsGenericMethodDefinition)
+			return null;
+
+		return Method.GetGenericArguments().Select(type => (TypeBase)TypeFactory.Get(type, null)).ToArray();
+	}
+
+	internal RealMethodInfo? CloseGenericMethod(IReadOnlyList<TypeBase> genericArguments)
+	{
+		if (!Method.IsGenericMethodDefinition || Method.GetGenericArguments().Length != genericArguments.Count)
+			return null;
+
+		try
+		{
+			var closedMethod = Method.MakeGenericMethod(genericArguments.Select(argument => argument.MakeRealType()).ToArray());
+			return new RealMethodInfo(TypeFactory, closedMethod, DeclaringRealType);
+		}
+		catch (ArgumentException)
+		{
+			return null;
+		}
+	}
+
 	public MethodInfo CreateMethodInfo()
 	{
+		if (Method.IsGenericMethod && !Method.ContainsGenericParameters)
+			return Method;
+
 		// This seriously needs to be optimized, this will be called a lot and it's slow as hell
 		return DeclaringRealType.MakeRealType().GetMethod(Method.Name, GetParameters().Select(x => x.ParameterType.MakeRealType()).ToArray())!;
 	}

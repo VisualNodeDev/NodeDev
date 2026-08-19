@@ -179,25 +179,27 @@ public class HomePage
 		if (box == null)
 			throw new Exception($"Could not get bounding box for node '{nodeName}'");
 
-		await node.ClickAsync();
-
 		// Calculate center of node as the starting point
 		var sourceX = (float)(box.X + box.Width / 2);
 		var sourceY = (float)(box.Y + box.Height / 2);
 
 		Console.WriteLine($"Dragging {nodeName} from ({sourceX}, {sourceY}) to ({targetX}, {targetY})");
 
-		// Perform manual drag with proper event sequence for Blazor.Diagrams
-		// 1. Move mouse to starting position
+		// Dismiss any hover UI left by the preceding action (for example, a MudBlazor
+		// tooltip from a node-search result) before interacting with the diagram node.
+		await _user.Mouse.MoveAsync(0, 0);
+
+		// Perform manual drag with proper event sequence for Blazor.Diagrams.
+		// Moving to the node and pressing the mouse button selects it and starts the drag;
+		// a separate click is both redundant and vulnerable to transient popovers.
 		await _user.Mouse.MoveAsync(sourceX, sourceY);
-		// 2. Press mouse button down (pointerdown event)
 		await _user.Mouse.DownAsync();
 		await Task.Delay(50); // Single delay for event propagation
 
-		// 3. Move mouse to target position with multiple steps (pointermove events)
+		// Move mouse to target position with multiple steps (pointermove events)
 		await _user.Mouse.MoveAsync(targetX, targetY, new() { Steps = 15 });
 
-		// 4. Release mouse button (pointerup event)
+		// Release mouse button (pointerup event)
 		await _user.Mouse.UpAsync();
 
 		// Wait for the UI to update after drag
@@ -316,7 +318,11 @@ public class HomePage
 
 	public async Task TakeScreenshot(string fileName)
 	{
-		await _user.ScreenshotAsync(new() { Path = fileName });
+		var screenshotPath = fileName;
+		if (OperatingSystem.IsWindows() && fileName.StartsWith("/tmp/", StringComparison.Ordinal))
+			screenshotPath = Path.Combine(Path.GetTempPath(), fileName["/tmp/".Length..]);
+
+		await _user.ScreenshotAsync(new() { Path = screenshotPath });
 	}
 
 	// Advanced Node Operations
@@ -353,7 +359,11 @@ public class HomePage
 		}
 		catch (TimeoutException)
 		{
-			throw new NotImplementedException($"Node search result not found - [data-test-id='node-search-result'][data-node-type='{nodeType}']. Search may not be open or node type may not exist.");
+			var availableTypes = await _user
+				.Locator("[data-test-id='node-search-result']")
+				.EvaluateAllAsync<string[]>("elements => elements.map(element => element.getAttribute('data-node-type') ?? '')");
+			throw new NotImplementedException(
+				$"Node search result '{nodeType}' was not found. Available results: {string.Join(", ", availableTypes)}");
 		}
 	}
 

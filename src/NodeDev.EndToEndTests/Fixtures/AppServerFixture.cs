@@ -1,4 +1,8 @@
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace NodeDev.EndToEndTests.Fixtures;
 
@@ -25,4 +29,15 @@ public class AppServerFixture : IAsyncLifetime
 
 internal class BlazorWebAppFactory : WebApplicationFactory<Program>
 {
+	protected override void ConfigureWebHost(IWebHostBuilder builder)
+	{
+		builder.UseEnvironment("Development");
+		builder.ConfigureLogging(logging =>
+		{
+			logging.ClearProviders();
+			logging.AddConsole();
+		});
+		builder.ConfigureServices(services =>
+			services.AddDataProtection().UseEphemeralDataProtectionProvider());
+	}
 }
