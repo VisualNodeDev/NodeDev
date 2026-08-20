@@ -88,24 +88,23 @@ else
         return DialogService.ShowAsync<OpenProjectDialog>("Open Project", DialogOptions);
     }
 
-    private Task Save()
+    private async Task Save()
     {
         if (string.IsNullOrWhiteSpace(Project.Settings.ProjectName))
         {
-            return SaveAs();
+            await SaveAs();
+            return;
         }
 
         try
         {
-            ProjectService.SaveProjectToFile();
+            await ProjectService.SaveProjectToFileAsync();
             Snackbar.Add("Project saved", Severity.Success);
         }
         catch (Exception ex)
         {
             Snackbar.Add(ex.Message, Severity.Error);
         }
-        
-		return Task.CompletedTask;
     }
 
 	private Task SaveAs()

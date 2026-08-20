@@ -1,6 +1,9 @@
 ﻿@using NodeDev.Core;
 @using NodeDev.Core.Class;
 @using System.Reactive.Linq;
+@using NodeDev.Blazor.Services
+@implements IDisposable
+@inject SourceGenerationService SourceGenerationService
 
 @using BlazorMonaco
 @using BlazorMonaco.Editor
@@ -40,6 +43,8 @@ else
 
     private IDisposable? GraphChangedSubscription { get; set; }
 
+    private CancellationTokenSource? GenerationCancellation { get; set; }
+
     private string? CodeCs;
 
     private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor, string code, string language)
@@ -62,49 +67,56 @@ else
         base.OnParametersSet();
 
         if (!IsVisible)
-            return;
-
-        // Either the target method changed or it previously failed to compile
-        if (Method != PreviousMethod)
         {
-            if (Method?.Graph.Project != PreviousMethod?.Graph.Project)
-            {
-                GraphChangedSubscription?.Dispose();
+            GraphChangedSubscription?.Dispose();
+            GraphChangedSubscription = null;
+            GenerationCancellation?.Cancel();
+            return;
+        }
 
-                if (Method != null)
-                    GraphChangedSubscription = Method.Graph.Project.GraphChanged.Where(x => x.Graph == Method?.Graph).AcceptThenSample(TimeSpan.FromSeconds(1)).Delay(TimeSpan.FromSeconds(1)).Subscribe(x => InvokeAsync(() => OnGraphChanged(x.Graph)));
-            }
+        if (Method != PreviousMethod || (Method != null && GraphChangedSubscription == null))
+        {
+            GraphChangedSubscription?.Dispose();
+            GraphChangedSubscription = null;
+			GenerationCancellation?.Cancel();
+			GenerationCancellation?.Dispose();
+			GenerationCancellation = null;
 
             PreviousMethod = Method;
-            CodeCs = null; // we don't want to leave the code from the previous method visible
+            CodeCs = null;
 
             if (Method != null)
-                OnGraphChanged(Method.Graph);
+            {
+                var method = Method;
+                GraphChangedSubscription = method.Graph.Project.GraphChanged
+                    .Where(change => change.Graph == method.Graph)
+                    .AcceptThenSample(TimeSpan.FromSeconds(1))
+                    .Subscribe(change =>
+                    {
+                        _ = InvokeAsync(() => QueueSourceRefresh(method));
+                    });
+                QueueSourceRefresh(method);
+            }
         }
     }
 
-    private void OnGraphChanged(Graph graph)
+    private void QueueSourceRefresh(NodeClassMethod method)
     {
-        ArgumentNullException.ThrowIfNull(Method);
+        GenerationCancellation?.Cancel();
+        GenerationCancellation?.Dispose();
+        GenerationCancellation = new CancellationTokenSource();
+        _ = GenerateSourceAsync(method, GenerationCancellation.Token);
+    }
 
+    private async Task GenerateSourceAsync(NodeClassMethod method, CancellationToken cancellationToken)
+    {
         try
         {
-            var temp = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            var assemblyPath = Method.Graph.Project.Build(Core.BuildOptions.Debug with { OutputPath = temp });
-
-            // Get the generated C# code from the project
-            CodeCs = Method.Graph.Project.GetGeneratedCSharpCode(Method);
-
-            if (CodeCs != null)
-            {
-                CodeCs = $"// Generated code from NodeDev visual programming{System.Environment.NewLine}// This is the actual C# code that gets compiled and executed{System.Environment.NewLine}{System.Environment.NewLine}{CodeCs}";
-            }
-            else
-            {
-                CodeCs = "// Unable to retrieve generated code for this method";
-            }
-
-            StateHasChanged();
+            var generatedCode = await SourceGenerationService.GenerateCSharpAsync(method, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            CodeCs = generatedCode == null
+                ? "// Unable to retrieve generated code for this method"
+                : $"// Generated code from NodeDev visual programming{System.Environment.NewLine}// This is the actual C# code that gets compiled and executed{System.Environment.NewLine}{System.Environment.NewLine}{generatedCode}";
         }
         catch (BuildError buildError)
         {
@@ -115,9 +127,22 @@ else
 
             CodeCs += $"{System.Environment.NewLine}*/";
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
         catch (Exception ex)
         {
             CodeCs = $"/* Error during code generation: {System.Environment.NewLine}{ex}{System.Environment.NewLine}*/";
         }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        GraphChangedSubscription?.Dispose();
+        GenerationCancellation?.Cancel();
+        GenerationCancellation?.Dispose();
     }
 }

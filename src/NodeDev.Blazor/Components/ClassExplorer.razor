@@ -106,6 +106,9 @@
     [Parameter]
     public EventCallback<NodeDev.Core.Class.NodeClassMethod?> SelectedMethodChanged { get; set; }
 
+    [Parameter]
+    public EventCallback<NodeDev.Core.Class.NodeClassMethod> MethodDeleted { get; set; }
+
     private TreeItem? SelectedTreeItem;
 
     private List<TreeItemData<TreeItem>> Items { get; } = [];
@@ -267,10 +270,24 @@
 
         if (confirm == true)
         {
-            // Note: There's no public API to remove methods, so we just remove from UI
-            Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.RemoveAll(x => x.Value?.Method == item.Method);
-            Snackbar.Add($"Method '{item.Method.Name}' removed from view (Note: No API to actually delete)", Severity.Warning);
-            StateHasChanged();
+            try
+            {
+                Class.RemoveMethod(item.Method);
+                Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.RemoveAll(x => x.Value?.Method == item.Method);
+                if (SelectedTreeItem == item)
+                {
+                    SelectedTreeItem = null;
+                    SelectedMethod = null;
+                    await SelectedMethodChanged.InvokeAsync(null);
+                }
+                await MethodDeleted.InvokeAsync(item.Method);
+                Snackbar.Add($"Method '{item.Method.Name}' deleted", Severity.Success);
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
         }
     }
 
@@ -377,7 +394,8 @@
         {
             // remove the textbox
             if (IsNew)
-                Items.First().Children!.RemoveAll(x => x.Value == CurrentlyEditingItem);
+                Items.First(x => x.Value?.Type == (CurrentlyEditingItem.Type == TreeItemType.Method ? TreeItemType.MethodsFolder : TreeItemType.PropertiesFolder))
+                    .Children!.RemoveAll(x => x.Value == CurrentlyEditingItem);
 
             CurrentlyEditingItem = null;
             Text = null;

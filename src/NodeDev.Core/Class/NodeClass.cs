@@ -11,7 +11,7 @@ namespace NodeDev.Core.Class
 
 		public TypeBase ClassTypeBase => Project.GetNodeClassType(this);
 
-		public string Name { get; set; } = name;
+		public string Name { get; private set; } = name;
 
 		public string Namespace { get; set; } = @namespace;
 
@@ -24,6 +24,12 @@ namespace NodeDev.Core.Class
 
 		public void AddMethod(NodeClassMethod nodeClassMethod, bool createEntryAndReturn)
 		{
+			ArgumentNullException.ThrowIfNull(nodeClassMethod);
+			if (nodeClassMethod.Class != this)
+				throw new ArgumentException("The method belongs to a different class.", nameof(nodeClassMethod));
+			if (_Methods.Any(method => method.Name == nodeClassMethod.Name && method.Parameters.Select(parameter => parameter.ParameterType).SequenceEqual(nodeClassMethod.Parameters.Select(parameter => parameter.ParameterType))))
+				throw new InvalidOperationException($"A method named '{nodeClassMethod.Name}' with the same signature already exists.");
+
 			_Methods.Add(nodeClassMethod);
 
 			if (!createEntryAndReturn)
@@ -38,6 +44,30 @@ namespace NodeDev.Core.Class
 
 			// Link the execution path
 			nodeClassMethod.Manager.AddNewConnectionBetween(entry.Outputs[0], returnNode.Inputs[0]);
+		}
+
+		public void RemoveMethod(NodeClassMethod method)
+		{
+			ArgumentNullException.ThrowIfNull(method);
+			if (!_Methods.Contains(method))
+				throw new InvalidOperationException("The method does not belong to this class.");
+
+			var referencingCall = Project.GetNodes<Nodes.MethodCall>().FirstOrDefault(call => call.TargetMethod == method);
+			if (referencingCall != null)
+				throw new InvalidOperationException($"Method '{method.Name}' is still used by node '{referencingCall.Name}'. Remove those calls first.");
+
+			_Methods.Remove(method);
+		}
+
+		public void Rename(string newName)
+		{
+			ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+			if (Project.Classes.Any(nodeClass => nodeClass != this && nodeClass.Namespace == Namespace && nodeClass.Name == newName))
+				throw new InvalidOperationException($"A class named '{Namespace}.{newName}' already exists.");
+
+			Name = newName;
+			foreach (var method in Project.Classes.SelectMany(nodeClass => nodeClass.Methods))
+				method.Graph.RaiseGraphChanged(true);
 		}
 
 		#endregion
