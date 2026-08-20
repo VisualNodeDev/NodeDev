@@ -5,6 +5,8 @@ using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Delegates;
 using NodeDev.Core.Nodes.Flow;
 using System.Linq.Expressions;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 
 namespace NodeDev.Core;
 
@@ -18,26 +20,17 @@ public class Graph(NodeClassMethod selfMethod)
 
 	public Project Project => SelfMethod.Class.Project;
 
-	private IGraphCanvas? _graphCanvas;
-	/// <summary>
-	/// The canvas that this graph is displayed on. Null if the graph is not displayed on a canvas.
-	/// </summary>
-	public IGraphCanvas? GraphCanvas
-	{
-		get => _graphCanvas;
-		set
-		{
-			_graphCanvas = value;
-			_graphManagerService = null;
-		}
-	}
-
 	private GraphManagerService? _graphManagerService;
 	/// <summary>
-	/// Get the GraphManagerService for this graph and its associated graph canvas.
-	/// This property should be used all the time as it will keep itself up to date with the graph canvas.
+	/// Gets the domain service used to mutate this graph.
 	/// </summary>
-	public GraphManagerService Manager => _graphManagerService ??= new(_graphCanvas ?? new GraphCanvasNoUI(this));
+	public GraphManagerService Manager => _graphManagerService ??= new(this);
+
+	private readonly Subject<GraphChange> GraphChangeSubject = new();
+	/// <summary>
+	/// Domain changes emitted by this graph. Each UI projection subscribes to the graph it displays.
+	/// </summary>
+	public IObservable<GraphChange> Changes => GraphChangeSubject.AsObservable();
 
 	static Graph()
 	{
@@ -76,7 +69,19 @@ public class Graph(NodeClassMethod selfMethod)
 		return false;
 	}
 
-	public void RaiseGraphChanged(bool requireUIRefresh) => Project.GraphChangedSubject.OnNext((this, requireUIRefresh));
+	internal void Notify(GraphChange change)
+	{
+		GraphChangeSubject.OnNext(change);
+		Project.GraphChangedSubject.OnNext((this, false));
+	}
+
+	public void RaiseGraphChanged(bool requireUIRefresh)
+	{
+		if (requireUIRefresh)
+			GraphChangeSubject.OnNext(new GraphChange.ProjectionReset());
+
+		Project.GraphChangedSubject.OnNext((this, requireUIRefresh));
+	}
 
 
 	#region GetChunks
@@ -479,10 +484,7 @@ public class Graph(NodeClassMethod selfMethod)
 		foreach (var serializedNode in serializedGraphObj.Nodes)
 		{
 			var node = Node.Deserialize(graph, serializedNode);
-
-			var noUi = new GraphCanvasNoUI(graph);
-			var manager = new GraphManagerService(noUi);
-			manager.AddNode(node);
+			graph.Manager.AddNode(node);
 		}
 
 		foreach (var node in graph.Nodes.Values)

@@ -1,8 +1,5 @@
 ﻿@using System.Text.Json
 @using NodeDev.Blazor.Services
-@using NodeDev.Core
-@inject AppOptionsContainer AppOptionsContainer
-@inject IDialogService DialogService
 @inject ProjectService ProjectService
 @inject ISnackbar Snackbar
 
@@ -22,7 +19,7 @@
 
 	public string? ProjectName { get; set; }
 
-	private void Close() => MudDialog.Close(DialogResult.Ok(true));
+	private void Close() => MudDialog.Cancel();
 
 	protected override void OnInitialized()
 	{
@@ -30,12 +27,11 @@
 		ProjectName = ProjectService.Project.Settings.ProjectName;
 	}
 
-	private void SaveProject()
+	private async Task SaveProject()
 	{
 		try
 		{
-			ProjectService.Project.Settings.ProjectName = ProjectName!;
-			ProjectService.SaveProjectToFile();
+			await ProjectService.SaveProjectToFileAsync(ProjectName!);
 			Snackbar.Add("Project saved", Severity.Success);
 			MudDialog.Close(DialogResult.Ok(ProjectName));
 		}

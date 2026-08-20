@@ -11,20 +11,18 @@ namespace NodeDev.Core.ManagerServices;
 /// </summary>
 public class GraphManagerService
 {
-	private readonly IGraphCanvas GraphCanvas;
+	private readonly Graph Graph;
 
-	private Graph Graph => GraphCanvas.Graph;
-
-	internal GraphManagerService(IGraphCanvas graphCanvas)
+	internal GraphManagerService(Graph graph)
 	{
-		GraphCanvas = graphCanvas;
+		Graph = graph;
 	}
 
 	#region Nodes
 
 	/// <summary>
 	/// Add the node from the search result.
-	/// The <paramref name="populateNode"/> is used to add required UI information before adding it to the UI
+	/// The <paramref name="populateNode"/> callback can attach persisted decorations before the node-added notification is published.
 	/// </summary>
 	/// <param name="searchResult"></param>
 	/// <param name="populateNode"></param>
@@ -80,7 +78,7 @@ public class GraphManagerService
 		ValidateNodePlacement(node);
 		((IDictionary<string, Node>)Graph.Nodes)[node.Id] = node;
 
-		GraphCanvas.AddNode(node);
+		Graph.Notify(new GraphChange.NodeAdded(node));
 	}
 
 
@@ -105,10 +103,8 @@ public class GraphManagerService
 		foreach (var removedNode in removalOrder)
 		{
 			Graph._Nodes.Remove(removedNode.Id);
-			GraphCanvas.RemoveNode(removedNode);
+			Graph.Notify(new GraphChange.NodeRemoved(removedNode));
 		}
-
-		Graph.RaiseGraphChanged(false);
 	}
 
 	private List<Node> GetRecursiveRemovalOrder(Node root)
@@ -200,7 +196,7 @@ public class GraphManagerService
 		foreach (var owner in owners)
 		{
 			owner.AddCapture(captureName, scopedSource.Type);
-			GraphCanvas.Refresh(owner);
+			Graph.Notify(new GraphChange.NodeChanged(owner));
 
 			var captureIndex = owner.Captures.Count - 1;
 			var entry = Graph.GetNodesInScope(owner.BodyScopeId).OfType<LambdaEntryNode>().Single();
@@ -258,7 +254,7 @@ public class GraphManagerService
 		}
 
 		foreach (var parent in newConnectionsList.Concat(removedConnectionsList).Select(connection => connection.Parent).Distinct())
-			GraphCanvas.Refresh(parent);
+			Graph.Notify(new GraphChange.NodeChanged(parent));
 
 		foreach (var (oldLink, newConnection) in reconnections)
 			AddNewConnectionBetween(oldLink, newConnection);
@@ -292,10 +288,9 @@ public class GraphManagerService
 				PropagateNewGeneric(destination.Parent, newTypesRight, usedInitialTypes, source, false);
 		}
 
-		GraphCanvas.AddLinkToGraphCanvas(source, destination);
-
-		GraphCanvas.UpdatePortColor(source);
-		GraphCanvas.UpdatePortColor(destination);
+		Graph.Notify(new GraphChange.LinkAdded(source, destination));
+		Graph.Notify(new GraphChange.ConnectionChanged(source));
+		Graph.Notify(new GraphChange.ConnectionChanged(destination));
 
 		// we have to disconnect the previously connected exec, since exec outputs can only have one connection
 		if (source.Type.IsExec && source.Connections.Count > 1)
@@ -303,7 +298,6 @@ public class GraphManagerService
 		else if (!destination.Type.IsExec && destination.Connections.Count > 1) // non-exec inputs can only have one connection
 			DisconnectConnectionBetween(destination.Connections.First(x => x != source), destination);
 
-		Graph.RaiseGraphChanged(false); // any change in the graph should trigger a UI refresh already, lets just trigger at least one non-ui refresh to be sure
 	}
 
 	public void DisconnectConnectionBetween(Connection source, Connection destination)
@@ -316,12 +310,9 @@ public class GraphManagerService
 		source._Connections.Remove(destination);
 		destination._Connections.Remove(source);
 
-		GraphCanvas.RemoveLinkFromGraphCanvas(source, destination);
-
-		GraphCanvas.UpdatePortColor(source);
-		GraphCanvas.UpdatePortColor(destination);
-
-		Graph.RaiseGraphChanged(false); // no ui refresh needed as we already took care of it through the GraphCanvas directly
+		Graph.Notify(new GraphChange.LinkRemoved(source, destination));
+		Graph.Notify(new GraphChange.ConnectionChanged(source));
+		Graph.Notify(new GraphChange.ConnectionChanged(destination));
 	}
 
 	/// <summary>
@@ -343,7 +334,7 @@ public class GraphManagerService
 			// update port.Type property as well as the textbox visibility if necessary
 			port.UpdateTypeAndTextboxVisibility(previousType.ReplaceUndefinedGeneric(changedGenerics), overrideInitialType: overrideInitialTypes);
 			hadAnyChanges |= node.GenericConnectionTypeDefined(port).Count != 0;
-			GraphCanvas.UpdatePortColor(port);
+			Graph.Notify(new GraphChange.ConnectionChanged(port));
 
 			var isPortInput = port.IsInput; // cache for performance, IsInput is slow
 											// check if other connections had their own generics and if we just solved them
@@ -367,7 +358,7 @@ public class GraphManagerService
 		}
 
 		if (hadAnyChanges)
-			Graph.RaiseGraphChanged(false);
+			Graph.Notify(new GraphChange.NodeChanged(node));
 	}
 
 	public void SelectNodeOverload(Node popupNode, Node.AlternateOverload overload)

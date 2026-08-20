@@ -46,13 +46,68 @@ namespace NodeDev.Blazor.Services
 			ChangeProject(project);
 		}
 
-		public void SaveProjectToFile()
+		public Task LoadProjectAsync(string projectName)
 		{
-			ArgumentNullException.ThrowIfNullOrWhiteSpace(Project.Settings.ProjectName);
-			var projectPath = Path.Combine(AppOptionsContainer.AppOptions.ProjectsDirectory!, $"{Project.Settings.ProjectName}.ndproj");
-			string content = Project.Serialize();
-			File.WriteAllText(projectPath, content);
+			return LoadProjectFromFileAsync(GetProjectFilePath(projectName));
+		}
 
+		public IReadOnlyList<string> GetSavedProjectNames()
+		{
+			var projectsDirectory = GetProjectsDirectory();
+			if (!Directory.Exists(projectsDirectory))
+				return [];
+
+			return Directory.EnumerateFiles(projectsDirectory, "*.ndproj")
+				.Select(Path.GetFileNameWithoutExtension)
+				.Where(name => !string.IsNullOrWhiteSpace(name))
+				.OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+				.ToList()!;
+		}
+
+		public async Task SaveProjectToFileAsync(string? projectName = null, CancellationToken cancellationToken = default)
+		{
+			projectName ??= Project.Settings.ProjectName;
+			var projectPath = GetProjectFilePath(projectName);
+			var projectsDirectory = Path.GetDirectoryName(projectPath)!;
+			Directory.CreateDirectory(projectsDirectory);
+
+			var temporaryPath = Path.Combine(projectsDirectory, $".{Guid.NewGuid():N}.tmp");
+			try
+			{
+				var serializedProject = Project.Serialize(Project.Settings with { ProjectName = projectName });
+				await File.WriteAllTextAsync(temporaryPath, serializedProject, cancellationToken);
+				File.Move(temporaryPath, projectPath, overwrite: true);
+				Project.Settings.ProjectName = projectName;
+			}
+			finally
+			{
+				if (File.Exists(temporaryPath))
+					File.Delete(temporaryPath);
+			}
+		}
+
+		private string GetProjectFilePath(string projectName)
+		{
+			ArgumentException.ThrowIfNullOrWhiteSpace(projectName);
+			if (projectName is "." or ".." || projectName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || projectName.Contains('/') || projectName.Contains('\\'))
+				throw new ArgumentException("Project name contains invalid filename characters.", nameof(projectName));
+
+			var projectsDirectory = GetProjectsDirectory();
+			var projectPath = Path.GetFullPath(Path.Combine(projectsDirectory, $"{projectName}.ndproj"));
+			var relativePath = Path.GetRelativePath(projectsDirectory, projectPath);
+			if (Path.IsPathRooted(relativePath) || relativePath == ".." || relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+				throw new InvalidOperationException("The project path must remain inside the configured projects directory.");
+
+			return projectPath;
+		}
+
+		private string GetProjectsDirectory()
+		{
+			var configuredDirectory = AppOptionsContainer.AppOptions.ProjectsDirectory;
+			if (string.IsNullOrWhiteSpace(configuredDirectory))
+				throw new InvalidOperationException("Configure a projects directory in Options before opening or saving projects.");
+
+			return Path.GetFullPath(configuredDirectory);
 		}
 	}
 }

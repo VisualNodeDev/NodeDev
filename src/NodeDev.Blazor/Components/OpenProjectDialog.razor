@@ -1,8 +1,5 @@
 ﻿@using System.Text.Json
 @using NodeDev.Blazor.Services
-@using NodeDev.Core
-@inject AppOptionsContainer AppOptionsContainer
-@inject IDialogService DialogService
 @inject ProjectService ProjectService
 @inject ISnackbar Snackbar
 
@@ -32,25 +29,20 @@
 	private string? ProjectName { get; set; }
 	private List<string> RecentProjects { get; set; } = new List<string>();
 
-	private void Close() => MudDialog.Close(DialogResult.Ok(true));
+	private void Close() => MudDialog.Cancel();
 
 	protected override void OnInitialized()
 	{
 		base.OnInitialized();
-		RecentProjects = ListRecentProjects();
-	}
-
-	private List<string> ListRecentProjects()
-	{
-		if (AppOptionsContainer.AppOptions.ProjectsDirectory is null)
+		try
 		{
-			return [];
+			RecentProjects = ProjectService.GetSavedProjectNames().ToList();
 		}
-		if (!Directory.Exists(AppOptionsContainer.AppOptions.ProjectsDirectory))
+		catch (Exception ex)
 		{
-			return [];
+			Snackbar.Add(ex.Message, Severity.Error);
+			RecentProjects = [];
 		}
-		return Directory.EnumerateFiles(AppOptionsContainer.AppOptions.ProjectsDirectory, "*.ndproj").Select(Path.GetFileNameWithoutExtension).ToList()!;
 	}
 
 	private async Task LoadProject()
@@ -61,8 +53,8 @@
 		}
 		try
 		{
-			var projectPath = Path.Combine(AppOptionsContainer.AppOptions.ProjectsDirectory!, $"{ProjectName}.ndproj");
-			await ProjectService.LoadProjectFromFileAsync(projectPath);
+			await ProjectService.LoadProjectAsync(ProjectName);
+			MudDialog.Close(DialogResult.Ok(ProjectName));
 		}
 		catch (Exception ex)
 		{
@@ -70,6 +62,5 @@
 			Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
 			Snackbar.Add(ex.Message, Severity.Error);
 		}
-		MudDialog.Close(DialogResult.Ok(true));
 	}
 }

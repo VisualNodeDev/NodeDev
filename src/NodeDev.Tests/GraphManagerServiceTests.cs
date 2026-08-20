@@ -1,9 +1,7 @@
 ﻿using NodeDev.Core;
-using NodeDev.Core.Connections;
-using NodeDev.Core.ManagerServices;
 using NodeDev.Core.Nodes;
 using NodeDev.Core.Nodes.Flow;
-using NSubstitute;
+using System.Reactive.Linq;
 
 namespace NodeDev.Tests;
 
@@ -13,9 +11,8 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 	public void SelectingNewListOverloadRefreshesPortsAndKeepsExecConnected()
 	{
 		var project = Project.CreateNewDefaultProject(out var main);
-		var graphCanvas = Substitute.For<IGraphCanvas>();
-		graphCanvas.Graph.Returns(main.Graph);
-		main.Graph.GraphCanvas = graphCanvas;
+		var changes = new List<GraphChange>();
+		using var subscription = main.Graph.Changes.Subscribe(changes.Add);
 
 		var newNode = new New(main.Graph);
 		main.Graph.Manager.AddNode(newNode);
@@ -33,33 +30,30 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 		var capacityOverload = Assert.Single(
 			newNode.AlternatesOverloads,
 			overload => overload.Parameters.Count == 1 && overload.Parameters[0].Name == "capacity");
-		graphCanvas.ClearReceivedCalls();
+		changes.Clear();
 
 		main.Graph.Manager.SelectNodeOverload(newNode, capacityOverload);
 
 		Assert.Contains(main.EntryNode.Outputs[0], newNode.Inputs[0].Connections);
 		Assert.Equal("capacity", newNode.Inputs[1].Name);
-		graphCanvas.Received(1).Refresh(newNode);
+		Assert.Contains(changes, change => change is GraphChange.NodeChanged nodeChanged && nodeChanged.Node == newNode);
 	}
 
 	[Fact]
-	public void AddEnumerableRange_ShouldExposeAllPortsWhenAddedToCanvas()
+	public void AddEnumerableRange_ShouldExposeAllPortsWhenNodeAddedIsPublished()
 	{
 		var project = Project.CreateNewDefaultProject(out var main);
-		var graphCanvas = Substitute.For<IGraphCanvas>();
-		graphCanvas.Graph.Returns(main.Graph);
-		main.Graph.GraphCanvas = graphCanvas;
 
-		string[]? inputsSeenByCanvas = null;
-		string[]? outputsSeenByCanvas = null;
-		graphCanvas
-			.When(canvas => canvas.AddNode(Arg.Any<Node>()))
-			.Do(call =>
+		string[]? inputsSeenBySubscriber = null;
+		string[]? outputsSeenBySubscriber = null;
+		using var subscription = main.Graph.Changes.Subscribe(change =>
+		{
+			if (change is GraphChange.NodeAdded added)
 			{
-				var addedNode = call.Arg<Node>();
-				inputsSeenByCanvas = addedNode.Inputs.Select(connection => connection.Name).ToArray();
-				outputsSeenByCanvas = addedNode.Outputs.Select(connection => connection.Name).ToArray();
-			});
+				inputsSeenBySubscriber = added.Node.Inputs.Select(connection => connection.Name).ToArray();
+				outputsSeenBySubscriber = added.Node.Outputs.Select(connection => connection.Name).ToArray();
+			}
+		});
 
 		var rangeSearchResult = Assert.Single(
 			NodeProvider.Search(main.Graph, "Enumerable.Range", null, null)
@@ -67,12 +61,12 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		var rangeNode = Assert.IsType<MethodCall>(main.Graph.Manager.AddNode(rangeSearchResult, _ => { }));
 
-		Assert.NotNull(inputsSeenByCanvas);
-		Assert.NotNull(outputsSeenByCanvas);
-		Assert.Equal(["Exec", "start", "count"], inputsSeenByCanvas);
-		Assert.Equal(["Exec", "Result"], outputsSeenByCanvas);
-		Assert.Equal(inputsSeenByCanvas, rangeNode.Inputs.Select(connection => connection.Name));
-		Assert.Equal(outputsSeenByCanvas, rangeNode.Outputs.Select(connection => connection.Name));
+		Assert.NotNull(inputsSeenBySubscriber);
+		Assert.NotNull(outputsSeenBySubscriber);
+		Assert.Equal(["Exec", "start", "count"], inputsSeenBySubscriber);
+		Assert.Equal(["Exec", "Result"], outputsSeenBySubscriber);
+		Assert.Equal(inputsSeenBySubscriber, rangeNode.Inputs.Select(connection => connection.Name));
+		Assert.Equal(outputsSeenBySubscriber, rangeNode.Outputs.Select(connection => connection.Name));
 	}
 
 	[Fact]
@@ -83,11 +77,9 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 		Assert.Single(main.ReturnNodes);
 		Assert.Equal(main.EntryNode.Outputs[0].Connections[0], main.ReturnNodes.Single().Inputs[0]);
 
-		// create fake IGraphCanvas
-		var graphCanvas = Substitute.For<IGraphCanvas>();
-		graphCanvas.Graph.Returns(main.Graph);
-
-		var graphManager = new GraphManagerService(graphCanvas);
+		var graphManager = main.Graph.Manager;
+		var changes = new List<GraphChange>();
+		using var subscription = main.Graph.Changes.Subscribe(changes.Add);
 
 		// create a random method call used to test the connection
 		var methodCall = new MethodCall(main.Graph);
@@ -104,13 +96,8 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 		// return node is not connected to anything
 		Assert.Empty(main.ReturnNodes.Single().Inputs[0].Connections);
 
-		// check that each connection was updated
-		graphCanvas.Received().UpdatePortColor(Arg.Is(main.EntryNode.Outputs[0].Connections[0]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(methodCall.Inputs[0]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(main.ReturnNodes.Single().Inputs[0]));
-
-		// check that the old connection was removed from the graph canvas
-		graphCanvas.Received().RemoveLinkFromGraphCanvas(Arg.Is(main.EntryNode.Outputs[0]), Arg.Is(main.ReturnNodes.Single().Inputs[0]));
+		Assert.Contains(changes, change => change is GraphChange.LinkAdded added && added.Source == main.EntryNode.Outputs[0] && added.Destination == methodCall.Inputs[0]);
+		Assert.Contains(changes, change => change is GraphChange.LinkRemoved removed && removed.Source == main.EntryNode.Outputs[0] && removed.Destination == main.ReturnNodes.Single().Inputs[0]);
 	}
 
 	[Fact]
@@ -121,11 +108,9 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 		Assert.Single(main.ReturnNodes);
 		Assert.Equal(main.EntryNode.Outputs[0].Connections[0], main.ReturnNodes.Single().Inputs[0]);
 
-		// create fake IGraphCanvas
-		var graphCanvas = Substitute.For<IGraphCanvas>();
-		graphCanvas.Graph.Returns(main.Graph);
-
-		var graphManager = new GraphManagerService(graphCanvas);
+		var graphManager = main.Graph.Manager;
+		var changes = new List<GraphChange>();
+		using var subscription = main.Graph.Changes.Subscribe(changes.Add);
 
 		var addNode1 = AddNewAddNodeToGraph<int>(main.Graph);
 		var addNode2 = AddNewAddNodeToGraph<int>(main.Graph);
@@ -133,23 +118,19 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		// connect output of addNode1 to input of addNode3
 		graphManager.AddNewConnectionBetween(addNode1.Outputs[0], addNode3.Inputs[0]);
-		graphCanvas.Received().UpdatePortColor(Arg.Is(addNode1.Outputs[0]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(addNode3.Inputs[0]));
 		Assert.Single(addNode1.Outputs[0].Connections);
 		Assert.Single(addNode3.Inputs[0].Connections);
 		Assert.Equal(addNode1.Outputs[0].Connections[0], addNode3.Inputs[0]);
+		changes.Clear();
 
 		// connect output of addNode2 to input of addNode3. It should disconnect the existing connection
 		graphManager.AddNewConnectionBetween(addNode2.Outputs[0], addNode3.Inputs[0]);
-		graphCanvas.Received(2).UpdatePortColor(Arg.Is(addNode1.Outputs[0])); // when first adding, then when disconnecting
-		graphCanvas.Received(1).UpdatePortColor(Arg.Is(addNode2.Outputs[0]));
-		graphCanvas.Received(3).UpdatePortColor(Arg.Is(addNode3.Inputs[0])); // when first adding, adding a second time, then disconnecting
 		Assert.Empty(addNode1.Outputs[0].Connections);
 		Assert.Single(addNode2.Outputs[0].Connections);
 		Assert.Single(addNode3.Inputs[0].Connections);
 		Assert.Equal(addNode2.Outputs[0].Connections[0], addNode3.Inputs[0]);
 
-		graphCanvas.Received().RemoveLinkFromGraphCanvas(Arg.Is(addNode1.Outputs[0]), Arg.Is(addNode3.Inputs[0]));
+		Assert.Contains(changes, change => change is GraphChange.LinkRemoved removed && removed.Source == addNode1.Outputs[0] && removed.Destination == addNode3.Inputs[0]);
 	}
 
 	[Fact]
@@ -160,11 +141,9 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 		Assert.Single(main.ReturnNodes);
 		Assert.Equal(main.EntryNode.Outputs[0].Connections[0], main.ReturnNodes.Single().Inputs[0]);
 
-		// create fake IGraphCanvas
-		var graphCanvas = Substitute.For<IGraphCanvas>();
-		graphCanvas.Graph.Returns(main.Graph);
-
-		var graphManager = new GraphManagerService(graphCanvas);
+		var graphManager = main.Graph.Manager;
+		var changes = new List<GraphChange>();
+		using var subscription = main.Graph.Changes.Subscribe(changes.Add);
 
 		// create a random method call used to test the connection
 		var methodCall = new MethodCall(main.Graph);
@@ -172,13 +151,11 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		// connect output of addNode1 to input of addNode3
 		graphManager.AddNewConnectionBetween(methodCall.Outputs[0], main.ReturnNodes.Single().Inputs[0]);
-		graphCanvas.Received().UpdatePortColor(Arg.Is(methodCall.Outputs[0]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(main.ReturnNodes.Single().Inputs[0]));
 		Assert.Single(main.EntryNode.Outputs[0].Connections);
 		Assert.Equal(2, main.ReturnNodes.Single().Inputs[0].Connections.Count);
 		Assert.Single(methodCall.Outputs[0].Connections);
 		Assert.Equal(methodCall.Outputs[0].Connections[0], main.ReturnNodes.Single().Inputs[0]);
-		graphCanvas.DidNotReceiveWithAnyArgs().RemoveLinkFromGraphCanvas(Arg.Any<Connection>(), Arg.Any<Connection>());
+		Assert.DoesNotContain(changes, change => change is GraphChange.LinkRemoved);
 	}
 
 	[Fact]
@@ -191,11 +168,7 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		var typeFactory = main.TypeFactory;
 
-		// create fake IGraphCanvas
-		var graphCanvas = Substitute.For<IGraphCanvas>();
-		graphCanvas.Graph.Returns(main.Graph);
-
-		var graphManager = new GraphManagerService(graphCanvas);
+		var graphManager = main.Graph.Manager;
 
 		// create a random method call used to test the connection
 		var methodCall = AddMethodCall(main.Graph, typeFactory.Get<Array>(), nameof(Array.Empty));
@@ -206,9 +179,6 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		// connect output of Array.Empty<string>() to input of foreachNode
 		graphManager.AddNewConnectionBetween(methodCall.Outputs[1], foreachNode.Inputs[1]);
-		graphCanvas.Received().UpdatePortColor(Arg.Is(methodCall.Outputs[1]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(foreachNode.Inputs[1]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(foreachNode.Outputs[1]));
 		Assert.Equal(typeFactory.Get<IEnumerable<string>>(), foreachNode.Inputs[1].Type);
 		Assert.Equal(typeFactory.Get<string>(), foreachNode.Outputs[1].Type);
 	}
@@ -223,11 +193,7 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		var typeFactory = main.TypeFactory;
 
-		// create fake IGraphCanvas
-		var graphCanvas = Substitute.For<IGraphCanvas>();
-		graphCanvas.Graph.Returns(main.Graph);
-
-		var graphManager = new GraphManagerService(graphCanvas);
+		var graphManager = main.Graph.Manager;
 
 		// create a random method call used to test the connection
 		var newListArray = new New(main.Graph);
@@ -245,11 +211,6 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		// connect output of new List<string[]> to input of foreachNode
 		graphManager.AddNewConnectionBetween(newListArray.Outputs[1], foreachNode.Inputs[1]);
-		graphCanvas.Received().UpdatePortColor(Arg.Is(newListArray.Outputs[1]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(foreachNode.Inputs[1]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(foreachNode.Outputs[1]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(foreachNode2.Inputs[1]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(foreachNode2.Outputs[1]));
 
 		// Input of foreach node should be IEnumerable<string[]>, output should be string[]
 		Assert.Equal(typeFactory.Get<IEnumerable<string[]>>(), foreachNode.Inputs[1].Type);
@@ -270,11 +231,7 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		var typeFactory = main.TypeFactory;
 
-		// create fake IGraphCanvas
-		var graphCanvas = Substitute.For<IGraphCanvas>();
-		graphCanvas.Graph.Returns(main.Graph);
-
-		var graphManager = new GraphManagerService(graphCanvas);
+		var graphManager = main.Graph.Manager;
 
 		// output string[]
 		var newArray = new New(main.Graph);
@@ -286,10 +243,6 @@ public class GraphManagerServiceTests : NodeDevTestsBase
 
 		// connect output of foreachNode into input of foreachNode2
 		graphManager.AddNewConnectionBetween(newArray.Outputs[1], arrayGet.Inputs[0]);
-
-		graphCanvas.Received().UpdatePortColor(Arg.Is(newArray.Outputs[1]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(arrayGet.Inputs[0]));
-		graphCanvas.Received().UpdatePortColor(Arg.Is(arrayGet.Outputs[0]));
 
 		// Input of arrayGet should be string[], output should be string
 		Assert.Equal(typeFactory.Get<string[]>(), arrayGet.Inputs[0].Type);

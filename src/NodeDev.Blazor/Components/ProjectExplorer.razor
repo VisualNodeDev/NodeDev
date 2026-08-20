@@ -54,6 +54,9 @@
     [Parameter]
     public EventCallback<NodeDev.Core.Class.NodeClass?> SelectedClassChanged { get; set; }
 
+    [Parameter]
+    public EventCallback<NodeDev.Core.Class.NodeClass> ClassDeleted { get; set; }
+
     private TreeItem? Selected = null;
     private TreeItem? HoveredClass = null;
 
@@ -150,10 +153,17 @@
         if (result != null && !result.Canceled && result.Data is string newName)
         {
             var oldName = item.Class.Name;
-            item.Class.Name = newName; // Update the class name
-            item.Name = newName; // Update the tree item name for display
-            Snackbar.Add($"Class renamed from '{oldName}' to '{newName}'", Severity.Success);
-            StateHasChanged();
+            try
+            {
+                item.Class.Rename(newName);
+                item.Name = newName;
+                Snackbar.Add($"Class renamed from '{oldName}' to '{newName}'", Severity.Success);
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
         }
     }
 
@@ -170,30 +180,43 @@
 
         if (confirm == true)
         {
-            // Note: There's no public API to remove classes, so we just remove from UI
-            // Remove from tree
-            TreeItemData<TreeItem>? Remove(List<TreeItemData<TreeItem>> items)
+            try
             {
-                foreach (var i in items.ToList())
-                {
-                    if (i.Value == item)
-                    {
-                        items.Remove(i);
-                        return i;
-                    }
-                    if (i.Children != null)
-                    {
-                        var found = Remove(i.Children);
-                        if (found != null)
-                            return found;
-                    }
-                }
-                return null;
-            }
+                Project.RemoveClass(item.Class);
 
-            Remove(Items);
-            Snackbar.Add($"Class '{item.Class.Name}' removed from view (Note: No API to actually delete)", Severity.Warning);
-            StateHasChanged();
+                TreeItemData<TreeItem>? Remove(List<TreeItemData<TreeItem>> items)
+                {
+                    foreach (var i in items.ToList())
+                    {
+                        if (i.Value == item)
+                        {
+                            items.Remove(i);
+                            return i;
+                        }
+                        if (i.Children != null)
+                        {
+                            var found = Remove(i.Children);
+                            if (found != null)
+                                return found;
+                        }
+                    }
+                    return null;
+                }
+
+                Remove(Items);
+                if (Selected == item)
+                {
+                    Selected = null;
+                    OnSelectedItemChanged();
+                }
+                await ClassDeleted.InvokeAsync(item.Class);
+                Snackbar.Add($"Class '{item.Class.Name}' deleted", Severity.Success);
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
         }
     }
 

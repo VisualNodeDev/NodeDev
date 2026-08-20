@@ -21,12 +21,12 @@
             <StartContent>
                 <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2 wh100" KeepPanelsAlive="true" Class="wh100" data-test-id="ProjectExplorerSection">
                     <MudTabPanel Text="Project">
-                        <ProjectExplorer Project="ProjectService.Project" @bind-SelectedClass="SelectedClass"></ProjectExplorer>
+                        <ProjectExplorer Project="ProjectService.Project" @bind-SelectedClass="SelectedClass" ClassDeleted="OnClassDeleted"></ProjectExplorer>
                     </MudTabPanel>
                     <MudTabPanel Text="Class">
                         @if (SelectedClass != null)
                         {
-                            <ClassExplorer @key="SelectedClass" Class="SelectedClass" SelectedMethodChanged="OpenMethod"></ClassExplorer>
+                            <ClassExplorer @key="SelectedClass" Class="SelectedClass" SelectedMethodChanged="OpenMethod" MethodDeleted="CloseMethod"></ClassExplorer>
                         }
                     </MudTabPanel>
                 </MudTabs>
@@ -85,6 +85,8 @@
     private Core.Class.NodeClass? SelectedClass { get; set; }
 
     private List<Core.Class.NodeClassMethod> OpenedMethods { get; } = new();
+
+    private Dictionary<Core.Graph, GraphCanvas> GraphCanvases { get; } = new();
 
     private MudTabs Tabs { get; set; } = null!;
 
@@ -165,18 +167,57 @@
         StateHasChanged();
     }
 
+    private void CloseMethod(Core.Class.NodeClassMethod method)
+    {
+        var removedIndex = OpenedMethods.IndexOf(method);
+        if (removedIndex < 0)
+            return;
+
+        OpenedMethods.RemoveAt(removedIndex);
+        if (OpenedMethods.Count == 0)
+            ActivePanelIndex = 0;
+        else if (removedIndex < ActivePanelIndex)
+            ActivePanelIndex--;
+        else if (removedIndex == ActivePanelIndex)
+            ActivePanelIndex = Math.Min(ActivePanelIndex, OpenedMethods.Count - 1);
+    }
+
+    private void OnClassDeleted(Core.Class.NodeClass nodeClass)
+    {
+        var activeMethod = ActivePanelIndex < OpenedMethods.Count ? OpenedMethods[ActivePanelIndex] : null;
+        var previousActiveIndex = ActivePanelIndex;
+        OpenedMethods.RemoveAll(method => method.Class == nodeClass);
+        if (SelectedClass == nodeClass)
+            SelectedClass = null;
+        ActivePanelIndex = activeMethod != null && OpenedMethods.Contains(activeMethod)
+            ? OpenedMethods.IndexOf(activeMethod)
+            : OpenedMethods.Count == 0 ? 0 : Math.Min(previousActiveIndex, OpenedMethods.Count - 1);
+    }
+
     public void ToggleBreakpointOnSelectedNode()
     {
         if (OpenedMethods.Count > 0 && ActivePanelIndex < OpenedMethods.Count)
         {
             var method = OpenedMethods[ActivePanelIndex];
-            var graphCanvas = method.Graph.GraphCanvas as GraphCanvas;
-            graphCanvas?.ToggleBreakpointOnSelectedNode();
+            if (GraphCanvases.TryGetValue(method.Graph, out var graphCanvas))
+                graphCanvas.ToggleBreakpointOnSelectedNode();
         }
+    }
+
+    internal void RegisterGraphCanvas(GraphCanvas graphCanvas)
+    {
+        GraphCanvases[graphCanvas.Graph] = graphCanvas;
+    }
+
+    internal void UnregisterGraphCanvas(GraphCanvas graphCanvas)
+    {
+        if (GraphCanvases.TryGetValue(graphCanvas.Graph, out var registered) && registered == graphCanvas)
+            GraphCanvases.Remove(graphCanvas.Graph);
     }
 
     public void Dispose()
     {
         ProjectService.ProjectChanged -= OnProjectChanged;
+        GraphCanvases.Clear();
     }
 }

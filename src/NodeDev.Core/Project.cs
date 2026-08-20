@@ -147,7 +147,52 @@ public class Project
 
 	public void AddClass(NodeClass nodeClass)
 	{
+		ArgumentNullException.ThrowIfNull(nodeClass);
+		if (nodeClass.Project != this)
+			throw new ArgumentException("The class belongs to a different project.", nameof(nodeClass));
+		if (_Classes.Any(existing => existing.Namespace == nodeClass.Namespace && existing.Name == nodeClass.Name))
+			throw new InvalidOperationException($"A class named '{nodeClass.Namespace}.{nodeClass.Name}' already exists.");
+
 		_Classes.Add(nodeClass);
+	}
+
+	public void RemoveClass(NodeClass nodeClass)
+	{
+		ArgumentNullException.ThrowIfNull(nodeClass);
+		if (!_Classes.Contains(nodeClass))
+			throw new InvalidOperationException("The class does not belong to this project.");
+
+		var referencingMember = _Classes
+			.Where(existing => existing != nodeClass)
+			.SelectMany(existing => existing.Properties.Select(property => (Name: $"{existing.Name}.{property.Name}", Type: property.PropertyType))
+				.Concat(existing.Methods.Select(method => (Name: $"{existing.Name}.{method.Name} return type", Type: method.ReturnType)))
+				.Concat(existing.Methods.SelectMany(method => method.Parameters.Select(parameter => (Name: $"{existing.Name}.{method.Name}.{parameter.Name}", Type: parameter.ParameterType)))))
+			.FirstOrDefault(member => ReferencesClass(member.Type, nodeClass));
+		if (referencingMember != default)
+			throw new InvalidOperationException($"Class '{nodeClass.Name}' is still referenced by '{referencingMember.Name}'. Remove that reference first.");
+
+		var referencingNode = _Classes
+			.Where(existing => existing != nodeClass)
+			.SelectMany(existing => existing.Methods)
+			.SelectMany(method => method.Graph.Nodes.Values)
+			.FirstOrDefault(node =>
+				node.InputsAndOutputs.Any(connection => ReferencesClass(connection.Type, nodeClass)) ||
+				node is MethodCall { TargetMethod: NodeClassMethod targetMethod } && targetMethod.Class == nodeClass);
+		if (referencingNode != null)
+			throw new InvalidOperationException($"Class '{nodeClass.Name}' is still referenced by node '{referencingNode.Name}'. Remove that node first.");
+
+		_Classes.Remove(nodeClass);
+		NodeClassTypes.Remove(nodeClass);
+	}
+
+	private static bool ReferencesClass(TypeBase type, NodeClass nodeClass)
+	{
+		return type switch
+		{
+			NodeClassType nodeClassType => nodeClassType.NodeClass == nodeClass,
+			NodeClassArrayType arrayType => arrayType.InnerNodeClassType.NodeClass == nodeClass,
+			_ => type.Generics.Any(generic => ReferencesClass(generic, nodeClass))
+		};
 	}
 
 	#endregion
@@ -923,7 +968,13 @@ public class Project
 
 	public string Serialize()
 	{
-		var serializedProject = new SerializedProject(Id, NodeDevVersion, Classes.Select(x => x.Serialize()).ToList(), Settings);
+		return Serialize(Settings);
+	}
+
+	public string Serialize(ProjectSettings settings)
+	{
+		ArgumentNullException.ThrowIfNull(settings);
+		var serializedProject = new SerializedProject(Id, NodeDevVersion, Classes.Select(x => x.Serialize()).ToList(), settings);
 
 		return JsonSerializer.Serialize(serializedProject, new JsonSerializerOptions()
 		{
@@ -942,6 +993,7 @@ public class Project
 
 		var serializedProject = document.Deserialize<SerializedProject>() ?? throw new Exception("Unable to deserialize project");
 		var project = new Project(serializedProject.Id == default ? Guid.NewGuid() : serializedProject.Id);
+		project.Settings = serializedProject.Settings ?? new ProjectSettings();
 
 		var nodeClasses = new Dictionary<NodeClass, NodeClass.SerializedNodeClass>();
 		foreach (var nodeClassSerializedObj in serializedProject.Classes)
