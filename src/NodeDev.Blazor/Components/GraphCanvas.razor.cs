@@ -515,22 +515,9 @@ public partial class GraphCanvas : ComponentBase, IDisposable
 		else if (obj.Key == "F9")
 		{
 			var node = Diagram.Nodes.Where(x => x.Selected).OfType<GraphNodeModel>().FirstOrDefault();
-			if (node != null && !node.Node.CanBeInlined)
+			if (node != null)
 			{
-				// If debugging, use Project API to dynamically set/remove breakpoint
-				if (Graph.Project.IsHardDebugging)
-				{
-					if (node.Node.HasBreakpoint)
-						Graph.Project.RemoveBreakpointForNode(node.Node.Id);
-					else
-						Graph.Project.SetBreakpointForNode(node.Node.Id);
-				}
-				else
-				{
-					// Not debugging - just toggle decoration
-					node.Node.ToggleBreakpoint();
-				}
-				node.Refresh();
+				ToggleBreakpoint(node);
 			}
 		}
 	}
@@ -593,26 +580,46 @@ public partial class GraphCanvas : ComponentBase, IDisposable
 
 	#region ToggleBreakpoint
 
+	/// <summary>
+	/// Toggles the breakpoint on the selected graph node when one is selected.
+	/// </summary>
 	public void ToggleBreakpointOnSelectedNode()
 	{
 		var node = Diagram.Nodes.Where(x => x.Selected).OfType<GraphNodeModel>().FirstOrDefault();
-		if (node != null && !node.Node.CanBeInlined)
+		if (node != null)
 		{
-			// If debugging, use Project API to dynamically set/remove breakpoint
-			if (Graph.Project.IsHardDebugging)
+			ToggleBreakpoint(node);
+		}
+	}
+
+	/// <summary>
+	/// Applies the correct breakpoint operation for the current debugging mode.
+	/// </summary>
+	/// <param name="node">The graph node whose breakpoint state should change.</param>
+	private void ToggleBreakpoint(GraphNodeModel node)
+	{
+		if (node.Node.CanBeInlined)
+		{
+			return;
+		}
+
+		if (Graph.Project.IsHardDebugging)
+		{
+			if (node.Node.HasBreakpoint)
 			{
-				if (node.Node.HasBreakpoint)
-					Graph.Project.RemoveBreakpointForNode(node.Node.Id);
-				else
-					Graph.Project.SetBreakpointForNode(node.Node.Id);
+				Graph.Project.RemoveBreakpointForNode(node.Node.Id);
 			}
 			else
 			{
-				// Not debugging - just toggle decoration
-				node.Node.ToggleBreakpoint();
+				Graph.Project.SetBreakpointForNode(node.Node.Id);
 			}
-			node.Refresh();
 		}
+		else
+		{
+			node.Node.ToggleBreakpoint();
+		}
+
+		node.Refresh();
 	}
 
 	#endregion

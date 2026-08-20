@@ -45,11 +45,11 @@
         <div class="row">
             @if (i < inputs.Count)
             {
-                <GraphNodeWidgetPort GraphCanvas="GraphCanvas" Node="Node" IsInput="true" SharingRow="i < outputs.Count" Port="inputs[i]"></GraphNodeWidgetPort>
+                <GraphNodeWidgetPort GraphCanvas="GraphCanvas" IsInput="true" SharingRow="i < outputs.Count" Port="inputs[i]"></GraphNodeWidgetPort>
             }
             @if (i < outputs.Count)
             {
-                <GraphNodeWidgetPort GraphCanvas="GraphCanvas" Node="Node" IsInput="false" SharingRow="i < inputs.Count" Port="outputs[i]"></GraphNodeWidgetPort>
+                <GraphNodeWidgetPort GraphCanvas="GraphCanvas" IsInput="false" SharingRow="i < inputs.Count" Port="outputs[i]"></GraphNodeWidgetPort>
             }
         </div>
     }

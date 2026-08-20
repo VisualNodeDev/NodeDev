@@ -1,5 +1,6 @@
 ﻿@inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject NodeDev.Blazor.Services.WorkspaceCommandService Commands
 
 <MudDialog>
     <DialogContent>
@@ -8,7 +9,6 @@
             
             <div style="display: flex; gap: 8px; margin: 8px 0;">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddParameter" Class="px-8" data-test-id="add-parameter">Add parameter</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="ShowReturnTypeEdit" Class="px-8" data-test-id="change-return-type">Change return type</MudButton>
             </div>
 
             <MudDataGrid Items="Method.Parameters" EditMode="DataGridEditMode.Cell" ReadOnly="false" Class="w100 flex-1">
@@ -24,11 +24,11 @@
                         </CellTemplate>
                     </TemplateColumn>
 
-                    <CallbackSetColumn Property="x => x.Name" SetCallback="(x, name) => x.Rename(name)" Editable="true" data-test-id="param-name-input" />
+                    <CallbackSetColumn T="NodeDev.Core.Class.NodeClassMethodParameter" TProperty="string" Property="x => x.Name" SetCallback="RenameParameter" Editable="true" data-test-id="param-name-input" />
 
                     <TemplateColumn Title="IsOut">
                         <EditTemplate>
-                            <MudCheckBox T="bool" Value="context.Item?.IsOut ?? false" ValueChanged="@(v => context.Item?.SetIsOut(v))"></MudCheckBox>
+                            <MudCheckBox T="bool" Value="context.Item?.IsOut ?? false" ValueChanged="@(v => SetParameterIsOut(context.Item, v))"></MudCheckBox>
                         </EditTemplate>
                     </TemplateColumn>
 
@@ -37,9 +37,9 @@
                         <CellTemplate>
 
                             <div style="display: flex; flex-direction: row">
-                                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" OnClick="context.Item.MoveUp" Disabled="Method.Parameters.FirstOrDefault() == context.Item"></MudIconButton>
-                                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" OnClick="context.Item.MoveDown" Disabled="Method.Parameters.LastOrDefault() == context.Item"></MudIconButton>
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" OnClick="context.Item.Remove"></MudIconButton>
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" OnClick="() => MoveParameterUp(context.Item)" Disabled="Method.Parameters.FirstOrDefault() == context.Item"></MudIconButton>
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" OnClick="() => MoveParameterDown(context.Item)" Disabled="Method.Parameters.LastOrDefault() == context.Item"></MudIconButton>
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" OnClick="() => RemoveParameter(context.Item)"></MudIconButton>
                             </div>
 
                         </CellTemplate>
@@ -63,49 +63,100 @@
     [Parameter]
     public NodeDev.Core.Class.NodeClassMethod Method { get; set; } = null!;
 
-    void Submit() => MudDialog.Close(DialogResult.Ok(true));
-
-    void AddParameter()
+    /// <summary>
+    /// Closes the editor after its immediate parameter mutations have been applied.
+    /// </summary>
+    private void Submit()
     {
-        Method.AddDefaultParameter();
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    /// <summary>
+    /// Adds the default parameter defined by the core model and refreshes the grid.
+    /// </summary>
+    private void AddParameter()
+    {
+        ShowFailure(Commands.AddDefaultParameter(Method));
         StateHasChanged();
     }
 
-    private async Task ShowReturnTypeEdit()
-    {
-        var result = await DialogService.Show<TypeSelectorDialog>("Select Return Type", new()
-            {
-                [nameof(TypeSelectorDialog.TypeFactory)] = Method.Class.TypeFactory
-            }, new DialogOptions()
-            {
-                FullScreen = false,
-                FullWidth = true
-            }).Result;
-
-        // Note: ReturnType is readonly in NodeClassMethod, so we can't actually change it
-        // This is a limitation of the current API
-        Snackbar.Add("Return type changing not yet supported in the API", Severity.Warning);
-    }
-
+    /// <summary>
+    /// Opens the type selector for a method parameter.
+    /// </summary>
+    /// <param name="parameter">The parameter that receives the selected type.</param>
     private async Task ShowParameterTypeEdit(NodeDev.Core.Class.NodeClassMethodParameter parameter)
     {
-        var result = await DialogService.Show<TypeSelectorDialog>("", new()
+        var dialog = await DialogService.ShowAsync<TypeSelectorDialog>("Select Parameter Type", new()
             {
                 [nameof(TypeSelectorDialog.TypeFactory)] = Method.Class.TypeFactory
-            }, new DialogOptions()
-            {
-                FullScreen = false,
-                FullWidth = true
-            }).Result;
+            }, DialogDefaults.TypeSelector);
+        var result = await dialog.Result;
 
-        NodeDev.Core.Types.TypeBase typeBase;
-        if (result?.Data is Type type)
-            typeBase = Method.Class.TypeFactory.Get(type, null);
-        else if (result?.Data is NodeDev.Core.Types.TypeBase t)
-            typeBase = t;
-        else
-            return;
+        if (result?.Data is NodeDev.Core.Types.TypeBase type)
+        {
+            ShowFailure(Commands.ChangeParameterType(parameter, type));
+        }
+    }
 
-        parameter.ChangeType(typeBase);
+    /// <summary>
+    /// Applies an inline name edit through the workspace command boundary.
+    /// </summary>
+    /// <param name="parameter">The parameter being renamed.</param>
+    /// <param name="name">The edited name, which may be empty while editing.</param>
+    private void RenameParameter(NodeDev.Core.Class.NodeClassMethodParameter parameter, string? name)
+    {
+        ShowFailure(Commands.RenameParameter(parameter, name ?? ""));
+    }
+
+    /// <summary>
+    /// Applies the output-parameter toggle when the grid has a valid row item.
+    /// </summary>
+    /// <param name="parameter">The optional parameter from the grid row.</param>
+    /// <param name="value">Whether the parameter should be emitted as <see langword="out"/>.</param>
+    private void SetParameterIsOut(NodeDev.Core.Class.NodeClassMethodParameter? parameter, bool value)
+    {
+        if (parameter != null)
+        {
+            ShowFailure(Commands.SetParameterIsOut(parameter, value));
+        }
+    }
+
+    /// <summary>
+    /// Moves a parameter earlier in the method signature.
+    /// </summary>
+    /// <param name="parameter">The parameter to move.</param>
+    private void MoveParameterUp(NodeDev.Core.Class.NodeClassMethodParameter parameter)
+    {
+        ShowFailure(Commands.MoveParameterUp(parameter));
+    }
+
+    /// <summary>
+    /// Moves a parameter later in the method signature.
+    /// </summary>
+    /// <param name="parameter">The parameter to move.</param>
+    private void MoveParameterDown(NodeDev.Core.Class.NodeClassMethodParameter parameter)
+    {
+        ShowFailure(Commands.MoveParameterDown(parameter));
+    }
+
+    /// <summary>
+    /// Removes a parameter from the method signature.
+    /// </summary>
+    /// <param name="parameter">The parameter to remove.</param>
+    private void RemoveParameter(NodeDev.Core.Class.NodeClassMethodParameter parameter)
+    {
+        ShowFailure(Commands.RemoveParameter(parameter));
+    }
+
+    /// <summary>
+    /// Displays only failed command outcomes because successful inline edits do not require a toast.
+    /// </summary>
+    /// <param name="result">The command outcome to inspect.</param>
+    private void ShowFailure(NodeDev.Blazor.Services.WorkspaceCommandResult result)
+    {
+        if (!result.Succeeded)
+        {
+            Snackbar.ShowCommandResult(result);
+        }
     }
 }

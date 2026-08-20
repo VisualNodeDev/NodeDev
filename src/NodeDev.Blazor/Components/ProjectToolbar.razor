@@ -1,12 +1,9 @@
-﻿@using Microsoft.AspNetCore.Components.Forms
 @using NodeDev.Blazor.Services
 @using NodeDev.Core
 @implements IDisposable
-@inject ProjectService ProjectService
+@inject WorkspaceCommandService Commands
 @inject ISnackbar Snackbar
-@inject AppOptionsContainer AppOptionsContainer
 @inject IDialogService DialogService
-
 
 <MudButton OnClick="Open" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="open-project">Open</MudButton>
 <MudButton OnClick="NewProject" Class="ml-3" Disabled=@Project.IsLiveDebuggingEnabled data-test-id="newProject">New Project</MudButton>
@@ -17,7 +14,6 @@
 @if (Project.IsHardDebugging)
 {
     <MudIconButton Icon="@Icons.Material.Filled.Stop" Class="ml-3" OnClick="StopDebugging" data-test-id="stop-debug" Title="Stop Debugging" Color="Color.Error" />
-    <MudIconButton Icon="@Icons.Material.Filled.Pause" Class="ml-3" OnClick="PauseDebugging" data-test-id="pause-debug" Title="Pause" Disabled="true" />
     <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Class="ml-3" OnClick="ResumeDebugging" data-test-id="resume-debug" Title="Continue" Disabled="@(!Project.IsPausedAtBreakpoint)" Color="@(Project.IsPausedAtBreakpoint ? Color.Success : Color.Default)" />
     @if (Project.IsPausedAtBreakpoint && Project.CurrentBreakpoint != null)
     {
@@ -36,58 +32,65 @@ else
     <MudIconButton Icon="@Icons.Material.Filled.BugReport" Class="ml-3" OnClick="RunWithDebug" data-test-id="run-with-debug" Title="Run with Debug" Color="Color.Info" />
 }
 
-<MudButton OnClick="Export" Class="ml-3" data-test-id="export-project">Export</MudButton>
-<MudButton OnClick="Add" Class="ml-3">Add node</MudButton>
-<MudButton OnClick="SwitchLiveDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
+<MudButton OnClick="SwitchLiveDebugging" Disabled="@Project.IsHardDebugging">@(Project.IsLiveDebuggingEnabled ? "Stop Live Debugging" : "Start Live Debugging")</MudButton>
 <MudButton OnClick="ToggleBreakpoint" Class="ml-3" data-test-id="toggle-breakpoint" Title="Toggle Breakpoint (F9)">
     <MudIcon Icon="@Icons.Material.Filled.FiberManualRecord" Color="Color.Error" Size="Size.Small" />
 </MudButton>
 <MudSpacer />
 <MudButton OnClick="OpenOptionsDialogAsync" Class="ml-3" data-test-id="options">Options</MudButton>
-<MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
-
 
 @code {
-
     [CascadingParameter]
     public NodeDev.Blazor.Index? IndexPage { get; set; }
 
-    private Project Project => ProjectService.Project;
-
-    private DialogOptions DialogOptions => new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
-
+    private Project Project => Commands.Project;
     private IDisposable? HardDebugStateSubscription;
     private IDisposable? CurrentBreakpointSubscription;
 
+    /// <summary>
+    /// Subscribes to debug-state notifications so toolbar controls track the active project.
+    /// </summary>
     protected override void OnInitialized()
     {
-        base.OnInitialized();
-        
-        // Subscribe to hard debug state changes to refresh UI
-        HardDebugStateSubscription = Project.HardDebugStateChanged.Subscribe(_ =>
-        {
-            InvokeAsync(StateHasChanged);
-        });
-        
-        // Subscribe to current breakpoint changes to refresh UI
-        CurrentBreakpointSubscription = Project.CurrentBreakpointChanged.Subscribe(breakpoint =>
-        {
-            Console.WriteLine($"[ProjectToolbar] CurrentBreakpoint changed: {(breakpoint != null ? $"{breakpoint.NodeName}" : "null")}");
-            InvokeAsync(StateHasChanged);
-        });
+        HardDebugStateSubscription = Project.HardDebugStateChanged.Subscribe(value => { _ = InvokeAsync(StateHasChanged); });
+        CurrentBreakpointSubscription = Project.CurrentBreakpointChanged.Subscribe(value => { _ = InvokeAsync(StateHasChanged); });
     }
 
+    /// <summary>
+    /// Disposes subscriptions that are tied to this toolbar instance.
+    /// </summary>
     public void Dispose()
     {
         HardDebugStateSubscription?.Dispose();
         CurrentBreakpointSubscription?.Dispose();
     }
 
-    private Task Open()
+    /// <summary>
+    /// Loads saved project names and opens the selected project.
+    /// </summary>
+    private async Task Open()
     {
-        return DialogService.ShowAsync<OpenProjectDialog>("Open Project", DialogOptions);
+        var projectsResult = Commands.GetSavedProjectNames();
+        if (!projectsResult.Succeeded || projectsResult.Value == null)
+        {
+            Snackbar.ShowCommandResult(projectsResult);
+            return;
+        }
+
+        var dialog = await DialogService.ShowAsync<OpenProjectDialog>("Open Project", new()
+        {
+            [nameof(OpenProjectDialog.ProjectNames)] = projectsResult.Value
+        }, DialogDefaults.MediumForm);
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: string projectName })
+        {
+            Snackbar.ShowCommandResult(await Commands.OpenProjectAsync(projectName));
+        }
     }
 
+    /// <summary>
+    /// Saves the project, prompting for a name when it has not yet been named.
+    /// </summary>
     private async Task Save()
     {
         if (string.IsNullOrWhiteSpace(Project.Settings.ProjectName))
@@ -96,139 +99,96 @@ else
             return;
         }
 
-        try
+        Snackbar.ShowCommandResult(await Commands.SaveProjectAsync());
+    }
+
+    /// <summary>
+    /// Prompts for a project name and saves when the dialog returns one.
+    /// </summary>
+    private async Task SaveAs()
+    {
+        var dialog = await DialogService.ShowAsync<SaveAsProjectDialog>("Save As Project", new()
         {
-            await ProjectService.SaveProjectToFileAsync();
-            Snackbar.Add("Project saved", Severity.Success);
-        }
-        catch (Exception ex)
+            [nameof(SaveAsProjectDialog.ProjectName)] = Project.Settings.ProjectName
+        }, DialogDefaults.MediumForm);
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: string projectName })
         {
-            Snackbar.Add(ex.Message, Severity.Error);
+            Snackbar.ShowCommandResult(await Commands.SaveProjectAsync(projectName));
         }
     }
 
-	private Task SaveAs()
-	{
-        return DialogService.ShowAsync<SaveAsProjectDialog>("Save As Project", DialogOptions);
-	}
-
+    /// <summary>
+    /// Replaces the active project with a fresh default project.
+    /// </summary>
     private void NewProject()
     {
-        ProjectService.ChangeProject(Core.Project.CreateNewDefaultProject());
+        Snackbar.ShowCommandResult(Commands.CreateNewProject());
     }
 
-    private void Add()
+    /// <summary>
+    /// Builds and runs the active project using the appropriate live-debugging mode.
+    /// </summary>
+    public async Task Run()
     {
-        //GraphCanvas?.ShowAddNode();
+        var options = Project.IsLiveDebuggingEnabled ? Core.BuildOptions.Debug : Core.BuildOptions.Release;
+        Snackbar.ShowCommandResult(await Commands.RunProjectAsync(options));
     }
 
-    public void Run()
+    /// <summary>
+    /// Builds and runs the active project with the hard debugger attached.
+    /// </summary>
+    public async Task RunWithDebug()
     {
-        new Thread(() =>
-        {
-            Project.Run(Project.IsLiveDebuggingEnabled ? Core.BuildOptions.Debug : Core.BuildOptions.Release);
-        }).Start();
+        Snackbar.ShowCommandResult(await Commands.RunWithDebugAsync(Core.BuildOptions.Debug));
     }
 
-    public void RunWithDebug()
-    {
-        new Thread(() =>
-        {
-            try
-            {
-                Project.RunWithDebug(Core.BuildOptions.Debug);
-            }
-            catch (Exception ex)
-            {
-                // Show error dialog on UI thread
-                InvokeAsync(async () =>
-                {
-                    await DialogService.ShowMessageBox(
-                        "Debug Attachment Failed",
-                        ex.Message,
-                        yesText: "OK");
-                });
-            }
-        }).Start();
-    }
-
+    /// <summary>
+    /// Requests that the active hard-debugging session stop.
+    /// </summary>
     public void StopDebugging()
     {
-        try
-        {
-            Project.StopDebugging();
-            Snackbar.Add("Debugging stopped", Severity.Info);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Failed to stop debugging: {ex.Message}", Severity.Error);
-        }
+        Snackbar.ShowCommandResult(Commands.StopDebugging(), Severity.Info);
     }
 
-    public void PauseDebugging()
-    {
-        // Placeholder for future implementation
-        Snackbar.Add("Pause functionality coming soon", Severity.Info);
-    }
-
+    /// <summary>
+    /// Continues a hard-debugging session that is paused at a breakpoint.
+    /// </summary>
     public void ResumeDebugging()
     {
-        try
-        {
-            Project.ContinueExecution();
-            Snackbar.Add("Execution resumed", Severity.Success);
-        }
-        catch (InvalidOperationException ex)
-        {
-            Snackbar.Add($"Cannot resume: {ex.Message}", Severity.Error);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Failed to resume: {ex.Message}", Severity.Error);
-        }
+        Snackbar.ShowCommandResult(Commands.ResumeDebugging());
     }
 
-    public void Build()
+    /// <summary>
+    /// Builds the active project with debug symbols.
+    /// </summary>
+    public async Task Build()
     {
-        try
-        {
-            Project.Build(Core.BuildOptions.Debug);
-            Snackbar.Add("Project built successfully", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Build failed: {ex.Message}", Severity.Error);
-        }
+        Snackbar.ShowCommandResult(await Commands.BuildProjectAsync(Core.BuildOptions.Debug));
     }
 
-    public void Export()
-    {
-        try
-        {
-            // Export functionality - for now, just show a message
-            Snackbar.Add("Export functionality not yet implemented", Severity.Info);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
-        }
-    }
-
+    /// <summary>
+    /// Starts or stops live debugging based on the current project state.
+    /// </summary>
     private void SwitchLiveDebugging()
     {
-        if (Project.IsLiveDebuggingEnabled)
-            Project.StopLiveDebugging();
-        else
-            Project.StartLiveDebugging();
+        Snackbar.ShowCommandResult(Commands.ToggleLiveDebugging(), Severity.Info);
     }
 
+    /// <summary>
+    /// Toggles a breakpoint for the node currently selected on the active graph canvas.
+    /// </summary>
     private void ToggleBreakpoint()
     {
         IndexPage?.ToggleBreakpointOnSelectedNode();
     }
 
+    /// <summary>
+    /// Opens the options dialog without waiting for a result because the dialog persists its own changes.
+    /// </summary>
+    /// <returns>A task that completes after the dialog is displayed.</returns>
     private Task OpenOptionsDialogAsync()
     {
-        return DialogService.ShowAsync<OptionsDialog>("Options", DialogOptions);
+        return DialogService.ShowAsync<OptionsDialog>("Options", DialogDefaults.MediumForm);
     }
 }
