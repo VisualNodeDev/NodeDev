@@ -1,5 +1,6 @@
 ﻿@inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject NodeDev.Blazor.Services.WorkspaceCommandService Commands
 
 <MudStack Row="false" Class="wh100" data-test-id="classExplorer">
     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -19,14 +20,6 @@
         <ItemTemplate>
             @if (context.Value == null)
             { }
-            else if (context.Value == CurrentlyEditingItem)
-            {
-                <MudTreeViewItem @bind-Expanded="@context.Expanded" Items="@context.Children" Value="@context.Value" Text="@context.Text" EndTextTypo="@Typo.caption">
-                    <BodyContent Context="Item">
-                        <MudTextField T="string" Typo="Typo.caption" @bind-Value="Text" Variant="Variant.Text" OnKeyUp="OnEditTextKeyUp" AutoFocus="true"></MudTextField>
-                    </BodyContent>
-                </MudTreeViewItem>
-            }
             else if (context.Value.Type == TreeItemType.MethodsFolder || context.Value.Type == TreeItemType.PropertiesFolder)
             {
                 <MudTreeViewItem @bind-Expanded="@context.Expanded" Items="@context.Children" Value="@context.Value" Text="@context.Value!.Name" EndTextTypo="@Typo.caption">
@@ -70,8 +63,7 @@
                             <MudText Typo="Typo.caption" Style="justify-self: start;">@Item.Value!.Property!.PropertyType.FriendlyName @Item.Value!.Name</MudText>
                             <div style="@($"justify-self: end; visibility: {(Hovered == Item.Value ? "visible" : "hidden")}")">
                                 <MudIconButton Icon="@Icons.Material.Filled.ShapeLine" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowPropertyTypeEdit(Item.Value!)" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenameMenu(Item.Value!)" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" Color="Color.Inherit" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" Color="Color.Inherit" OnClick="() => ShowRenamePropertyDialog(Item.Value!)" />
                             </div>
                         </div>
                     </BodyContent>
@@ -115,10 +107,9 @@
 
     private TreeItem? Hovered = null;
 
-    private TreeItem? CurrentlyEditingItem = null;
-    private string? Text = null;
-    public bool IsNew = false;
-
+    /// <summary>
+    /// Builds the tree from the class members that exist when this explorer is created.
+    /// </summary>
     protected override void OnInitialized()
     {
         base.OnInitialized();
@@ -169,110 +160,129 @@
         }
     }
 
-    private void ShowAddMethodMenu()
-    {
-        var newItem = new TreeItemData<TreeItem>()
-            {
-                Value = new TreeItem(TreeItemType.Method, null, null)
-                {
-                    Name = "NewMethod"
-                }
-            };
-        Items.First(x => x.Value?.Type == TreeItemType.MethodsFolder).Children!.Add(newItem);
-
-        CurrentlyEditingItem = newItem.Value;
-        IsNew = true;
-        Text = CurrentlyEditingItem.Name;
-
-    }
-
-    private void ShowNewProperty()
-    {
-        var newItem = new TreeItemData<TreeItem>()
-            {
-                Value = new(TreeItemType.Property, null, null)
-                {
-                    Name = "NewProperty"
-                }
-            };
-        Items.First(x => x.Value!.Type == TreeItemType.PropertiesFolder).Children!.Add(newItem);
-
-        CurrentlyEditingItem = newItem.Value;
-        IsNew = true;
-        Text = CurrentlyEditingItem.Name;
-
-    }
-
+    /// <summary>
+    /// Prompts for a method name and adds the created method to the methods branch.
+    /// </summary>
     private async Task ShowCreateMethodDialog()
     {
-        var dialogReference = await DialogService.ShowAsync<CreateMethodDialog>("Create New Method", new()
+        var dialogReference = await DialogService.ShowAsync<NameDialog>("Create New Method", new()
         {
-            [nameof(CreateMethodDialog.Class)] = Class
-        }, new DialogOptions()
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        });
+            [nameof(NameDialog.InitialValue)] = "NewMethod",
+            [nameof(NameDialog.Label)] = "Method Name",
+            [nameof(NameDialog.ConfirmText)] = "Create",
+            [nameof(NameDialog.InputTestId)] = "method-name-input",
+            [nameof(NameDialog.ConfirmTestId)] = "confirm-create-method"
+        }, DialogDefaults.SmallForm);
 
         var result = await dialogReference.Result;
 
-        if (result != null && !result.Canceled && result.Data is NodeDev.Core.Class.NodeClassMethod method)
+        if (result is { Canceled: false, Data: string methodName })
         {
-            Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.Add(new()
+            var commandResult = Commands.CreateMethod(Class, methodName);
+            Snackbar.ShowCommandResult(commandResult);
+            if (commandResult is { Succeeded: true, Value: not null })
             {
-                Value = new(TreeItemType.Method, method, null)
+                Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.Add(new()
                 {
-                    Name = method.Name
-                }
-            });
-            Snackbar.Add($"Method '{method.Name}' created successfully", Severity.Success);
-            StateHasChanged();
+                    Value = new(TreeItemType.Method, commandResult.Value, null)
+                    {
+                        Name = commandResult.Value.Name
+                    }
+                });
+                StateHasChanged();
+            }
         }
     }
 
+    /// <summary>
+    /// Prompts for a property name and adds the created property to the properties branch.
+    /// </summary>
+    private async Task ShowNewProperty()
+    {
+        var dialogReference = await DialogService.ShowAsync<NameDialog>("Create New Property", new()
+        {
+            [nameof(NameDialog.InitialValue)] = "NewProperty",
+            [nameof(NameDialog.Label)] = "Property Name",
+            [nameof(NameDialog.ConfirmText)] = "Create"
+        }, DialogDefaults.SmallForm);
+        var result = await dialogReference.Result;
+
+        if (result is { Canceled: false, Data: string propertyName })
+        {
+            var commandResult = Commands.CreateProperty(Class, propertyName);
+            Snackbar.ShowCommandResult(commandResult);
+            if (commandResult is { Succeeded: true, Value: not null })
+            {
+                Items.First(x => x.Value!.Type == TreeItemType.PropertiesFolder).Children!.Add(new()
+                {
+                    Value = new(TreeItemType.Property, null, commandResult.Value)
+                    {
+                        Name = commandResult.Value.Name
+                    }
+                });
+                StateHasChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Prompts for and applies a replacement name for a method tree item.
+    /// </summary>
+    /// <param name="item">The tree item containing the method to rename.</param>
     private async Task ShowRenameMethodDialog(TreeItem item)
     {
-        if (item.Method == null) return;
+        if (item.Method == null)
+        {
+            return;
+        }
 
-        var dialogReference = await DialogService.ShowAsync<RenameDialog>("Rename Method", new()
+        var dialogReference = await DialogService.ShowAsync<NameDialog>("Rename Method", new()
         {
-            [nameof(RenameDialog.CurrentName)] = item.Method.Name,
-            [nameof(RenameDialog.Label)] = "Method Name",
-            [nameof(RenameDialog.IsMethod)] = true
-        }, new DialogOptions()
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        });
+            [nameof(NameDialog.InitialValue)] = item.Method.Name,
+            [nameof(NameDialog.Label)] = "Method Name",
+            [nameof(NameDialog.ConfirmText)] = "Rename",
+            [nameof(NameDialog.InputTestId)] = "method-name-input",
+            [nameof(NameDialog.ConfirmTestId)] = "confirm-rename"
+        }, DialogDefaults.SmallForm);
         
         var result = await dialogReference.Result;
 
-        if (result != null && !result.Canceled && result.Data is string newName)
+        if (result is { Canceled: false, Data: string newName })
         {
-            var oldName = item.Method.Name;
-            item.Method.Rename(newName);
-            item.Name = newName; // Update the tree item name for display
-            Snackbar.Add($"Method renamed from '{oldName}' to '{newName}'", Severity.Success);
-            StateHasChanged();
+            var commandResult = Commands.RenameMethod(item.Method, newName);
+            Snackbar.ShowCommandResult(commandResult);
+            if (commandResult.Succeeded)
+            {
+                item.Name = newName;
+                StateHasChanged();
+            }
         }
     }
 
+    /// <summary>
+    /// Confirms and deletes a method, clearing any selected method that was removed.
+    /// </summary>
+    /// <param name="item">The tree item containing the method to delete.</param>
     private async Task DeleteMethod(TreeItem item)
     {
-        if (item.Method == null) return;
+        if (item.Method == null)
+        {
+            return;
+        }
 
         var confirm = await DialogService.ShowMessageBox(
             "Delete Method",
             $"Are you sure you want to delete method '{item.Method.Name}'?",
             yesText: "Delete", cancelText: "Cancel",
-            options: new DialogOptions() { MaxWidth = MaxWidth.Small }
+            options: DialogDefaults.Confirmation
         );
 
         if (confirm == true)
         {
-            try
+            var commandResult = Commands.DeleteMethod(item.Method);
+            Snackbar.ShowCommandResult(commandResult);
+            if (commandResult.Succeeded)
             {
-                Class.RemoveMethod(item.Method);
                 Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.RemoveAll(x => x.Value?.Method == item.Method);
                 if (SelectedTreeItem == item)
                 {
@@ -281,126 +291,88 @@
                     await SelectedMethodChanged.InvokeAsync(null);
                 }
                 await MethodDeleted.InvokeAsync(item.Method);
-                Snackbar.Add($"Method '{item.Method.Name}' deleted", Severity.Success);
                 StateHasChanged();
             }
-            catch (Exception ex)
+        }
+    }
+
+    /// <summary>
+    /// Prompts for and applies a replacement name for a property tree item.
+    /// </summary>
+    /// <param name="item">The tree item containing the property to rename.</param>
+    private async Task ShowRenamePropertyDialog(TreeItem item)
+    {
+        if (item.Property == null)
+        {
+            return;
+        }
+
+        var dialogReference = await DialogService.ShowAsync<NameDialog>("Rename Property", new()
+        {
+            [nameof(NameDialog.InitialValue)] = item.Property.Name,
+            [nameof(NameDialog.Label)] = "Property Name",
+            [nameof(NameDialog.ConfirmText)] = "Rename"
+        }, DialogDefaults.SmallForm);
+        var result = await dialogReference.Result;
+        if (result is { Canceled: false, Data: string newName })
+        {
+            var commandResult = Commands.RenameProperty(item.Property, newName);
+            Snackbar.ShowCommandResult(commandResult);
+            if (commandResult.Succeeded)
             {
-                Snackbar.Add(ex.Message, Severity.Error);
+                item.Name = newName;
+                StateHasChanged();
             }
         }
     }
 
-
-    private void ShowRenameMenu(TreeItem item)
-    {
-        if (item == null)
-            return;
-
-        Text = item.Name;
-        CurrentlyEditingItem = item;
-        IsNew = false;
-    }
-
+    /// <summary>
+    /// Opens the type selector for a property and applies a selected type.
+    /// </summary>
+    /// <param name="item">The tree item containing the property to update.</param>
     private async Task ShowPropertyTypeEdit(TreeItem item)
     {
-        var result = await DialogService.Show<TypeSelectorDialog>("", new()
+		if (item.Property == null)
+		{
+			return;
+		}
+
+        var dialog = await DialogService.ShowAsync<TypeSelectorDialog>("Select Property Type", new()
             {
                 [nameof(TypeSelectorDialog.TypeFactory)] = Class.TypeFactory
-            }, new DialogOptions()
-            {
-                FullScreen = true,
-                FullWidth = true
-            }).Result;
+            }, DialogDefaults.FullScreen);
+        var result = await dialog.Result;
 
-        NodeDev.Core.Types.TypeBase typeBase;
-        if (result?.Data is Type type)
-            typeBase = Class.TypeFactory.Get(type, null);
-        else if (result?.Data is NodeDev.Core.Types.TypeBase t)
-            typeBase = t;
-        else
-            return;
-
-        item.Property!.ChangeType(typeBase);
+        if (result?.Data is NodeDev.Core.Types.TypeBase type)
+        {
+            Snackbar.ShowCommandResult(Commands.ChangePropertyType(item.Property, type));
+        }
     }
 
+    /// <summary>
+    /// Opens the parameter editor for the selected method.
+    /// </summary>
+    /// <param name="item">The tree item containing the method to edit.</param>
     private async Task ShowMethodEdit(TreeItem item)
     {
-        var result = await DialogService.Show<EditMethodMenu>("", new()
+		if (item.Method == null)
+		{
+			return;
+		}
+
+        var dialog = await DialogService.ShowAsync<EditMethodMenu>("Edit Method", new()
             {
                 [nameof(EditMethodMenu.Method)] = item.Method
-            }, new DialogOptions()
-            {
-                FullScreen = false,
-                FullWidth = true,
-                MaxWidth = MaxWidth.Large
-            }).Result;
+            }, DialogDefaults.LargeEditor);
+        await dialog.Result;
     }
 
-    private void OnEditTextKeyUp(KeyboardEventArgs args)
-    {
-        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(Text) || CurrentlyEditingItem == null)
-            return;
-
-        if (IsNew)
-        {
-            if (CurrentlyEditingItem!.Type == TreeItemType.Method)
-            {
-                var method = new Core.Class.NodeClassMethod(Class, Text, Class.TypeFactory.Get(typeof(void), null));
-                Class.AddMethod(method, createEntryAndReturn: true);
-
-                Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.RemoveAll(x => x.Value == CurrentlyEditingItem);
-                Items.First(x => x.Value!.Type == TreeItemType.MethodsFolder).Children!.Add(new()
-                    {
-                        Value = new(TreeItemType.Method, method, null)
-                        {
-                            Name = method.Name
-                        }
-                    });
-            }
-            else if (CurrentlyEditingItem.Type == TreeItemType.Property)
-            {
-                var property = new Core.Class.NodeClassProperty(Class, Text, Class.TypeFactory.Get<double>());
-                Class.Properties.Add(property);
-
-                Items.First(x => x.Value!.Type == TreeItemType.PropertiesFolder).Children!.RemoveAll(x => x.Value == CurrentlyEditingItem);
-                Items.First(x => x.Value!.Type == TreeItemType.PropertiesFolder).Children!.Add(new()
-                    {
-                        Value = new(TreeItemType.Property, null, property)
-                        {
-                            Name = property.Name
-                        }
-                    });
-            }
-        }
-        else if (CurrentlyEditingItem.Method != null)
-        {
-            CurrentlyEditingItem.Method.Rename(Text);
-            CurrentlyEditingItem.Name = Text;
-        }
-        else if (CurrentlyEditingItem.Property != null)
-        {
-            CurrentlyEditingItem.Property.Rename(Text);
-            CurrentlyEditingItem.Name = Text;
-        }
-
-        CurrentlyEditingItem = null;
-        Text = null;
-    }
-
+    /// <summary>
+    /// Publishes the selected method and clears the selection for non-method tree items.
+    /// </summary>
+    /// <param name="tree">The newly selected tree item.</param>
     private void OnSelectedItemChanged(TreeItem? tree)
     {
-        if (CurrentlyEditingItem != null)
-        {
-            // remove the textbox
-            if (IsNew)
-                Items.First(x => x.Value?.Type == (CurrentlyEditingItem.Type == TreeItemType.Method ? TreeItemType.MethodsFolder : TreeItemType.PropertiesFolder))
-                    .Children!.RemoveAll(x => x.Value == CurrentlyEditingItem);
-
-            CurrentlyEditingItem = null;
-            Text = null;
-        }
-
         SelectedTreeItem = tree;
 
         if (tree?.Type == TreeItemType.Method)

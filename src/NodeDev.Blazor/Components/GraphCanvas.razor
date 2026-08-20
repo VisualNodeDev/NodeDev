@@ -4,21 +4,21 @@
 
 	@if (PopupState.IsShowingNodeSelection)
 	{
-		<div @onclick="CancelPopup" style="background-color: var(--mud-palette-overlay-dark); width: 100%; height: 100%; position: absolute; z-index: 1">
+		<PopupOverlay OnDismiss="CancelPopup">
 			<NodeDev.Blazor.Components.NodeSelection PositionX="PopupState.X" PositionY="PopupState.Y" GraphCanvas="this" OnNodeTypeSelected="OnNewNodeTypeSelected" Connection="PopupState.NodeConnection" CallableScopeId="@PopupState.CallableScopeId" />
-		</div>
+		</PopupOverlay>
 	}
 	@if (PopupState.IsShowingGenericTypeSelection)
 	{
-		<div @onclick="CancelPopup" style="background-color: var(--mud-palette-overlay-dark); width: 100%; height: 100%; position: absolute; z-index: 1">
-			<NodeDev.Blazor.Components.TypeSelector PositionX="PopupState.X" PositionY="PopupState.Y" TypeFactory="Graph.SelfClass.TypeFactory" OnTypeSelected="OnGenericTypeSelected" />
-		</div>
+		<PopupOverlay OnDismiss="CancelPopup">
+			<NodeDev.Blazor.Components.TypeSelector TypeFactory="Graph.SelfClass.TypeFactory" OnTypeSelected="OnGenericTypeSelected" />
+		</PopupOverlay>
 	}
 	@if (PopupState.IsShowingOverloadSelection && PopupState.Node != null)
 	{
-		<div @onclick="CancelPopup" style="background-color: var(--mud-palette-overlay-dark); width: 100%; height: 100%; position: absolute; z-index: 1">
+		<PopupOverlay OnDismiss="CancelPopup">
 			<NodeDev.Blazor.Components.AlternateOverloadsSelection OnNodeMethodSelected="OnNewOverloadSelected" Node="PopupState.Node" />
-		</div>
+		</PopupOverlay>
 	}
 
 	<div style="width:100%; height:100%;" data-test-id="graph-canvas">

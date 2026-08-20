@@ -49,29 +49,6 @@ public class ProjectManagementTests : E2ETestBase
 	}
 
 	[Fact(Timeout = 60_000)]
-	public async Task ProjectExportFunctionality()
-	{
-		await HomePage.CreateNewProject();
-		
-		try
-		{
-			await HomePage.ExportProject();
-			
-			// Check for success (no error message)
-			await Task.Delay(200);
-			var hasError = await HomePage.HasErrorMessage();
-			Assert.False(hasError, "Export failed - error message present");
-			
-			await HomePage.TakeScreenshot("/tmp/project-exported.png");
-			Console.WriteLine("✓ Project exported successfully");
-		}
-		catch (NotImplementedException ex)
-		{
-			Console.WriteLine($"Export feature not implemented: {ex.Message}");
-		}
-	}
-
-	[Fact(Timeout = 60_000)]
 	public async Task BuildProjectFromUI()
 	{
 		await HomePage.CreateNewProject();

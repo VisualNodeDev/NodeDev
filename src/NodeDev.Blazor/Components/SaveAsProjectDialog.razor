@@ -1,44 +1,33 @@
-﻿@using System.Text.Json
-@using NodeDev.Blazor.Services
-@inject ProjectService ProjectService
-@inject ISnackbar Snackbar
-
 <MudDialog>
-	<DialogContent>
-		<MudTextField @bind-Value="ProjectName" Label="File Name" Variant="Variant.Text" data-test-id="saveAsProjectName"></MudTextField>
-	</DialogContent>
-	<DialogActions>
-		<MudButton Color="Color.Primary" OnClick="SaveProject" Disabled="ProjectName is null" data-test-id="saveAsSave">Save</MudButton>
-		<MudButton Color="Color.Primary" OnClick="Close" data-test-id="saveAsCancel">Cancel</MudButton>
-	</DialogActions>
+    <DialogContent>
+        <MudTextField @bind-Value="ProjectName" Label="File Name" Variant="Variant.Text" data-test-id="saveAsProjectName" Immediate="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@string.IsNullOrWhiteSpace(ProjectName)" data-test-id="saveAsSave">Save</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Cancel" data-test-id="saveAsCancel">Cancel</MudButton>
+    </DialogActions>
 </MudDialog>
 
 @code {
-	[CascadingParameter]
-	private IMudDialogInstance MudDialog { get; set; } = null!;
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
 
-	public string? ProjectName { get; set; }
+    [Parameter]
+    public string? ProjectName { get; set; }
 
-	private void Close() => MudDialog.Cancel();
+    /// <summary>
+    /// Closes the dialog without saving the project.
+    /// </summary>
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
 
-	protected override void OnInitialized()
-	{
-		base.OnInitialized();
-		ProjectName = ProjectService.Project.Settings.ProjectName;
-	}
-
-	private async Task SaveProject()
-	{
-		try
-		{
-			await ProjectService.SaveProjectToFileAsync(ProjectName!);
-			Snackbar.Add("Project saved", Severity.Success);
-			MudDialog.Close(DialogResult.Ok(ProjectName));
-		}
-		catch (Exception ex)
-		{
-			Snackbar.Add(ex.Message, Severity.Error);
-		}
-	}
-
+    /// <summary>
+    /// Returns the requested project name to the toolbar.
+    /// </summary>
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(ProjectName));
+    }
 }

@@ -613,23 +613,6 @@ public class HomePage
 
 	// Project Management
 
-	public async Task ExportProject()
-	{
-		var exportButton = _user.Locator("[data-test-id='export-project']");
-		if (await exportButton.CountAsync() == 0)
-		{
-			throw new NotImplementedException($"Export project UI element not found - [data-test-id='export-project']. This feature may not be implemented yet.");
-		}
-
-		await exportButton.ClickAsync();
-		var confirmButton = _user.Locator("[data-test-id='confirm-export']");
-		if (await confirmButton.CountAsync() > 0)
-		{
-			await confirmButton.ClickAsync();
-		}
-		await Task.Delay(500);
-	}
-
 	public async Task BuildProject()
 	{
 		var buildButton = _user.Locator("[data-test-id='build-project']");

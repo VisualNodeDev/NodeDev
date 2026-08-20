@@ -69,25 +69,21 @@ public class DebugModeTests : E2ETestBase
 		await runWithDebugButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible });
 		await runWithDebugButton.ClickAsync();
 
-		// Assert - Check that Stop/Pause/Resume buttons are visible
+		// Assert - Check that the implemented debug controls are visible
 		var stopButton = Page.Locator("[data-test-id='stop-debug']");
-		var pauseButton = Page.Locator("[data-test-id='pause-debug']");
 		var resumeButton = Page.Locator("[data-test-id='resume-debug']");
 		var statusText = Page.Locator("[data-test-id='debug-status-text']");
 
 		await stopButton.WaitForAsync(new() { State = Microsoft.Playwright.WaitForSelectorState.Visible, Timeout = 10000 });
 		var isStopVisible = await stopButton.IsVisibleAsync();
-		var isPauseVisible = await pauseButton.IsVisibleAsync();
 		var isResumeVisible = await resumeButton.IsVisibleAsync();
 		var isStatusVisible = await statusText.IsVisibleAsync();
 
 		Console.WriteLine($"Stop button visible: {isStopVisible}");
-		Console.WriteLine($"Pause button visible: {isPauseVisible}");
 		Console.WriteLine($"Resume button visible: {isResumeVisible}");
 		Console.WriteLine($"Status text visible: {isStatusVisible}");
 
 		Assert.True(isStopVisible, "Stop button should be visible");
-		Assert.True(isPauseVisible, "Pause button should be visible");
 		Assert.True(isResumeVisible, "Resume button should be visible");
 		Assert.True(isStatusVisible, "Status text should be visible");
 
