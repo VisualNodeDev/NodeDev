@@ -20,7 +20,7 @@ using System.Numerics;
 
 namespace NodeDev.Blazor.Components;
 
-public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
+public partial class GraphCanvas : ComponentBase, IDisposable
 {
 	[Parameter, EditorRequired]
 	public Graph Graph { get; set; } = null!;
@@ -45,8 +45,6 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	{
 		base.OnInitialized();
 		_ = NodeProvider.WarmExtensionMethodCatalogAsync();
-
-		Graph.GraphCanvas = this;
 
 		var options = new BlazorDiagramOptions
 		{
@@ -79,6 +77,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		DiagramSynchronizer = new GraphDiagramSynchronizer(Graph, action => InvokeAsync(action));
 		DiagramProjection = new GraphDiagramProjection(Graph, Diagram, DiagramSynchronizer, OnConnectionAdded);
 		DebugVisualizer = new GraphDebugVisualizer(Graph, Diagram, action => InvokeAsync(action));
+		IndexPage.RegisterGraphCanvas(this);
 	}
 
 	#endregion
@@ -93,26 +92,9 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 		{
 			await Task.Delay(100);
 			Diagram.Batch(DiagramProjection.Initialize);
-			DiagramSynchronizer.Start(DiagramProjection.Rebuild, StateHasChanged);
+			DiagramSynchronizer.Start(DiagramProjection, StateHasChanged);
 			DebugVisualizer.Start();
 		}
-	}
-
-	#endregion
-
-	#region UpdateConnectionType
-
-	public void UpdatePortColor(Connection connection)
-	{
-		var port = FindPort(connection);
-		if (port == null)
-			return;
-
-		var color = GetTypeShapeColor(connection.Type, connection.Parent.TypeFactory);
-		foreach (var link in port.Links.Cast<LinkModel>())
-			link.Color = color;
-
-		Diagram.Refresh();
 	}
 
 	#endregion
@@ -426,10 +408,6 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 		GraphManagerService.SelectNodeOverload(PopupState.Node, overload);
 
-		// Refresh the node visually after overload selection
-		// The node's ports have changed, so we need to update the UI
-		Refresh(PopupState.Node);
-
 		CancelPopup();
 	}
 
@@ -639,92 +617,6 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 
 	#endregion
 
-	#region RemoveNode
-
-	public void RemoveNode(Node node)
-	{
-		if (node is LambdaReturnNode { IsImplicit: true } boundaryReturn)
-		{
-			var group = FindLambdaGroup(boundaryReturn.CallableScopeId);
-			if (group != null)
-			{
-				foreach (var port in group.Ports
-					.OfType<GraphPortModel>()
-					.Where(x => x.Connection.Parent == boundaryReturn)
-					.ToList())
-				{
-					group.RemovePort(port);
-				}
-				group.Refresh();
-			}
-			return;
-		}
-
-		var nodeModel = FindNodeModel(node);
-		if (nodeModel == null)
-			return;
-
-		using var suppression = DiagramSynchronizer.SuppressCanvasMutations();
-		if (nodeModel is LambdaGroupModel modelGroup)
-			Diagram.Groups.Remove(modelGroup);
-		else
-			Diagram.Nodes.Remove(nodeModel);
-	}
-
-	#endregion
-
-	#region AddLink / RemoveLink
-
-	public void RemoveLinkFromGraphCanvas(Connection source, Connection destination)
-	{
-		using (DiagramSynchronizer.SuppressConnectionUpdates())
-		{
-			var link = Diagram.Links.FirstOrDefault(x => (x.Source.Model as GraphPortModel)?.Connection == source && (x.Target.Model as GraphPortModel)?.Connection == destination);
-			if (link != null)
-				Diagram.Links.Remove(link);
-		}
-	}
-
-	public void AddLinkToGraphCanvas(Connection source, Connection destination)
-	{
-		using (DiagramSynchronizer.SuppressConnectionUpdates())
-		{
-			if (source.IsInput)
-				(destination, source) = (source, destination);
-
-			var sourcePort = FindPort(source) ?? throw new InvalidOperationException($"No canvas port exists for {source.Parent.Name}.{source.Name}.");
-			var destinationPort = FindPort(destination) ?? throw new InvalidOperationException($"No canvas port exists for {destination.Parent.Name}.{destination.Name}.");
-
-			// Make sure there isn't already an existing identical link
-			if (Diagram.Links.OfType<LinkModel>().Any(x => (x.Source as SinglePortAnchor)?.Port == sourcePort && (x.Target as SinglePortAnchor)?.Port == destinationPort))
-				return;
-
-			var link = Diagram.Links.Add(new LinkModel(sourcePort, destinationPort));
-
-			OnConnectionAdded(link, true);
-		}
-	}
-
-	#endregion
-
-	#region AddNode
-
-	public void AddNode(Node node)
-	{
-		DiagramProjection.AddNode(node);
-	}
-
-	#endregion
-
-	#region Refresh
-
-	public void Refresh(Node node)
-	{
-		DiagramProjection.Refresh(node);
-	}
-
-	#endregion
-
 	#region Initialize
 
 	public static string GetTypeShapeColor(TypeBase type, TypeFactory typeFactory)
@@ -750,9 +642,7 @@ public partial class GraphCanvas : ComponentBase, IDisposable, IGraphCanvas
 	public void Dispose()
 	{
 		GC.SuppressFinalize(this);
-
-		if (Graph.GraphCanvas == this)
-			Graph.GraphCanvas = null;
+		IndexPage.UnregisterGraphCanvas(this);
 
 		DebugVisualizer.Dispose();
 		DiagramSynchronizer.Dispose();

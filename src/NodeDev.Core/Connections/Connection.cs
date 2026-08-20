@@ -161,7 +161,7 @@ namespace NodeDev.Core.Connections
 			else
 				TextboxValue = null;
 
-			Parent.Graph.GraphCanvas?.Refresh(Parent);
+			Parent.Graph.Notify(new GraphChange.NodeChanged(Parent));
 		}
 
 		public void UpdateTextboxText(string? text)

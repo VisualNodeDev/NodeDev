@@ -1,4 +1,5 @@
 using Blazor.Diagrams;
+using Blazor.Diagrams.Core.Anchors;
 using Blazor.Diagrams.Core.Models;
 using Blazor.Diagrams.Core.Models.Base;
 using NodeDev.Blazor.DiagramsModels;
@@ -95,6 +96,9 @@ internal sealed class GraphDiagramProjection
 	/// </summary>
 	public void AddNode(Node node)
 	{
+		if (FindNodeModel(node) != null)
+			return;
+
 		if (node is CreateDelegateNode delegateNode)
 			AddLambdaGroupModel(delegateNode);
 		else if (node is LambdaReturnNode { IsImplicit: true } boundaryReturn)
@@ -103,6 +107,96 @@ internal sealed class GraphDiagramProjection
 			AddGraphNodeModel(node);
 
 		ReparentScopedModels();
+	}
+
+	/// <summary>
+	/// Removes the model representing a domain node without allowing diagram callbacks to repeat the domain mutation.
+	/// </summary>
+	public void RemoveNode(Node node)
+	{
+		if (node is LambdaReturnNode { IsImplicit: true } boundaryReturn)
+		{
+			var group = FindLambdaGroup(boundaryReturn.CallableScopeId);
+			if (group == null)
+				return;
+
+			foreach (var port in group.Ports
+				.OfType<GraphPortModel>()
+				.Where(port => port.Connection.Parent == boundaryReturn)
+				.ToList())
+			{
+				group.RemovePort(port);
+			}
+			group.Refresh();
+			return;
+		}
+
+		var nodeModel = FindNodeModel(node);
+		if (nodeModel == null)
+			return;
+
+		using var suppression = Synchronizer.SuppressCanvasMutations();
+		if (nodeModel is LambdaGroupModel groupModel)
+			Diagram.Groups.Remove(groupModel);
+		else
+			Diagram.Nodes.Remove(nodeModel);
+	}
+
+	/// <summary>
+	/// Adds a projected link if the diagram does not already contain it.
+	/// </summary>
+	public void AddLink(Connection source, Connection destination)
+	{
+		if (source.IsInput)
+			(destination, source) = (source, destination);
+
+		var sourcePort = FindPort(source) ?? throw new InvalidOperationException($"No canvas port exists for {source.Parent.Name}.{source.Name}.");
+		var destinationPort = FindPort(destination) ?? throw new InvalidOperationException($"No canvas port exists for {destination.Parent.Name}.{destination.Name}.");
+		if (Diagram.Links.Any(link =>
+			(link.Source.Model as GraphPortModel)?.Connection == source &&
+			(link.Target.Model as GraphPortModel)?.Connection == destination))
+		{
+			return;
+		}
+
+		LinkModel link;
+		using (Synchronizer.SuppressConnectionUpdates())
+			link = Diagram.Links.Add(new LinkModel(new SinglePortAnchor(sourcePort), new SinglePortAnchor(destinationPort)));
+
+		ConfigureConnection(link, true);
+	}
+
+	/// <summary>
+	/// Removes a projected link if it still exists.
+	/// </summary>
+	public void RemoveLink(Connection source, Connection destination)
+	{
+		if (source.IsInput)
+			(destination, source) = (source, destination);
+
+		using var suppression = Synchronizer.SuppressConnectionUpdates();
+		var link = Diagram.Links.FirstOrDefault(candidate =>
+			(candidate.Source.Model as GraphPortModel)?.Connection == source &&
+			(candidate.Target.Model as GraphPortModel)?.Connection == destination);
+		if (link != null)
+			Diagram.Links.Remove(link);
+	}
+
+	/// <summary>
+	/// Recomputes the visual state of a changed domain connection and its links.
+	/// </summary>
+	public void RefreshConnection(Connection connection)
+	{
+		var port = FindPort(connection);
+		if (port == null)
+			return;
+
+		var color = GraphCanvas.GetTypeShapeColor(connection.Type, connection.Parent.TypeFactory);
+		foreach (var link in port.Links.Cast<LinkModel>())
+			link.Color = color;
+
+		port.Parent.Refresh();
+		Diagram.Refresh();
 	}
 
 	/// <summary>

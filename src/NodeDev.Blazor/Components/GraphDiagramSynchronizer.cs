@@ -1,5 +1,4 @@
 using NodeDev.Core;
-using System.Reactive.Linq;
 
 namespace NodeDev.Blazor.Components;
 
@@ -12,7 +11,7 @@ internal sealed class GraphDiagramSynchronizer : IDisposable
 {
 	private readonly Graph Graph;
 	private readonly Func<Action, Task> InvokeAsync;
-	private IDisposable? GraphChangedSubscription;
+	private IDisposable? GraphChangeSubscription;
 	private int ConnectionSuppressionCount;
 	private int NodeRemovalSuppressionCount;
 	private int VertexLoadingCount;
@@ -32,22 +31,47 @@ internal sealed class GraphDiagramSynchronizer : IDisposable
 	public bool IsLoadingVertices => VertexLoadingCount != 0;
 
 	/// <summary>
-	/// Starts listening for UI-relevant domain changes. Bursts are sampled to avoid repeatedly rebuilding
-	/// the diagram while one logical graph operation emits several notifications.
+	/// Starts listening for domain changes and applies them to this synchronizer's diagram projection.
 	/// </summary>
-	public void Start(Action rebuildProjection, Action stateHasChanged)
+	public void Start(GraphDiagramProjection projection, Action stateHasChanged)
 	{
-		GraphChangedSubscription = Graph.Project.GraphChanged
-			.Where(change => change.RequireUIRefresh && change.Graph == Graph)
-			.AcceptThenSample(TimeSpan.FromMilliseconds(250))
+		GraphChangeSubscription = Graph.Changes
 			.Subscribe(change =>
 			{
 				_ = InvokeAsync(() =>
 				{
-					rebuildProjection();
+					ApplyChange(projection, change);
 					stateHasChanged();
 				});
 			});
+	}
+
+	private static void ApplyChange(GraphDiagramProjection projection, GraphChange change)
+	{
+		switch (change)
+		{
+			case GraphChange.NodeAdded added:
+				projection.AddNode(added.Node);
+				break;
+			case GraphChange.NodeRemoved removed:
+				projection.RemoveNode(removed.Node);
+				break;
+			case GraphChange.NodeChanged changed:
+				projection.Refresh(changed.Node);
+				break;
+			case GraphChange.LinkAdded added:
+				projection.AddLink(added.Source, added.Destination);
+				break;
+			case GraphChange.LinkRemoved removed:
+				projection.RemoveLink(removed.Source, removed.Destination);
+				break;
+			case GraphChange.ConnectionChanged changed:
+				projection.RefreshConnection(changed.Connection);
+				break;
+			case GraphChange.ProjectionReset:
+				projection.Rebuild();
+				break;
+		}
 	}
 
 	/// <summary>
@@ -99,8 +123,8 @@ internal sealed class GraphDiagramSynchronizer : IDisposable
 	/// </summary>
 	public void Dispose()
 	{
-		GraphChangedSubscription?.Dispose();
-		GraphChangedSubscription = null;
+		GraphChangeSubscription?.Dispose();
+		GraphChangeSubscription = null;
 	}
 
 	/// <summary>

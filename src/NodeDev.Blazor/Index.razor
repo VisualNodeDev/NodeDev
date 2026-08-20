@@ -86,6 +86,8 @@
 
     private List<Core.Class.NodeClassMethod> OpenedMethods { get; } = new();
 
+    private Dictionary<Core.Graph, GraphCanvas> GraphCanvases { get; } = new();
+
     private MudTabs Tabs { get; set; } = null!;
 
     private int ActivePanelIndex = 0;
@@ -197,13 +199,25 @@
         if (OpenedMethods.Count > 0 && ActivePanelIndex < OpenedMethods.Count)
         {
             var method = OpenedMethods[ActivePanelIndex];
-            var graphCanvas = method.Graph.GraphCanvas as GraphCanvas;
-            graphCanvas?.ToggleBreakpointOnSelectedNode();
+            if (GraphCanvases.TryGetValue(method.Graph, out var graphCanvas))
+                graphCanvas.ToggleBreakpointOnSelectedNode();
         }
+    }
+
+    internal void RegisterGraphCanvas(GraphCanvas graphCanvas)
+    {
+        GraphCanvases[graphCanvas.Graph] = graphCanvas;
+    }
+
+    internal void UnregisterGraphCanvas(GraphCanvas graphCanvas)
+    {
+        if (GraphCanvases.TryGetValue(graphCanvas.Graph, out var registered) && registered == graphCanvas)
+            GraphCanvases.Remove(graphCanvas.Graph);
     }
 
     public void Dispose()
     {
         ProjectService.ProjectChanged -= OnProjectChanged;
+        GraphCanvases.Clear();
     }
 }
