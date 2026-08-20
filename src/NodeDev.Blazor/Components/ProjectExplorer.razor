@@ -1,5 +1,6 @@
 ﻿@inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject NodeDev.Blazor.Services.WorkspaceCommandService Commands
 
 <MudStack Row="false" Class="wh100">
     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -58,10 +59,11 @@
     public EventCallback<NodeDev.Core.Class.NodeClass> ClassDeleted { get; set; }
 
     private TreeItem? Selected = null;
-    private TreeItem? HoveredClass = null;
-
     private List<TreeItemData<TreeItem>> Items { get; } = new();
 
+    /// <summary>
+    /// Publishes the selected class, or clears it when a folder is selected.
+    /// </summary>
     private void OnSelectedItemChanged()
     {
         if (Selected?.Type == TreeItemType.Class)
@@ -76,14 +78,23 @@
         }
     }
 
+    /// <summary>
+    /// Adds existing project classes to the explorer tree.
+    /// </summary>
     protected override void OnInitialized()
     {
         base.OnInitialized();
 
         foreach (var nodeClass in Project.Classes)
+        {
             AddClass(nodeClass);
+        }
     }
 
+    /// <summary>
+    /// Adds a class to its namespace branch, creating missing namespace folders as needed.
+    /// </summary>
+    /// <param name="nodeClass">The class to represent in the tree.</param>
     private void AddClass(NodeDev.Core.Class.NodeClass nodeClass)
     {
         // find the folder that already exists in the tree
@@ -106,7 +117,9 @@
         }
 
         if (folder?.Children == null)
+        {
             throw new Exception("Call cannot have no namespace ??");
+        }
 
         folder.Children.Add(new()
             {
@@ -114,76 +127,96 @@
             });
     }
 
+    /// <summary>
+    /// Prompts for a class name and adds the created class to the appropriate namespace branch.
+    /// </summary>
     private async Task ShowCreateClassDialog()
     {
-        var result = await DialogService.Show<CreateClassDialog>("Create New Class", new()
+        var dialog = await DialogService.ShowAsync<NameDialog>("Create New Class", new()
         {
-            [nameof(CreateClassDialog.Project)] = Project
-        }, new DialogOptions()
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        }).Result;
+            [nameof(NameDialog.InitialValue)] = "NewClass",
+            [nameof(NameDialog.Label)] = "Class Name",
+            [nameof(NameDialog.ConfirmText)] = "Create",
+            [nameof(NameDialog.InputTestId)] = "class-name-input",
+            [nameof(NameDialog.ConfirmTestId)] = "confirm-create-class"
+        }, DialogDefaults.SmallForm);
+        var result = await dialog.Result;
 
-        if (result != null && !result.Canceled && result.Data is NodeDev.Core.Class.NodeClass newClass)
+        if (result is { Canceled: false, Data: string className })
         {
-            AddClass(newClass);
-            Snackbar.Add($"Class '{newClass.Name}' created successfully", Severity.Success);
-            StateHasChanged();
+            var commandResult = Commands.CreateClass(className);
+            Snackbar.ShowCommandResult(commandResult);
+            if (commandResult is { Succeeded: true, Value: not null })
+            {
+                AddClass(commandResult.Value);
+                StateHasChanged();
+            }
         }
     }
 
+    /// <summary>
+    /// Prompts for and applies a replacement name for a class tree item.
+    /// </summary>
+    /// <param name="item">The tree item containing the class to rename.</param>
     private async Task ShowRenameClassDialog(TreeItem item)
     {
-        if (item.Class == null) return;
+        if (item.Class == null)
+        {
+            return;
+        }
 
-        var dialogReference = DialogService.Show<RenameDialog>("Rename Class", new()
+        var dialogReference = await DialogService.ShowAsync<NameDialog>("Rename Class", new()
         {
-            [nameof(RenameDialog.CurrentName)] = item.Class.Name,
-            [nameof(RenameDialog.Label)] = "Class Name",
-            [nameof(RenameDialog.IsMethod)] = false
-        }, new DialogOptions()
-        {
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        });
+            [nameof(NameDialog.InitialValue)] = item.Class.Name,
+            [nameof(NameDialog.Label)] = "Class Name",
+            [nameof(NameDialog.ConfirmText)] = "Rename",
+            [nameof(NameDialog.InputTestId)] = "class-name-input",
+            [nameof(NameDialog.ConfirmTestId)] = "confirm-rename"
+        }, DialogDefaults.SmallForm);
         
         var result = await dialogReference.Result;
 
-        if (result != null && !result.Canceled && result.Data is string newName)
+        if (result is { Canceled: false, Data: string newName })
         {
-            var oldName = item.Class.Name;
-            try
+            var commandResult = Commands.RenameClass(item.Class, newName);
+            Snackbar.ShowCommandResult(commandResult);
+            if (commandResult.Succeeded)
             {
-                item.Class.Rename(newName);
                 item.Name = newName;
-                Snackbar.Add($"Class renamed from '{oldName}' to '{newName}'", Severity.Success);
                 StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add(ex.Message, Severity.Error);
             }
         }
     }
 
+    /// <summary>
+    /// Confirms and deletes a class, then removes its representation from the explorer tree.
+    /// </summary>
+    /// <param name="item">The tree item containing the class to delete.</param>
     private async Task DeleteClass(TreeItem item)
     {
-        if (item.Class == null) return;
+        if (item.Class == null)
+        {
+            return;
+        }
 
         var confirm = await DialogService.ShowMessageBox(
             "Delete Class",
             $"Are you sure you want to delete class '{item.Class.Name}'?",
             yesText: "Delete", cancelText: "Cancel",
-            options: new DialogOptions() { MaxWidth = MaxWidth.Small }
+            options: DialogDefaults.Confirmation
         );
 
         if (confirm == true)
         {
-            try
+            var commandResult = Commands.DeleteClass(item.Class);
+            Snackbar.ShowCommandResult(commandResult);
+            if (commandResult.Succeeded)
             {
-                Project.RemoveClass(item.Class);
-
+                /// <summary>
+                /// Finds and removes the specified item from a branch of the explorer tree.
+                /// </summary>
+                /// <param name="items">The branch to search recursively.</param>
+                /// <returns>The removed item, or <see langword="null"/> when this branch does not contain it.</returns>
                 TreeItemData<TreeItem>? Remove(List<TreeItemData<TreeItem>> items)
                 {
                     foreach (var i in items.ToList())
@@ -197,7 +230,9 @@
                         {
                             var found = Remove(i.Children);
                             if (found != null)
+                            {
                                 return found;
+                            }
                         }
                     }
                     return null;
@@ -210,12 +245,7 @@
                     OnSelectedItemChanged();
                 }
                 await ClassDeleted.InvokeAsync(item.Class);
-                Snackbar.Add($"Class '{item.Class.Name}' deleted", Severity.Success);
                 StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add(ex.Message, Severity.Error);
             }
         }
     }

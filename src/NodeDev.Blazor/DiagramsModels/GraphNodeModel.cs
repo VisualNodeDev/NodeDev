@@ -24,30 +24,6 @@ namespace NodeDev.Blazor.DiagramsModels
 
 		public GraphPortModel GetPort(Connection connection) => Ports.OfType<GraphPortModel>().First(x => x.Connection == connection);
 
-		internal void OnConnectionPathHighlighted(Connection connection)
-		{
-			var port = GetPort(connection);
-
-			foreach (var link in port.Links.OfType<LinkModel>())
-			{
-				if (!link.Classes.Contains("highlighted"))
-					link.Classes += " highlighted";
-
-				link.Refresh();
-			}
-		}
-
-		internal void OnConnectionPathUnhighlighted(Connection connection)
-		{
-			var port = GetPort(connection);
-
-			foreach (var link in port.Links.OfType<LinkModel>())
-			{
-				link.Classes = link.Classes.Replace(" highlighted", "");
-				link.Refresh();
-			}
-		}
-
 		internal async Task OnNodeExecuting(Connection exec)
 		{
 			var port = GetPort(exec);

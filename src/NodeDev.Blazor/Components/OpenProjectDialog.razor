@@ -1,66 +1,47 @@
-﻿@using System.Text.Json
-@using NodeDev.Blazor.Services
-@inject ProjectService ProjectService
-@inject ISnackbar Snackbar
-
 <MudDialog>
-	<DialogContent>
-		<MudStack>
-			<MudPaper Class="full-width">
-				<MudList T="string" @bind-SelectedValue="ProjectName" ReadOnly="false">
-					@foreach (var item in RecentProjects)
-					{
-						<MudListItem Text="@item"></MudListItem>
-					}
-				</MudList>
-			</MudPaper>
-		</MudStack>
-	</DialogContent>
-	<DialogActions>
-		<MudButton Color="Color.Primary" OnClick="LoadProject" Disabled="ProjectName is null">Open</MudButton>
-		<MudButton Color="Color.Primary" OnClick="Close">Cancel</MudButton>
-	</DialogActions>
+    <DialogContent>
+        <MudStack>
+            <MudPaper Class="full-width">
+                <MudList T="string" @bind-SelectedValue="ProjectName" ReadOnly="false">
+                    @foreach (var item in ProjectNames)
+                    {
+                        <MudListItem Text="@item" />
+                    }
+                </MudList>
+            </MudPaper>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@string.IsNullOrWhiteSpace(ProjectName)">Open</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
 </MudDialog>
 
 @code {
-	[CascadingParameter]
-	private IMudDialogInstance MudDialog { get; set; } = null!;
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
 
-	private string? ProjectName { get; set; }
-	private List<string> RecentProjects { get; set; } = new List<string>();
+    [Parameter]
+    public IReadOnlyList<string> ProjectNames { get; set; } = [];
 
-	private void Close() => MudDialog.Cancel();
+    private string? ProjectName { get; set; }
 
-	protected override void OnInitialized()
-	{
-		base.OnInitialized();
-		try
-		{
-			RecentProjects = ProjectService.GetSavedProjectNames().ToList();
-		}
-		catch (Exception ex)
-		{
-			Snackbar.Add(ex.Message, Severity.Error);
-			RecentProjects = [];
-		}
-	}
+    /// <summary>
+    /// Closes the dialog without selecting a project.
+    /// </summary>
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
 
-	private async Task LoadProject()
-	{
-		if (string.IsNullOrWhiteSpace(ProjectName))
-		{
-			return;
-		}
-		try
-		{
-			await ProjectService.LoadProjectAsync(ProjectName);
-			MudDialog.Close(DialogResult.Ok(ProjectName));
-		}
-		catch (Exception ex)
-		{
-			Snackbar.Configuration.VisibleStateDuration = 10000;
-			Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
-			Snackbar.Add(ex.Message, Severity.Error);
-		}
-	}
+    /// <summary>
+    /// Returns the selected project name when one has been selected.
+    /// </summary>
+    private void Submit()
+    {
+        if (!string.IsNullOrWhiteSpace(ProjectName))
+        {
+            MudDialog.Close(DialogResult.Ok(ProjectName));
+        }
+    }
 }

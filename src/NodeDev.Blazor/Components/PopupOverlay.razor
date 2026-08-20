@@ -1,0 +1,13 @@
+<div class="graph-popup-overlay" @onclick="OnDismiss">
+    <div @onclick:stopPropagation="true">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnDismiss { get; set; }
+}
